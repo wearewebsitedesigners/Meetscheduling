@@ -105,6 +105,11 @@ function buildApp() {
   });
 
   app.get("/:username", async (req, res, next) => {
+    const accept = String(req.headers.accept || "");
+    if (!accept.includes("text/html")) {
+      return next();
+    }
+
     const username = String(req.params.username || "")
       .trim()
       .toLowerCase();
@@ -143,13 +148,31 @@ function buildApp() {
       "legal",
       "status",
       "cookie-settings",
+      "pricing",
+      "product",
+      "solutions",
+      "resources",
+      "about",
+      "contact",
+      "help-center",
+      "developers",
+      "community",
+      "blog",
+      "case-studies",
+      "security",
+      "careers",
+      "press",
+      "terms",
+      "privacy-policy",
+      "cookie-policy",
     ]);
     if (reserved.has(username) || username.includes(".")) {
       return next();
     }
 
     try {
-      const found = await query(
+      const found = await Promise.race([
+        query(
         `
           SELECT u.id
           FROM users u
@@ -159,12 +182,16 @@ function buildApp() {
           LIMIT 1
         `,
         [username]
-      );
+        ),
+        new Promise((resolve) => {
+          setTimeout(() => resolve({ rows: [] }), 1500);
+        }),
+      ]);
 
       if (!found.rows[0]) return next();
       return res.sendFile(path.join(staticRoot, "public-landing.html"));
     } catch (error) {
-      return next(error);
+      return next();
     }
   });
 

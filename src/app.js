@@ -1,0 +1,188 @@
+const path = require("path");
+const express = require("express");
+const authRoutes = require("./routes/auth.routes");
+const eventTypesRoutes = require("./routes/event-types.routes");
+const availabilityRoutes = require("./routes/availability.routes");
+const publicRoutes = require("./routes/public.routes");
+const dashboardRoutes = require("./routes/dashboard.routes");
+const integrationsRoutes = require("./routes/integrations.routes");
+const contactsRoutes = require("./routes/contacts.routes");
+const workflowsRoutes = require("./routes/workflows.routes");
+const routingRoutes = require("./routes/routing.routes");
+const landingPageRoutes = require("./routes/landing-page.routes");
+const { query } = require("./db/pool");
+const { notFoundHandler, errorHandler } = require("./middleware/error-handler");
+
+function buildApp() {
+  const app = express();
+  const staticRoot = path.resolve(__dirname, "..");
+
+  app.disable("x-powered-by");
+  app.use(express.json({ limit: "1mb" }));
+  app.use(express.urlencoded({ extended: false }));
+
+  app.use((req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "same-origin");
+    next();
+  });
+
+  app.get("/api/health", (req, res) => {
+    res.json({
+      ok: true,
+      service: "meetscheduling-api",
+      time: new Date().toISOString(),
+    });
+  });
+
+  app.use("/api/auth", authRoutes);
+  app.use("/api/event-types", eventTypesRoutes);
+  app.use("/api/availability", availabilityRoutes);
+  app.use("/api/public", publicRoutes);
+  app.use("/api/dashboard", dashboardRoutes);
+  app.use("/api/integrations", integrationsRoutes);
+  app.use("/api/contacts", contactsRoutes);
+  app.use("/api/workflows", workflowsRoutes);
+  app.use("/api/routing", routingRoutes);
+  app.use("/api/landing-page", landingPageRoutes);
+
+  app.use(express.static(staticRoot));
+
+  app.get("/dashboard", (req, res) => {
+    res.sendFile(path.join(staticRoot, "dashboard.html"));
+  });
+
+  app.get("/dashboard/*", (req, res) => {
+    res.sendFile(path.join(staticRoot, "dashboard.html"));
+  });
+
+  app.get(
+    /^\/(meetings|scheduling|availability|contacts|workflows|integrations|routing|landing-page|analytics|admin|account)(\/.*)?$/,
+    (req, res) => {
+      res.sendFile(path.join(staticRoot, "dashboard.html"));
+    }
+  );
+
+  app.get("/dashboard.html", (req, res) => {
+    res.sendFile(path.join(staticRoot, "dashboard.html"));
+  });
+
+  app.get("/dashboard.html/*", (req, res) => {
+    res.sendFile(path.join(staticRoot, "dashboard.html"));
+  });
+
+  app.get("/app", (req, res) => {
+    res.sendFile(path.join(staticRoot, "dashboard.html"));
+  });
+
+  app.get("/app/*", (req, res) => {
+    res.sendFile(path.join(staticRoot, "dashboard.html"));
+  });
+
+  app.get("/login", (req, res) => {
+    res.sendFile(path.join(staticRoot, "login.html"));
+  });
+
+  app.get("/login.html", (req, res) => {
+    res.sendFile(path.join(staticRoot, "login.html"));
+  });
+
+  app.get("/signup", (req, res) => {
+    res.sendFile(path.join(staticRoot, "signup.html"));
+  });
+
+  app.get("/signup.html", (req, res) => {
+    res.sendFile(path.join(staticRoot, "signup.html"));
+  });
+
+  app.get("/forgot-password", (req, res) => {
+    res.sendFile(path.join(staticRoot, "forgot-password.html"));
+  });
+
+  app.get("/forgot-password.html", (req, res) => {
+    res.sendFile(path.join(staticRoot, "forgot-password.html"));
+  });
+
+  app.get("/:username", async (req, res, next) => {
+    const username = String(req.params.username || "")
+      .trim()
+      .toLowerCase();
+    const reserved = new Set([
+      "",
+      "api",
+      "assets",
+      "dashboard",
+      "meetings",
+      "scheduling",
+      "availability",
+      "contacts",
+      "workflows",
+      "integrations",
+      "routing",
+      "landing-page",
+      "analytics",
+      "admin",
+      "account",
+      "app",
+      "login",
+      "signup",
+      "forgot-password",
+      "booking",
+      "styles.css",
+      "dashboard.css",
+      "dashboard.js",
+      "login.css",
+      "login.js",
+      "app.js",
+      "index.html",
+      "favicon.ico",
+      "robots.txt",
+      "sitemap.xml",
+      "privacy",
+      "legal",
+      "status",
+      "cookie-settings",
+    ]);
+    if (reserved.has(username) || username.includes(".")) {
+      return next();
+    }
+
+    try {
+      const found = await query(
+        `
+          SELECT u.id
+          FROM users u
+          LEFT JOIN user_landing_pages lp ON lp.user_id = u.id
+          WHERE u.username = $1
+            AND COALESCE(lp.is_published, TRUE) = TRUE
+          LIMIT 1
+        `,
+        [username]
+      );
+
+      if (!found.rows[0]) return next();
+      return res.sendFile(path.join(staticRoot, "public-landing.html"));
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.get("/:username/:slug", (req, res) => {
+    res.sendFile(path.join(staticRoot, "booking.html"));
+  });
+
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) return next();
+    const accept = String(req.headers.accept || "");
+    if (!accept.includes("text/html")) return next();
+    res.sendFile(path.join(staticRoot, "index.html"));
+  });
+
+  app.use(notFoundHandler);
+  app.use(errorHandler);
+
+  return app;
+}
+
+module.exports = buildApp;

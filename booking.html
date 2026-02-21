@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Book Meeting | Meetscheduling</title>
+    <style>
+      :root {
+        --bg: #f5f8fd;
+        --card: #ffffff;
+        --ink: #112e53;
+        --muted: #5d7899;
+        --line: #cfdcf0;
+        --brand: #1a73e8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+
+      main {
+        max-width: 980px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        display: grid;
+        gap: 1rem;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--card);
+        padding: 1rem;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 0.5rem;
+      }
+
+      p {
+        margin: 0.4rem 0;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .row {
+        display: grid;
+        gap: 0.65rem;
+      }
+
+      .row.two {
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      }
+
+      label {
+        display: grid;
+        gap: 0.35rem;
+        font-weight: 600;
+      }
+
+      input,
+      textarea,
+      select,
+      button {
+        font: inherit;
+      }
+
+      input,
+      textarea,
+      select {
+        border: 1px solid #a4badd;
+        border-radius: 10px;
+        padding: 0.65rem 0.75rem;
+        color: var(--ink);
+      }
+
+      textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+
+      .slots {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .slot {
+        border: 1px solid #98b5e6;
+        background: #fff;
+        color: #1e4679;
+        border-radius: 999px;
+        padding: 0.4rem 0.75rem;
+        cursor: pointer;
+      }
+
+      .slot.active {
+        background: var(--brand);
+        border-color: var(--brand);
+        color: #fff;
+      }
+
+      .button {
+        border: 0;
+        border-radius: 999px;
+        background: var(--brand);
+        color: #fff;
+        font-weight: 700;
+        padding: 0.62rem 1rem;
+        cursor: pointer;
+      }
+
+      .status {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 0.7rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card">
+        <h1 id="event-title">Loading event...</h1>
+        <p id="event-desc" class="muted"></p>
+        <p id="event-meta" class="muted"></p>
+      </section>
+
+      <section class="card row">
+        <div class="row two">
+          <label>
+            Date
+            <select id="date-select"></select>
+          </label>
+          <label>
+            Visitor timezone
+            <input id="timezone-input" disabled />
+          </label>
+        </div>
+
+        <div>
+          <p><strong>Available times</strong></p>
+          <div id="slots" class="slots"></div>
+        </div>
+      </section>
+
+      <section class="card row">
+        <div class="row two">
+          <label>
+            Name
+            <input id="name-input" placeholder="Your name" />
+          </label>
+          <label>
+            Email
+            <input id="email-input" type="email" placeholder="you@example.com" />
+          </label>
+        </div>
+
+        <label>
+          Notes
+          <textarea id="notes-input" placeholder="Anything the host should know?"></textarea>
+        </label>
+
+        <div>
+          <button id="confirm-btn" class="button" type="button">
+            Confirm booking
+          </button>
+        </div>
+      </section>
+
+      <section id="status" class="card status muted">Ready.</section>
+    </main>
+
+    <script src="booking.js"></script>
+  </body>
+</html>
+

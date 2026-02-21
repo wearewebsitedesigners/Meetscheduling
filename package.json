@@ -1,0 +1,31 @@
+{
+  "name": "meetscheduling",
+  "version": "1.0.0",
+  "description": "Meetscheduling-style meeting scheduling backend with PostgreSQL, event types, availability, slot generation, and bookings.",
+  "main": "server.js",
+  "scripts": {
+    "build": "echo \"Build step not required\"",
+    "start": "node server.js",
+    "dev": "node server.js",
+    "migrate": "node scripts/migrate.js",
+    "seed": "node scripts/seed.js"
+  },
+  "keywords": [
+    "meeting",
+    "scheduling",
+    "calendar",
+    "express",
+    "postgresql",
+    "saas"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "googleapis": "^144.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "luxon": "^3.6.1",
+    "nodemailer": "^6.10.0",
+    "pg": "^8.16.3"
+  }
+}

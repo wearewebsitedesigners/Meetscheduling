@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Business Landing | Meetscheduling</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Sora:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="public-landing.css" />
+  </head>
+  <body>
+    <div class="landing-shell">
+      <header class="landing-topbar">
+        <a href="/" class="brand-link">
+          <img src="assets/scheduling-logo.svg" alt="Meetscheduling" />
+        </a>
+      </header>
+
+      <main id="landing-root" class="landing-root" aria-live="polite">
+        <section class="loading-state">
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Loading landing page...</p>
+        </section>
+      </main>
+    </div>
+
+    <template id="landing-template">
+      <section class="hero-card glass-panel">
+        <div class="hero-cover" data-cover></div>
+        <div class="hero-inner">
+          <div class="hero-copy">
+            <div class="hero-profile">
+              <img data-profile-image alt="" />
+              <div>
+                <p class="hero-label">Business Profile</p>
+                <p class="hero-name" data-display-name></p>
+              </div>
+            </div>
+            <h1 data-headline></h1>
+            <p class="hero-subheadline" data-subheadline></p>
+            <p class="hero-about" data-about></p>
+          </div>
+          <aside class="hero-event-box">
+            <h2>Book a Service</h2>
+            <p>Select your event type</p>
+            <div class="event-list" data-event-list></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <article class="glass-panel section-card">
+          <header class="section-head">
+            <h2>Services</h2>
+            <p>What this business offers</p>
+          </header>
+          <div class="service-grid" data-services></div>
+        </article>
+
+        <article class="glass-panel section-card">
+          <header class="section-head">
+            <h2>Quick Contact</h2>
+            <p>Send a custom query and capture leads</p>
+          </header>
+          <form id="lead-form" class="lead-form">
+            <div class="field-grid">
+              <label>
+                Name
+                <input type="text" name="name" required minlength="2" maxlength="120" />
+              </label>
+              <label>
+                Email
+                <input type="email" name="email" required maxlength="320" />
+              </label>
+              <label>
+                Company
+                <input type="text" name="company" maxlength="160" />
+              </label>
+              <label>
+                Phone
+                <input type="text" name="phone" maxlength="60" />
+              </label>
+            </div>
+
+            <label>
+              Related event type
+              <select name="eventTypeId" data-event-select>
+                <option value="">General inquiry</option>
+              </select>
+            </label>
+
+            <label>
+              Message
+              <textarea
+                name="query"
+                rows="4"
+                required
+                minlength="5"
+                maxlength="5000"
+                placeholder="Tell us what you need help with"
+              ></textarea>
+            </label>
+
+            <div class="lead-actions">
+              <button type="submit" class="primary-btn">Send Query</button>
+              <p id="lead-status" role="status" aria-live="polite"></p>
+            </div>
+          </form>
+        </article>
+      </section>
+
+      <section class="glass-panel section-card gallery-card">
+        <header class="section-head">
+          <h2>Portfolio</h2>
+          <p>Recent work and profile images</p>
+        </header>
+        <div class="gallery-grid" data-gallery></div>
+      </section>
+    </template>
+    <script src="public-landing.js"></script>
+  </body>
+</html>

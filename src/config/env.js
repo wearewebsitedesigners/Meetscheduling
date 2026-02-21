@@ -27,7 +27,10 @@ const env = {
   nodeEnv: readEnv("NODE_ENV", "development"),
   port: readInt("PORT", 8080),
   appBaseUrl: readEnv("APP_BASE_URL", "http://localhost:8080"),
-  databaseUrl: readEnv("DATABASE_URL", ""),
+  databaseUrl: readEnv(
+    "DATABASE_URL",
+    readEnv("POSTGRES_URL", readEnv("POSTGRES_PRISMA_URL", ""))
+  ),
   jwtSecret: readEnv("JWT_SECRET", "replace-me-in-prod"),
   publicBookingSigningSecret: readEnv(
     "PUBLIC_BOOKING_SIGNING_SECRET",
@@ -53,9 +56,8 @@ const env = {
 if (!env.databaseUrl) {
   // eslint-disable-next-line no-console
   console.warn(
-    "DATABASE_URL is not set. PostgreSQL endpoints will fail until it is configured."
+    "DATABASE_URL/POSTGRES_URL is not set. PostgreSQL endpoints will fail until it is configured."
   );
 }
 
 module.exports = env;
-

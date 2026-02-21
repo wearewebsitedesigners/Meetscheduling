@@ -1,6 +1,9 @@
 const { Pool } = require("pg");
 const env = require("../config/env");
 
+const dbConnectTimeoutMs = Number(process.env.DB_CONNECT_TIMEOUT_MS || 5000);
+const dbQueryTimeoutMs = Number(process.env.DB_QUERY_TIMEOUT_MS || 10000);
+
 const pool = new Pool({
   connectionString: env.databaseUrl || undefined,
   ssl:
@@ -9,6 +12,12 @@ const pool = new Pool({
           rejectUnauthorized: false,
         }
       : undefined,
+  connectionTimeoutMillis: Number.isFinite(dbConnectTimeoutMs)
+    ? dbConnectTimeoutMs
+    : 5000,
+  query_timeout: Number.isFinite(dbQueryTimeoutMs) ? dbQueryTimeoutMs : 10000,
+  idleTimeoutMillis: 10000,
+  max: env.nodeEnv === "production" ? 3 : 10,
 });
 
 async function query(text, params = [], client = null) {
@@ -36,4 +45,3 @@ module.exports = {
   query,
   withTransaction,
 };
-

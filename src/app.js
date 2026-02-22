@@ -10,7 +10,6 @@ const contactsRoutes = require("./routes/contacts.routes");
 const workflowsRoutes = require("./routes/workflows.routes");
 const routingRoutes = require("./routes/routing.routes");
 const landingPageRoutes = require("./routes/landing-page.routes");
-const { query } = require("./db/pool");
 const { notFoundHandler, errorHandler } = require("./middleware/error-handler");
 
 function buildApp() {
@@ -104,7 +103,7 @@ function buildApp() {
     res.sendFile(path.join(staticRoot, "forgot-password.html"));
   });
 
-  app.get("/:username", async (req, res, next) => {
+  app.get("/:username", (req, res, next) => {
     const accept = String(req.headers.accept || "");
     if (!accept.includes("text/html")) {
       return next();
@@ -170,29 +169,7 @@ function buildApp() {
       return next();
     }
 
-    try {
-      const found = await Promise.race([
-        query(
-        `
-          SELECT u.id
-          FROM users u
-          LEFT JOIN user_landing_pages lp ON lp.user_id = u.id
-          WHERE u.username = $1
-            AND COALESCE(lp.is_published, TRUE) = TRUE
-          LIMIT 1
-        `,
-        [username]
-        ),
-        new Promise((resolve) => {
-          setTimeout(() => resolve({ rows: [] }), 1500);
-        }),
-      ]);
-
-      if (!found.rows[0]) return next();
-      return res.sendFile(path.join(staticRoot, "public-landing.html"));
-    } catch (error) {
-      return next();
-    }
+    return res.sendFile(path.join(staticRoot, "public-landing.html"));
   });
 
   app.get("/:username/:slug", (req, res) => {

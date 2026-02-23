@@ -258,12 +258,18 @@ textarea {
 .nav-item:hover>.nav-trigger,
 .nav-item:focus-within>.nav-trigger,
 .nav-item.open>.nav-trigger {
-  background: #e9eef7;
-  box-shadow: inset 0 -3px 0 #1a67e8;
+  background: rgba(21, 107, 232, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--brand);
+  box-shadow: none;
 }
 
 .nav-link:hover {
-  background: #edf2fb;
+  background: rgba(21, 107, 232, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--brand);
 }
 
 .mega-menu {
@@ -1183,12 +1189,34 @@ textarea {
 }
 
 .minimal-logos {
+  position: relative;
+  overflow: hidden;
+  margin-top: 1.5rem;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+}
+
+.minimal-logos .logo-track {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
+  width: max-content;
   gap: clamp(1.2rem, 3.5vw, 2.5rem);
-  margin-top: 1.5rem;
+  animation: marquee-minimal 30s linear infinite;
+  will-change: transform;
+}
+
+.minimal-logos .logo-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee-minimal {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-50% - clamp(0.6rem, 1.75vw, 1.25rem)));
+  }
 }
 
 .minimal-logos .logo-item {

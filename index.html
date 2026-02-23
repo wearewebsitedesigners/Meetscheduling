@@ -1,388 +1,442 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Meetscheduling | Easy scheduling ahead</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Sora:wght@500;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="/styles.css?v=3" />
-  </head>
-  <body>
-    <div class="bg-orbs" aria-hidden="true">
-      <span class="orb orb-a" data-parallax="1"></span>
-      <span class="orb orb-b" data-parallax="1"></span>
-      <span class="orb orb-c" data-parallax="1"></span>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meetscheduling | Easy scheduling ahead</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Sora:wght@500;700;800&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css?v=3" />
+</head>
+
+<body>
+  <div class="bg-orbs" aria-hidden="true">
+    <span class="orb orb-a" data-parallax="1"></span>
+    <span class="orb orb-b" data-parallax="1"></span>
+    <span class="orb orb-c" data-parallax="1"></span>
+  </div>
+
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="brand" href="#top" aria-label="Meetscheduling home">
+        <img class="brand-logo" src="assets/scheduling-logo.svg" alt="Meetscheduling logo"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';" />
+        <span class="brand-fallback" style="display:none;">Meetscheduling</span>
+      </a>
+
+      <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu">
+        Menu
+      </button>
+
+      <nav id="nav-menu" class="nav-menu" aria-label="Main">
+        <div class="nav-item has-mega">
+          <button type="button" class="nav-trigger" aria-expanded="false" aria-controls="mega-product">
+            Product <span class="caret">v</span>
+          </button>
+          <div id="mega-product" class="mega-menu" aria-label="Product menu">
+            <div class="mega-inner mega-two-col">
+              <section class="mega-section">
+                <h3>Product</h3>
+                <a class="mega-card-link" href="#product">
+                  <span class="mega-icon-box">S</span>
+                  <span>
+                    <strong>Scheduling</strong>
+                    <small>Simplified booking</small>
+                  </span>
+                </a>
+                <a class="mega-card-link" href="#product">
+                  <span class="mega-icon-box">N</span>
+                  <span>
+                    <strong>Notetaker</strong>
+                    <small>Meeting recaps and action items</small>
+                  </span>
+                </a>
+                <a class="mega-card-link" href="#product">
+                  <span class="mega-icon-box">P</span>
+                  <span>
+                    <strong>Product overview</strong>
+                    <small>Why choose Meetscheduling</small>
+                  </span>
+                </a>
+              </section>
+
+              <section class="mega-section mega-divider">
+                <h3>Platform</h3>
+                <a class="mega-list-link" href="#solutions">Integrations</a>
+                <a class="mega-list-link" href="#solutions">Mobile app</a>
+                <a class="mega-list-link" href="#solutions">Browser extension</a>
+                <a class="mega-list-link" href="#enterprise">Admin controls</a>
+                <a class="mega-list-link" href="#enterprise">Security</a>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <div class="nav-item has-mega">
+          <button type="button" class="nav-trigger" aria-expanded="false" aria-controls="mega-solutions">
+            Solutions <span class="caret">v</span>
+          </button>
+          <div id="mega-solutions" class="mega-menu" aria-label="Solutions menu">
+            <div class="mega-inner mega-three-col">
+              <section class="mega-section">
+                <h3>By business size</h3>
+                <a class="mega-card-link" href="#solutions">
+                  <span class="mega-icon-box">I</span>
+                  <span>
+                    <strong>Individuals</strong>
+                    <small>For solopreneurs</small>
+                  </span>
+                </a>
+                <a class="mega-card-link" href="#solutions">
+                  <span class="mega-icon-box">S</span>
+                  <span>
+                    <strong>Small business</strong>
+                    <small>For growing businesses</small>
+                  </span>
+                </a>
+                <a class="mega-card-link" href="#solutions">
+                  <span class="mega-icon-box">L</span>
+                  <span>
+                    <strong>Large companies</strong>
+                    <small>For enterprise</small>
+                  </span>
+                </a>
+              </section>
+
+              <section class="mega-section mega-divider">
+                <h3>By team</h3>
+                <a class="mega-list-link" href="#solutions">Sales</a>
+                <a class="mega-list-link" href="#solutions">Marketing</a>
+                <a class="mega-list-link" href="#solutions">Customer success</a>
+                <a class="mega-list-link" href="#solutions">Recruiting</a>
+              </section>
+
+              <section class="mega-section mega-divider">
+                <h3>By industry</h3>
+                <a class="mega-list-link" href="#solutions">Education</a>
+                <a class="mega-list-link" href="#solutions">Technology</a>
+                <a class="mega-list-link" href="#solutions">Financial services</a>
+                <a class="mega-list-link" href="#solutions">Professional services</a>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <div class="nav-item has-mega">
+          <button type="button" class="nav-trigger" aria-expanded="false" aria-controls="mega-resources">
+            Resources <span class="caret">v</span>
+          </button>
+          <div id="mega-resources" class="mega-menu" aria-label="Resources menu">
+            <div class="mega-inner mega-resources-grid">
+              <section class="mega-section">
+                <h3>Explore</h3>
+                <a class="mega-card-link" href="#resources">
+                  <span class="mega-icon-box">C</span>
+                  <span>
+                    <strong>Customer stories</strong>
+                    <small>See how businesses are growing</small>
+                  </span>
+                </a>
+                <a class="mega-card-link" href="#resources">
+                  <span class="mega-icon-box">B</span>
+                  <span>
+                    <strong>Blog</strong>
+                    <small>Latest product and company news</small>
+                  </span>
+                </a>
+                <a class="mega-card-link" href="#resources">
+                  <span class="mega-icon-box">R</span>
+                  <span>
+                    <strong>Resource library</strong>
+                    <small>Guides, videos, and webinars</small>
+                  </span>
+                </a>
+                <a class="mega-card-link" href="#resources">
+                  <span class="mega-icon-box">A</span>
+                  <span>
+                    <strong>About us</strong>
+                    <small>Our mission and commitment</small>
+                  </span>
+                </a>
+              </section>
+
+              <section class="mega-section mega-divider">
+                <h3>Learn &amp; connect</h3>
+                <a class="mega-list-link" href="#resources">Help Center</a>
+                <a class="mega-list-link" href="#resources">API &amp; developer tools</a>
+                <a class="mega-list-link" href="#resources">Community</a>
+                <a class="mega-list-link" href="#resources">Newsroom</a>
+                <a class="mega-list-link" href="#resources">Contact us</a>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <a class="nav-link" href="#pricing">Pricing</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a class="text-link" href="login.html">Log In</a>
+        <a class="btn btn-primary" href="signup.html">Get Started</a>
+      </div>
     </div>
+  </header>
 
-    <header class="site-header">
-      <div class="container nav-wrap">
-        <a class="brand" href="#top" aria-label="Meetscheduling home">
-          <img
-            class="brand-logo"
-            src="assets/scheduling-logo.svg"
-            alt="Meetscheduling logo"
-            onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';"
-          />
-          <span class="brand-fallback" style="display:none;">Meetscheduling</span>
-        </a>
+  <main id="top">
+    <section class="hero container section-spacing">
+      <div class="hero-copy reveal">
+        <h1>Easy scheduling ahead</h1>
+        <p class="hero-lead">
+          <span class="hero-highlight">Join 20 million professionals who easily book meetings with the
+            #1 scheduling tool.</span>
+        </p>
 
-        <button
-          id="nav-toggle"
-          class="nav-toggle"
-          type="button"
-          aria-expanded="false"
-          aria-controls="nav-menu"
-        >
-          Menu
-        </button>
+        <div class="hero-signups">
+          <a class="social-btn social-google" href="signup.html">
+            <span class="social-icon-box" aria-hidden="true">
+              <span class="google-g">G</span>
+            </span>
+            <span class="social-label">Sign up with Google</span>
+          </a>
+          <a class="social-btn social-microsoft" href="signup.html">
+            <span class="social-icon-box" aria-hidden="true">
+              <span class="ms-grid">
+                <span class="ms-red"></span>
+                <span class="ms-green"></span>
+                <span class="ms-blue"></span>
+                <span class="ms-yellow"></span>
+              </span>
+            </span>
+            <span class="social-label">Sign up with Microsoft</span>
+          </a>
 
-        <nav id="nav-menu" class="nav-menu" aria-label="Main">
-          <div class="nav-item has-mega">
-            <button
-              type="button"
-              class="nav-trigger"
-              aria-expanded="false"
-              aria-controls="mega-product"
-            >
-              Product <span class="caret">v</span>
-            </button>
-            <div id="mega-product" class="mega-menu" aria-label="Product menu">
-              <div class="mega-inner mega-two-col">
-                <section class="mega-section">
-                  <h3>Product</h3>
-                  <a class="mega-card-link" href="#product">
-                    <span class="mega-icon-box">S</span>
-                    <span>
-                      <strong>Scheduling</strong>
-                      <small>Simplified booking</small>
-                    </span>
-                  </a>
-                  <a class="mega-card-link" href="#product">
-                    <span class="mega-icon-box">N</span>
-                    <span>
-                      <strong>Notetaker</strong>
-                      <small>Meeting recaps and action items</small>
-                    </span>
-                  </a>
-                  <a class="mega-card-link" href="#product">
-                    <span class="mega-icon-box">P</span>
-                    <span>
-                      <strong>Product overview</strong>
-                      <small>Why choose Meetscheduling</small>
-                    </span>
-                  </a>
-                </section>
-
-                <section class="mega-section mega-divider">
-                  <h3>Platform</h3>
-                  <a class="mega-list-link" href="#solutions">Integrations</a>
-                  <a class="mega-list-link" href="#solutions">Mobile app</a>
-                  <a class="mega-list-link" href="#solutions">Browser extension</a>
-                  <a class="mega-list-link" href="#enterprise">Admin controls</a>
-                  <a class="mega-list-link" href="#enterprise">Security</a>
-                </section>
-              </div>
-            </div>
+          <div class="signup-divider" aria-hidden="true">
+            <span>OR</span>
           </div>
 
-          <div class="nav-item has-mega">
-            <button
-              type="button"
-              class="nav-trigger"
-              aria-expanded="false"
-              aria-controls="mega-solutions"
-            >
-              Solutions <span class="caret">v</span>
-            </button>
-            <div id="mega-solutions" class="mega-menu" aria-label="Solutions menu">
-              <div class="mega-inner mega-three-col">
-                <section class="mega-section">
-                  <h3>By business size</h3>
-                  <a class="mega-card-link" href="#solutions">
-                    <span class="mega-icon-box">I</span>
-                    <span>
-                      <strong>Individuals</strong>
-                      <small>For solopreneurs</small>
-                    </span>
-                  </a>
-                  <a class="mega-card-link" href="#solutions">
-                    <span class="mega-icon-box">S</span>
-                    <span>
-                      <strong>Small business</strong>
-                      <small>For growing businesses</small>
-                    </span>
-                  </a>
-                  <a class="mega-card-link" href="#solutions">
-                    <span class="mega-icon-box">L</span>
-                    <span>
-                      <strong>Large companies</strong>
-                      <small>For enterprise</small>
-                    </span>
-                  </a>
-                </section>
-
-                <section class="mega-section mega-divider">
-                  <h3>By team</h3>
-                  <a class="mega-list-link" href="#solutions">Sales</a>
-                  <a class="mega-list-link" href="#solutions">Marketing</a>
-                  <a class="mega-list-link" href="#solutions">Customer success</a>
-                  <a class="mega-list-link" href="#solutions">Recruiting</a>
-                </section>
-
-                <section class="mega-section mega-divider">
-                  <h3>By industry</h3>
-                  <a class="mega-list-link" href="#solutions">Education</a>
-                  <a class="mega-list-link" href="#solutions">Technology</a>
-                  <a class="mega-list-link" href="#solutions">Financial services</a>
-                  <a class="mega-list-link" href="#solutions">Professional services</a>
-                </section>
-              </div>
-            </div>
-          </div>
-
-          <div class="nav-item has-mega">
-            <button
-              type="button"
-              class="nav-trigger"
-              aria-expanded="false"
-              aria-controls="mega-resources"
-            >
-              Resources <span class="caret">v</span>
-            </button>
-            <div id="mega-resources" class="mega-menu" aria-label="Resources menu">
-              <div class="mega-inner mega-resources-grid">
-                <section class="mega-section">
-                  <h3>Explore</h3>
-                  <a class="mega-card-link" href="#resources">
-                    <span class="mega-icon-box">C</span>
-                    <span>
-                      <strong>Customer stories</strong>
-                      <small>See how businesses are growing</small>
-                    </span>
-                  </a>
-                  <a class="mega-card-link" href="#resources">
-                    <span class="mega-icon-box">B</span>
-                    <span>
-                      <strong>Blog</strong>
-                      <small>Latest product and company news</small>
-                    </span>
-                  </a>
-                  <a class="mega-card-link" href="#resources">
-                    <span class="mega-icon-box">R</span>
-                    <span>
-                      <strong>Resource library</strong>
-                      <small>Guides, videos, and webinars</small>
-                    </span>
-                  </a>
-                  <a class="mega-card-link" href="#resources">
-                    <span class="mega-icon-box">A</span>
-                    <span>
-                      <strong>About us</strong>
-                      <small>Our mission and commitment</small>
-                    </span>
-                  </a>
-                </section>
-
-                <section class="mega-section mega-divider">
-                  <h3>Learn &amp; connect</h3>
-                  <a class="mega-list-link" href="#resources">Help Center</a>
-                  <a class="mega-list-link" href="#resources">API &amp; developer tools</a>
-                  <a class="mega-list-link" href="#resources">Community</a>
-                  <a class="mega-list-link" href="#resources">Newsroom</a>
-                  <a class="mega-list-link" href="#resources">Contact us</a>
-                </section>
-              </div>
-            </div>
-          </div>
-
-          <a class="nav-link" href="#pricing">Pricing</a>
-        </nav>
-
-        <div class="nav-actions">
-          <a class="text-link" href="login.html">Log In</a>
-          <a class="btn btn-primary" href="signup.html">Automate Your Appointments</a>
+          <p class="hero-signup-note">
+            <a href="signup.html">Sign up free with email.</a>
+            <span>No credit card required</span>
+          </p>
         </div>
       </div>
-    </header>
 
-    <main id="top">
-      <section class="hero container section-spacing">
-        <div class="hero-copy reveal">
-          <h1>Easy scheduling ahead</h1>
-          <p class="hero-lead">
-            <span class="hero-highlight"
-              >Join 20 million professionals who easily book meetings with the
-              #1 scheduling tool.</span
-            >
+      <div class="hero-visual reveal delay-1">
+        <div class="hero-card hero-card-booking hero-card-animate" data-tilt>
+          <div class="hero-ribbon"></div>
+          <div class="hero-inner hero-booking-inner">
+            <div class="booking-head">
+              <h2 class="booking-title">Share your booking page</h2>
+              <div class="booking-head-tags">
+                <span>One-on-One</span>
+                <span>30m</span>
+              </div>
+            </div>
+
+            <div class="booking-layout">
+              <div class="booking-col booking-info-col">
+                <div class="booking-brand-row">
+                  <span class="acme-logo-shape" aria-hidden="true"></span>
+                  <strong>ACME Inc.</strong>
+                </div>
+
+                <div class="booking-profile-block">
+                  <span class="booking-avatar" aria-hidden="true"></span>
+                  <p>Fatima Sy</p>
+                  <h3>Client Check-in</h3>
+                </div>
+
+                <div class="booking-meta">
+                  <p><span class="booking-meta-icon clock" aria-hidden="true"></span>30 min</p>
+                  <p><span class="booking-meta-icon meet" aria-hidden="true"></span>Zoom</p>
+                </div>
+
+                <div class="booking-skeleton" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+
+              <div class="booking-col booking-calendar-col">
+                <h3>Select a Date &amp; Time</h3>
+
+                <div class="booking-month-nav">
+                  <button type="button" aria-label="Previous month">‹</button>
+                  <span>July 2024</span>
+                  <button type="button" aria-label="Next month">›</button>
+                </div>
+
+                <div class="booking-weekdays">
+                  <span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span>
+                </div>
+
+                <div class="booking-date-grid">
+                  <span>30</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+                  <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span>
+                  <span>14</span><span>15</span><span class="date-soft">16</span><span
+                    class="date-soft">17</span><span>18</span><span class="date-soft">19</span><span>20</span>
+                  <span>21</span><span class="date-active" data-demo-date>22</span><span class="date-soft"
+                    data-demo-date>23</span><span class="date-soft" data-demo-date>24</span><span class="date-soft"
+                    data-demo-date>25</span><span>26</span><span>27</span>
+                  <span>28</span><span>29</span><span class="date-soft">30</span><span
+                    class="date-soft">31</span><span>1</span><span>2</span><span>3</span>
+                </div>
+
+                <div class="booking-timezone">
+                  <strong>Time zone</strong>
+                  <p>Eastern time - US &amp; Canada</p>
+                </div>
+              </div>
+
+              <div class="booking-col booking-times-col">
+                <p class="booking-day-title">Monday, July 22</p>
+
+                <div class="calendar-slots booking-slot-list">
+                  <button type="button" data-demo-slot>10:00am</button>
+                  <div class="booking-confirm-row">
+                    <button type="button">11:00am</button>
+                    <button type="button" class="confirm-btn">Confirm</button>
+                  </div>
+                  <button type="button" data-demo-slot class="slot-on">1:00pm</button>
+                  <button type="button" data-demo-slot>2:30pm</button>
+                  <button type="button" data-demo-slot>4:00pm</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="logo-strip minimal-logo-strip section-spacing-top">
+      <div class="container logo-strip-inner">
+        <p>Trusted by more than 5,000 organizations</p>
+        <div class="minimal-logos" aria-label="Company logos">
+          <span class="logo-item"><img src="https://cdn.simpleicons.org/hubspot/123f6b" alt="" aria-hidden="true"
+              loading="lazy" decoding="async" /><span>HubSpot</span></span>
+          <span class="logo-item"><img src="https://cdn.simpleicons.org/salesforce/123f6b" alt="" aria-hidden="true"
+              loading="lazy" decoding="async" /><span>Salesforce</span></span>
+          <span class="logo-item"><img src="https://cdn.simpleicons.org/intercom/123f6b" alt="" aria-hidden="true"
+              loading="lazy" decoding="async" /><span>Intercom</span></span>
+          <span class="logo-item"><img src="https://cdn.simpleicons.org/microsoft/123f6b" alt="" aria-hidden="true"
+              loading="lazy" decoding="async" /><span>Microsoft</span></span>
+          <span class="logo-item"><img src="https://cdn.simpleicons.org/openai/123f6b" alt="" aria-hidden="true"
+              loading="lazy" decoding="async" /><span>OpenAI</span></span>
+          <span class="logo-item"><img src="https://cdn.simpleicons.org/shopify/123f6b" alt="" aria-hidden="true"
+              loading="lazy" decoding="async" /><span>Shopify</span></span>
+          <span class="logo-item"><img src="https://cdn.simpleicons.org/wordpress/123f6b" alt="" aria-hidden="true"
+              loading="lazy" decoding="async" /><span>WordPress</span></span>
+          <span class="logo-item"><img src="https://cdn.simpleicons.org/dropbox/123f6b" alt="" aria-hidden="true"
+              loading="lazy" decoding="async" /><span>Dropbox</span></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="solutions" class="section-spacing section-soft">
+      <div class="container integrations-block">
+        <div class="section-head integrations-head reveal">
+          <h2>Connect Meetscheduling to the tools you already use</h2>
+          <div class="integrations-head-meta">
+            <p>Boost productivity with 100+ integrations</p>
+            <a href="signup.html" class="integrations-link">View all integrations <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+
+        <div class="app-grid reveal delay-1" aria-label="Popular integrations">
+          <a class="app-tile" href="signup.html" aria-label="Zoom" style="--tile-glow: rgba(43, 143, 255, 0.3)"><img
+              src="https://cdn.simpleicons.org/zoom/2D8CFF" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Salesforce"
+            style="--tile-glow: rgba(0, 161, 224, 0.28)"><img src="https://cdn.simpleicons.org/salesforce/00A1E0" alt=""
+              aria-hidden="true" loading="lazy" decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Google Calendar"
+            style="--tile-glow: rgba(66, 133, 244, 0.28)"><img src="https://cdn.simpleicons.org/googlecalendar/4285F4"
+              alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Slack" style="--tile-glow: rgba(128, 85, 191, 0.28)"><img
+              src="https://cdn.simpleicons.org/slack/611F69" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Microsoft Teams"
+            style="--tile-glow: rgba(98, 100, 167, 0.3)"><img src="https://cdn.simpleicons.org/microsoftteams/6264A7"
+              alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Gmail" style="--tile-glow: rgba(234, 67, 53, 0.26)"><img
+              src="https://cdn.simpleicons.org/gmail/EA4335" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Outlook" style="--tile-glow: rgba(0, 120, 212, 0.28)"><img
+              src="https://cdn.simpleicons.org/microsoftoutlook/0078D4" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Chrome" style="--tile-glow: rgba(66, 133, 244, 0.26)"><img
+              src="https://cdn.simpleicons.org/googlechrome/4285F4" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Webex" style="--tile-glow: rgba(0, 188, 235, 0.3)"><img
+              src="https://cdn.simpleicons.org/webex/00BCEB" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="HubSpot" style="--tile-glow: rgba(255, 122, 89, 0.28)"><img
+              src="https://cdn.simpleicons.org/hubspot/FF7A59" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Stripe" style="--tile-glow: rgba(99, 91, 255, 0.28)"><img
+              src="https://cdn.simpleicons.org/stripe/635BFF" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Zapier" style="--tile-glow: rgba(255, 79, 0, 0.24)"><img
+              src="https://cdn.simpleicons.org/zapier/FF4F00" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="LinkedIn"
+            style="--tile-glow: rgba(10, 102, 194, 0.28)"><img src="https://cdn.simpleicons.org/linkedin/0A66C2" alt=""
+              aria-hidden="true" loading="lazy" decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Shopify" style="--tile-glow: rgba(122, 181, 92, 0.28)"><img
+              src="https://cdn.simpleicons.org/shopify/7AB55C" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Notion" style="--tile-glow: rgba(68, 80, 102, 0.24)"><img
+              src="https://cdn.simpleicons.org/notion/181818" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="Intercom"
+            style="--tile-glow: rgba(31, 141, 237, 0.28)"><img src="https://cdn.simpleicons.org/intercom/1F8DED" alt=""
+              aria-hidden="true" loading="lazy" decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="OpenAI" style="--tile-glow: rgba(64, 129, 116, 0.28)"><img
+              src="https://cdn.simpleicons.org/openai/0F7A61" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+          <a class="app-tile" href="signup.html" aria-label="PayPal" style="--tile-glow: rgba(0, 48, 135, 0.28)"><img
+              src="https://cdn.simpleicons.org/paypal/003087" alt="" aria-hidden="true" loading="lazy"
+              decoding="async" /></a>
+        </div>
+
+        <div class="suite-cards reveal delay-2">
+          <article class="suite-card">
+            <span class="suite-card-icon"><img src="https://cdn.simpleicons.org/google/4285F4" alt="" aria-hidden="true"
+                loading="lazy" decoding="async" /></span>
+            <h3>Google suite</h3>
+            <p>Connect your Google ecosystem for seamless booking and video meetings.</p>
+            <span class="suite-card-arrow" aria-hidden="true">↗</span>
+          </article>
+          <article class="suite-card">
+            <span class="suite-card-icon"><img src="https://cdn.simpleicons.org/microsoft/00A4EF" alt=""
+                aria-hidden="true" loading="lazy" decoding="async" /></span>
+            <h3>Microsoft suite</h3>
+            <p>Integrate with Outlook and Teams for enterprise scheduling workflows.</p>
+            <span class="suite-card-arrow" aria-hidden="true">↗</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="flow-showcase section-spacing" id="automation">
+      <div class="container">
+        <div class="section-head center reveal">
+          <h2>What Meetscheduling automates for your team</h2>
+          <p>
+            From calendar sync to links, reminders, and routing, every step is
+            designed to remove manual scheduling work.
           </p>
-
-          <div class="hero-signups">
-            <a class="social-btn social-google" href="signup.html">
-              <span class="social-icon-box" aria-hidden="true">
-                <span class="google-g">G</span>
-              </span>
-              <span class="social-label">Sign up with Google</span>
-            </a>
-            <a class="social-btn social-microsoft" href="signup.html">
-              <span class="social-icon-box" aria-hidden="true">
-                <span class="ms-grid">
-                  <span class="ms-red"></span>
-                  <span class="ms-green"></span>
-                  <span class="ms-blue"></span>
-                  <span class="ms-yellow"></span>
-                </span>
-              </span>
-              <span class="social-label">Sign up with Microsoft</span>
-            </a>
-
-            <div class="signup-divider" aria-hidden="true">
-              <span>OR</span>
-            </div>
-
-            <p class="hero-signup-note">
-              <a href="signup.html">Sign up free with email.</a>
-              <span>No credit card required</span>
-            </p>
-          </div>
         </div>
 
-        <div class="hero-visual reveal delay-1">
-          <div class="hero-card hero-card-booking hero-card-animate" data-tilt>
-            <div class="hero-ribbon"></div>
-            <div class="hero-inner hero-booking-inner">
-              <div class="booking-head">
-                <h2 class="booking-title">Share your booking page</h2>
-                <div class="booking-head-tags">
-                  <span>One-on-One</span>
-                  <span>30m</span>
-                </div>
-              </div>
-
-              <div class="booking-layout">
-                <div class="booking-col booking-info-col">
-                  <div class="booking-brand-row">
-                    <span class="acme-logo-shape" aria-hidden="true"></span>
-                    <strong>ACME Inc.</strong>
-                  </div>
-
-                  <div class="booking-profile-block">
-                    <span class="booking-avatar" aria-hidden="true"></span>
-                    <p>Fatima Sy</p>
-                    <h3>Client Check-in</h3>
-                  </div>
-
-                  <div class="booking-meta">
-                    <p><span class="booking-meta-icon clock" aria-hidden="true"></span>30 min</p>
-                    <p><span class="booking-meta-icon meet" aria-hidden="true"></span>Zoom</p>
-                  </div>
-
-                  <div class="booking-skeleton" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                </div>
-
-                <div class="booking-col booking-calendar-col">
-                  <h3>Select a Date &amp; Time</h3>
-
-                  <div class="booking-month-nav">
-                    <button type="button" aria-label="Previous month">‹</button>
-                    <span>July 2024</span>
-                    <button type="button" aria-label="Next month">›</button>
-                  </div>
-
-                  <div class="booking-weekdays">
-                    <span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span>
-                  </div>
-
-                  <div class="booking-date-grid">
-                    <span>30</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
-                    <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span>
-                    <span>14</span><span>15</span><span class="date-soft">16</span><span class="date-soft">17</span><span>18</span><span class="date-soft">19</span><span>20</span>
-                    <span>21</span><span class="date-active" data-demo-date>22</span><span class="date-soft" data-demo-date>23</span><span class="date-soft" data-demo-date>24</span><span class="date-soft" data-demo-date>25</span><span>26</span><span>27</span>
-                    <span>28</span><span>29</span><span class="date-soft">30</span><span class="date-soft">31</span><span>1</span><span>2</span><span>3</span>
-                  </div>
-
-                  <div class="booking-timezone">
-                    <strong>Time zone</strong>
-                    <p>Eastern time - US &amp; Canada</p>
-                  </div>
-                </div>
-
-                <div class="booking-col booking-times-col">
-                  <p class="booking-day-title">Monday, July 22</p>
-
-                  <div class="calendar-slots booking-slot-list">
-                    <button type="button" data-demo-slot>10:00am</button>
-                    <div class="booking-confirm-row">
-                      <button type="button">11:00am</button>
-                      <button type="button" class="confirm-btn">Confirm</button>
-                    </div>
-                    <button type="button" data-demo-slot class="slot-on">1:00pm</button>
-                    <button type="button" data-demo-slot>2:30pm</button>
-                    <button type="button" data-demo-slot>4:00pm</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="logo-strip">
-        <div class="container logo-strip-inner">
-          <p>Trusted by more than 100,000 of the world's leading organizations</p>
-          <div class="logo-marquee" aria-label="Company logos">
-            <div class="logo-track">
-              <span class="logo-item"><img src="https://cdn.simpleicons.org/shopify/123f6b" alt="" aria-hidden="true" loading="lazy" decoding="async" /><span>Shopify</span></span>
-              <span class="logo-item"><img src="https://cdn.simpleicons.org/wordpress/123f6b" alt="" aria-hidden="true" loading="lazy" decoding="async" /><span>WordPress</span></span>
-              <span class="logo-item"><img src="https://cdn.simpleicons.org/dropbox/123f6b" alt="" aria-hidden="true" loading="lazy" decoding="async" /><span>Dropbox</span></span>
-              <span class="logo-item"><img src="https://cdn.simpleicons.org/zendesk/123f6b" alt="" aria-hidden="true" loading="lazy" decoding="async" /><span>Zendesk</span></span>
-              <span class="logo-item"><img src="https://cdn.simpleicons.org/doordash/123f6b" alt="" aria-hidden="true" loading="lazy" decoding="async" /><span>Doordash</span></span>
-              <span class="logo-item"><img src="https://cdn.simpleicons.org/slack/123f6b" alt="" aria-hidden="true" loading="lazy" decoding="async" /><span>Slack</span></span>
-              <span class="logo-item"><img src="https://cdn.simpleicons.org/zoom/123f6b" alt="" aria-hidden="true" loading="lazy" decoding="async" /><span>Zoom</span></span>
-              <span class="logo-item"><img src="https://cdn.simpleicons.org/hubspot/123f6b" alt="" aria-hidden="true" loading="lazy" decoding="async" /><span>HubSpot</span></span>
-              <span class="logo-item"><img src="https://cdn.simpleicons.org/salesforce/123f6b" alt="" aria-hidden="true" loading="lazy" decoding="async" /><span>Salesforce</span></span>
-              <span class="logo-item"><img src="https://cdn.simpleicons.org/intercom/123f6b" alt="" aria-hidden="true" loading="lazy" decoding="async" /><span>Intercom</span></span>
-              <span class="logo-item"><img src="https://cdn.simpleicons.org/microsoft/123f6b" alt="" aria-hidden="true" loading="lazy" decoding="async" /><span>Microsoft</span></span>
-              <span class="logo-item"><img src="https://cdn.simpleicons.org/openai/123f6b" alt="" aria-hidden="true" loading="lazy" decoding="async" /><span>OpenAI</span></span>
-              <span class="logo-item" aria-hidden="true"><img src="https://cdn.simpleicons.org/shopify/123f6b" alt="" loading="lazy" decoding="async" /><span>Shopify</span></span>
-              <span class="logo-item" aria-hidden="true"><img src="https://cdn.simpleicons.org/wordpress/123f6b" alt="" loading="lazy" decoding="async" /><span>WordPress</span></span>
-              <span class="logo-item" aria-hidden="true"><img src="https://cdn.simpleicons.org/dropbox/123f6b" alt="" loading="lazy" decoding="async" /><span>Dropbox</span></span>
-              <span class="logo-item" aria-hidden="true"><img src="https://cdn.simpleicons.org/zendesk/123f6b" alt="" loading="lazy" decoding="async" /><span>Zendesk</span></span>
-              <span class="logo-item" aria-hidden="true"><img src="https://cdn.simpleicons.org/doordash/123f6b" alt="" loading="lazy" decoding="async" /><span>Doordash</span></span>
-              <span class="logo-item" aria-hidden="true"><img src="https://cdn.simpleicons.org/slack/123f6b" alt="" loading="lazy" decoding="async" /><span>Slack</span></span>
-              <span class="logo-item" aria-hidden="true"><img src="https://cdn.simpleicons.org/zoom/123f6b" alt="" loading="lazy" decoding="async" /><span>Zoom</span></span>
-              <span class="logo-item" aria-hidden="true"><img src="https://cdn.simpleicons.org/hubspot/123f6b" alt="" loading="lazy" decoding="async" /><span>HubSpot</span></span>
-              <span class="logo-item" aria-hidden="true"><img src="https://cdn.simpleicons.org/salesforce/123f6b" alt="" loading="lazy" decoding="async" /><span>Salesforce</span></span>
-              <span class="logo-item" aria-hidden="true"><img src="https://cdn.simpleicons.org/intercom/123f6b" alt="" loading="lazy" decoding="async" /><span>Intercom</span></span>
-              <span class="logo-item" aria-hidden="true"><img src="https://cdn.simpleicons.org/microsoft/123f6b" alt="" loading="lazy" decoding="async" /><span>Microsoft</span></span>
-              <span class="logo-item" aria-hidden="true"><img src="https://cdn.simpleicons.org/openai/123f6b" alt="" loading="lazy" decoding="async" /><span>OpenAI</span></span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="flow-showcase section-spacing" id="automation">
-        <div class="container">
-          <div class="section-head center reveal">
-            <h2>What Meetscheduling automates for your team</h2>
-            <p>
-              From calendar sync to links, reminders, and routing, every step is
-              designed to remove manual scheduling work.
-            </p>
-          </div>
-
-          <div class="flow-showcase-grid reveal delay-1">
-            <div class="flow-steps" role="tablist" aria-label="How Meetscheduling works">
-              <button class="flow-step is-active" type="button" data-flow-step="0">
+        <div class="flow-showcase-grid reveal delay-1">
+          <div class="flow-steps" role="tablist" aria-label="How Meetscheduling works">
+            <button class="flow-step is-active" type="button" data-flow-step="0">
               <span class="flow-step-top">
                 <span class="flow-step-icon" aria-hidden="true">
                   <svg class="flow-glyph glyph-calendar" viewBox="0 0 24 24">
@@ -403,7 +457,7 @@
               <span class="flow-step-meter" aria-hidden="true"></span>
             </button>
 
-              <button class="flow-step" type="button" data-flow-step="1">
+            <button class="flow-step" type="button" data-flow-step="1">
               <span class="flow-step-top">
                 <span class="flow-step-icon" aria-hidden="true">
                   <svg class="flow-glyph glyph-clock" viewBox="0 0 24 24">
@@ -420,7 +474,7 @@
               <span class="flow-step-meter" aria-hidden="true"></span>
             </button>
 
-              <button class="flow-step" type="button" data-flow-step="2">
+            <button class="flow-step" type="button" data-flow-step="2">
               <span class="flow-step-top">
                 <span class="flow-step-icon" aria-hidden="true">
                   <svg class="flow-glyph glyph-video" viewBox="0 0 24 24">
@@ -437,7 +491,7 @@
               <span class="flow-step-meter" aria-hidden="true"></span>
             </button>
 
-              <button class="flow-step" type="button" data-flow-step="3">
+            <button class="flow-step" type="button" data-flow-step="3">
               <span class="flow-step-top">
                 <span class="flow-step-icon" aria-hidden="true">
                   <svg class="flow-glyph glyph-sliders" viewBox="0 0 24 24">
@@ -457,7 +511,7 @@
               <span class="flow-step-meter" aria-hidden="true"></span>
             </button>
 
-              <button class="flow-step" type="button" data-flow-step="4">
+            <button class="flow-step" type="button" data-flow-step="4">
               <span class="flow-step-top">
                 <span class="flow-step-icon" aria-hidden="true">
                   <svg class="flow-glyph glyph-link" viewBox="0 0 24 24">
@@ -472,663 +526,624 @@
                 Embed your booking link on site, emails, funnels, and landing pages.
               </span>
               <span class="flow-step-meter" aria-hidden="true"></span>
-              </button>
+            </button>
+          </div>
+
+          <div class="flow-stage" aria-live="polite">
+            <div class="flow-stage-glass">
+              <div class="flow-stage-ribbon"></div>
+              <div class="flow-stage-orb flow-stage-orb-a" aria-hidden="true"></div>
+              <div class="flow-stage-orb flow-stage-orb-b" aria-hidden="true"></div>
+
+              <article class="flow-card is-active" data-flow-card="0">
+                <header>
+                  <span class="flow-pill">Calendars</span>
+                  <h3>All calendars in one place</h3>
+                </header>
+                <ul>
+                  <li><strong>Google Calendar</strong><span>2-way sync enabled</span></li>
+                  <li><strong>Outlook Calendar</strong><span>Conflict detection active</span></li>
+                  <li><strong>Apple Calendar</strong><span>Read-only availability</span></li>
+                </ul>
+                <footer>Availability is updated in real-time across connected calendars.</footer>
+              </article>
+
+              <article class="flow-card" data-flow-card="1">
+                <header>
+                  <span class="flow-pill">Availability</span>
+                  <h3>Smart meeting hours engine</h3>
+                </header>
+                <ul>
+                  <li><strong>Weekdays</strong><span>9:00 AM - 6:00 PM</span></li>
+                  <li><strong>Custom day overrides</strong><span>4 dates this month</span></li>
+                  <li><strong>Buffers</strong><span>15 min before / after</span></li>
+                </ul>
+                <footer>Automatic timezone conversion for every visitor globally.</footer>
+              </article>
+
+              <article class="flow-card" data-flow-card="2">
+                <header>
+                  <span class="flow-pill">Video tools</span>
+                  <h3>Instant conference links</h3>
+                </header>
+                <ul>
+                  <li><strong>Zoom</strong><span>Personal meeting room</span></li>
+                  <li><strong>Microsoft Teams</strong><span>Enterprise policy ready</span></li>
+                  <li><strong>Google Meet</strong><span>Auto-link on confirmation</span></li>
+                </ul>
+                <footer>Every invite includes secure links, updates, and reminders.</footer>
+              </article>
+
+              <article class="flow-card" data-flow-card="3">
+                <header>
+                  <span class="flow-pill">Event types</span>
+                  <h3>Match every scheduling flow</h3>
+                </header>
+                <ul>
+                  <li><strong>One-on-one</strong><span>Client check-ins and demos</span></li>
+                  <li><strong>Round robin</strong><span>Auto distribute leads</span></li>
+                  <li><strong>Group sessions</strong><span>Workshops and webinars</span></li>
+                </ul>
+                <footer>Set durations, limits, and booking questions per event type.</footer>
+              </article>
+
+              <article class="flow-card" data-flow-card="4">
+                <header>
+                  <span class="flow-pill">Share</span>
+                  <h3>One link, everywhere you sell</h3>
+                </header>
+                <ul>
+                  <li><strong>Website embeds</strong><span>Inline and popup widgets</span></li>
+                  <li><strong>Email campaigns</strong><span>One-click booking CTAs</span></li>
+                  <li><strong>Sales pages</strong><span>Track booking conversions</span></li>
+                </ul>
+                <footer>Convert visitors faster with frictionless, branded booking.</footer>
+              </article>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-            <div class="flow-stage" aria-live="polite">
-              <div class="flow-stage-glass">
-                <div class="flow-stage-ribbon"></div>
-                <div class="flow-stage-orb flow-stage-orb-a" aria-hidden="true"></div>
-                <div class="flow-stage-orb flow-stage-orb-b" aria-hidden="true"></div>
+    <section id="product" class="section-spacing container">
+      <div class="section-head center reveal">
+        <h2>Meetscheduling makes scheduling simple</h2>
+        <p>
+          Meetscheduling's user-friendly interface and powerful automation features
+          make it easy to schedule meetings without the hassle.
+        </p>
+        <a class="btn btn-primary" href="signup.html">Get started</a>
+      </div>
 
-                <article class="flow-card is-active" data-flow-card="0">
-                  <header>
-                    <span class="flow-pill">Calendars</span>
-                    <h3>All calendars in one place</h3>
-                  </header>
-                  <ul>
-                    <li><strong>Google Calendar</strong><span>2-way sync enabled</span></li>
-                    <li><strong>Outlook Calendar</strong><span>Conflict detection active</span></li>
-                    <li><strong>Apple Calendar</strong><span>Read-only availability</span></li>
-                  </ul>
-                  <footer>Availability is updated in real-time across connected calendars.</footer>
-                </article>
+      <div class="split-layout">
+        <div class="feature-list reveal">
+          <article>
+            <h3>Connect your calendars</h3>
+            <p>Meetscheduling automatically checks for conflicts to keep your schedule accurate.</p>
+          </article>
+          <article>
+            <h3>Customize your tools</h3>
+            <p>Create event types for every workflow and personalize booking pages.</p>
+          </article>
+          <article>
+            <h3>Share your availability</h3>
+            <p>Send one link and let invitees pick a time that works for everyone.</p>
+          </article>
+        </div>
 
-                <article class="flow-card" data-flow-card="1">
-                  <header>
-                    <span class="flow-pill">Availability</span>
-                    <h3>Smart meeting hours engine</h3>
-                  </header>
-                  <ul>
-                    <li><strong>Weekdays</strong><span>9:00 AM - 6:00 PM</span></li>
-                    <li><strong>Custom day overrides</strong><span>4 dates this month</span></li>
-                    <li><strong>Buffers</strong><span>15 min before / after</span></li>
-                  </ul>
-                  <footer>Automatic timezone conversion for every visitor globally.</footer>
-                </article>
+        <div class="showcase-card reveal delay-1" data-tilt>
+          <div class="showcase-gradient"></div>
+          <div class="showcase-stack">
+            <article class="integration-choice">
+              <strong>Google</strong>
+              <p>Calendar and Meet</p>
+            </article>
+            <article class="integration-choice">
+              <strong>Microsoft</strong>
+              <p>Outlook and Teams</p>
+            </article>
+            <article class="integration-choice">
+              <strong>Custom</strong>
+              <p>Routing + automation</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
 
-                <article class="flow-card" data-flow-card="2">
-                  <header>
-                    <span class="flow-pill">Video tools</span>
-                    <h3>Instant conference links</h3>
-                  </header>
-                  <ul>
-                    <li><strong>Zoom</strong><span>Personal meeting room</span></li>
-                    <li><strong>Microsoft Teams</strong><span>Enterprise policy ready</span></li>
-                    <li><strong>Google Meet</strong><span>Auto-link on confirmation</span></li>
-                  </ul>
-                  <footer>Every invite includes secure links, updates, and reminders.</footer>
-                </article>
 
-                <article class="flow-card" data-flow-card="3">
-                  <header>
-                    <span class="flow-pill">Event types</span>
-                    <h3>Match every scheduling flow</h3>
-                  </header>
-                  <ul>
-                    <li><strong>One-on-one</strong><span>Client check-ins and demos</span></li>
-                    <li><strong>Round robin</strong><span>Auto distribute leads</span></li>
-                    <li><strong>Group sessions</strong><span>Workshops and webinars</span></li>
-                  </ul>
-                  <footer>Set durations, limits, and booking questions per event type.</footer>
-                </article>
 
-                <article class="flow-card" data-flow-card="4">
-                  <header>
-                    <span class="flow-pill">Share</span>
-                    <h3>One link, everywhere you sell</h3>
-                  </header>
-                  <ul>
-                    <li><strong>Website embeds</strong><span>Inline and popup widgets</span></li>
-                    <li><strong>Email campaigns</strong><span>One-click booking CTAs</span></li>
-                    <li><strong>Sales pages</strong><span>Track booking conversions</span></li>
-                  </ul>
-                  <footer>Convert visitors faster with frictionless, branded booking.</footer>
-                </article>
+    <section class="section-spacing container">
+      <div class="section-head center reveal">
+        <h2>More than a scheduling link</h2>
+        <p>
+          With modern workflows, team routing, and analytics, your scheduling
+          stack becomes a complete revenue and ops engine.
+        </p>
+        <a class="btn btn-primary" href="login.html">Learn more</a>
+      </div>
+
+      <div class="split-layout reverse">
+        <div class="showcase-card reveal" data-tilt>
+          <div class="showcase-gradient alt"></div>
+          <div class="event-stack">
+            <article>
+              <div>
+                <strong>Event Types</strong>
+                <p>Screening call</p>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="product" class="section-spacing container">
-        <div class="section-head center reveal">
-          <h2>Meetscheduling makes scheduling simple</h2>
-          <p>
-            Meetscheduling's user-friendly interface and powerful automation features
-            make it easy to schedule meetings without the hassle.
-          </p>
-          <a class="btn btn-primary" href="signup.html">Get started</a>
-        </div>
-
-        <div class="split-layout">
-          <div class="feature-list reveal">
-            <article>
-              <h3>Connect your calendars</h3>
-              <p>Meetscheduling automatically checks for conflicts to keep your schedule accurate.</p>
+              <span>30m</span>
             </article>
             <article>
-              <h3>Customize your tools</h3>
-              <p>Create event types for every workflow and personalize booking pages.</p>
+              <div>
+                <strong>Follow-up Call</strong>
+                <p>Client handover</p>
+              </div>
+              <span>45m</span>
             </article>
             <article>
-              <h3>Share your availability</h3>
-              <p>Send one link and let invitees pick a time that works for everyone.</p>
-            </article>
-          </div>
-
-          <div class="showcase-card reveal delay-1" data-tilt>
-            <div class="showcase-gradient"></div>
-            <div class="showcase-stack">
-              <article class="integration-choice">
-                <strong>Google</strong>
-                <p>Calendar and Meet</p>
-              </article>
-              <article class="integration-choice">
-                <strong>Microsoft</strong>
-                <p>Outlook and Teams</p>
-              </article>
-              <article class="integration-choice">
-                <strong>Custom</strong>
-                <p>Routing + automation</p>
-              </article>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="solutions" class="section-spacing section-soft">
-        <div class="container integrations-block">
-          <div class="section-head integrations-head reveal">
-            <h2>Connect Meetscheduling to the tools you already use</h2>
-            <div class="integrations-head-meta">
-              <p>Boost productivity with 100+ integrations</p>
-              <a href="signup.html" class="integrations-link"
-                >View all integrations <span aria-hidden="true">→</span></a
-              >
-            </div>
-          </div>
-
-          <div class="app-grid reveal delay-1" aria-label="Popular integrations">
-            <a class="app-tile" href="signup.html" aria-label="Zoom" style="--tile-glow: rgba(43, 143, 255, 0.3)"><img src="https://cdn.simpleicons.org/zoom/2D8CFF" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Salesforce" style="--tile-glow: rgba(0, 161, 224, 0.28)"><img src="https://cdn.simpleicons.org/salesforce/00A1E0" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Google Calendar" style="--tile-glow: rgba(66, 133, 244, 0.28)"><img src="https://cdn.simpleicons.org/googlecalendar/4285F4" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Slack" style="--tile-glow: rgba(128, 85, 191, 0.28)"><img src="https://cdn.simpleicons.org/slack/611F69" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Microsoft Teams" style="--tile-glow: rgba(98, 100, 167, 0.3)"><img src="https://cdn.simpleicons.org/microsoftteams/6264A7" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Gmail" style="--tile-glow: rgba(234, 67, 53, 0.26)"><img src="https://cdn.simpleicons.org/gmail/EA4335" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Outlook" style="--tile-glow: rgba(0, 120, 212, 0.28)"><img src="https://cdn.simpleicons.org/microsoftoutlook/0078D4" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Chrome" style="--tile-glow: rgba(66, 133, 244, 0.26)"><img src="https://cdn.simpleicons.org/googlechrome/4285F4" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Webex" style="--tile-glow: rgba(0, 188, 235, 0.3)"><img src="https://cdn.simpleicons.org/webex/00BCEB" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="HubSpot" style="--tile-glow: rgba(255, 122, 89, 0.28)"><img src="https://cdn.simpleicons.org/hubspot/FF7A59" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Stripe" style="--tile-glow: rgba(99, 91, 255, 0.28)"><img src="https://cdn.simpleicons.org/stripe/635BFF" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Zapier" style="--tile-glow: rgba(255, 79, 0, 0.24)"><img src="https://cdn.simpleicons.org/zapier/FF4F00" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="LinkedIn" style="--tile-glow: rgba(10, 102, 194, 0.28)"><img src="https://cdn.simpleicons.org/linkedin/0A66C2" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Shopify" style="--tile-glow: rgba(122, 181, 92, 0.28)"><img src="https://cdn.simpleicons.org/shopify/7AB55C" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Notion" style="--tile-glow: rgba(68, 80, 102, 0.24)"><img src="https://cdn.simpleicons.org/notion/181818" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="Intercom" style="--tile-glow: rgba(31, 141, 237, 0.28)"><img src="https://cdn.simpleicons.org/intercom/1F8DED" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="OpenAI" style="--tile-glow: rgba(64, 129, 116, 0.28)"><img src="https://cdn.simpleicons.org/openai/0F7A61" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-            <a class="app-tile" href="signup.html" aria-label="PayPal" style="--tile-glow: rgba(0, 48, 135, 0.28)"><img src="https://cdn.simpleicons.org/paypal/003087" alt="" aria-hidden="true" loading="lazy" decoding="async" /></a>
-          </div>
-
-          <div class="suite-cards reveal delay-2">
-            <article class="suite-card">
-              <span class="suite-card-icon"><img src="https://cdn.simpleicons.org/google/4285F4" alt="" aria-hidden="true" loading="lazy" decoding="async" /></span>
-              <h3>Google suite</h3>
-              <p>Connect your Google ecosystem for seamless booking and video meetings.</p>
-              <span class="suite-card-arrow" aria-hidden="true">↗</span>
-            </article>
-            <article class="suite-card">
-              <span class="suite-card-icon"><img src="https://cdn.simpleicons.org/microsoft/00A4EF" alt="" aria-hidden="true" loading="lazy" decoding="async" /></span>
-              <h3>Microsoft suite</h3>
-              <p>Integrate with Outlook and Teams for enterprise scheduling workflows.</p>
-              <span class="suite-card-arrow" aria-hidden="true">↗</span>
+              <div>
+                <strong>Shared Team Slot</strong>
+                <p>Round robin</p>
+              </div>
+              <span>60m</span>
             </article>
           </div>
         </div>
-      </section>
 
-      <section class="section-spacing container">
-        <div class="section-head center reveal">
-          <h2>More than a scheduling link</h2>
-          <p>
-            With modern workflows, team routing, and analytics, your scheduling
-            stack becomes a complete revenue and ops engine.
-          </p>
-          <a class="btn btn-primary" href="login.html">Learn more</a>
+        <div class="feature-list reveal delay-1">
+          <article>
+            <h3>Browser extensions</h3>
+            <p>Book from LinkedIn, Gmail, and your CRM without switching tabs.</p>
+          </article>
+          <article>
+            <h3>Routing forms</h3>
+            <p>Qualify leads and route meetings to the right owner instantly.</p>
+          </article>
+          <article>
+            <h3>Admin controls</h3>
+            <p>Set org-wide standards for security, branding, and managed events.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="pricing" class="section-spacing pricing-wrap">
+      <div class="container">
+        <div class="section-head reveal">
+          <h2>Pick the perfect plan for your team</h2>
+          <p>Simple pricing built for individuals, teams, and enterprise organizations.</p>
         </div>
 
-        <div class="split-layout reverse">
-          <div class="showcase-card reveal" data-tilt>
-            <div class="showcase-gradient alt"></div>
-            <div class="event-stack">
-              <article>
-                <div>
-                  <strong>Event Types</strong>
-                  <p>Screening call</p>
-                </div>
-                <span>30m</span>
-              </article>
-              <article>
-                <div>
-                  <strong>Follow-up Call</strong>
-                  <p>Client handover</p>
-                </div>
-                <span>45m</span>
-              </article>
-              <article>
-                <div>
-                  <strong>Shared Team Slot</strong>
-                  <p>Round robin</p>
-                </div>
-                <span>60m</span>
-              </article>
-            </div>
-          </div>
-
-          <div class="feature-list reveal delay-1">
-            <article>
-              <h3>Browser extensions</h3>
-              <p>Book from LinkedIn, Gmail, and your CRM without switching tabs.</p>
-            </article>
-            <article>
-              <h3>Routing forms</h3>
-              <p>Qualify leads and route meetings to the right owner instantly.</p>
-            </article>
-            <article>
-              <h3>Admin controls</h3>
-              <p>Set org-wide standards for security, branding, and managed events.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section id="pricing" class="section-spacing pricing-wrap">
-        <div class="container">
-          <div class="section-head reveal">
-            <h2>Pick the perfect plan for your team</h2>
-            <p>Simple pricing built for individuals, teams, and enterprise organizations.</p>
-          </div>
-
-          <div class="pricing-toggle reveal delay-1" role="tablist" aria-label="Billing cycle">
-            <button type="button" class="active" data-billing="monthly">Bill monthly</button>
-            <button type="button" data-billing="yearly">Bill yearly (save 20%)</button>
-          </div>
-
-          <div class="pricing-grid reveal delay-2">
-            <article class="plan-card">
-              <h3>Free</h3>
-              <p class="plan-price" data-monthly="$0" data-yearly="$0">$0</p>
-              <p class="plan-copy">One calendar connection and one event type.</p>
-              <a class="btn btn-dark" href="signup.html">Get started</a>
-            </article>
-            <article class="plan-card">
-              <h3>Standard</h3>
-              <p class="plan-price" data-monthly="$12" data-yearly="$10">$12</p>
-              <p class="plan-copy">Automations, reminders, and branded scheduling pages.</p>
-              <a class="btn btn-primary" href="signup.html">Get started</a>
-            </article>
-            <article class="plan-card featured">
-              <span class="badge">Most popular</span>
-              <h3>Teams</h3>
-              <p class="plan-price" data-monthly="$20" data-yearly="$16">$20</p>
-              <p class="plan-copy">Round robin, routing, admin controls, and analytics.</p>
-              <a class="btn btn-primary" href="signup.html">Try for free</a>
-            </article>
-            <article class="plan-card">
-              <h3>Enterprise</h3>
-              <p class="plan-price" data-monthly="Starts at $15k" data-yearly="Starts at $15k">Starts at $15k</p>
-              <p class="plan-copy">Advanced security, provisioning, and dedicated success.</p>
-              <a class="btn btn-dark" href="login.html">Talk to sales</a>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="section-spacing container compare-wrap">
-        <div class="compare-shell reveal">
-          <div class="compare-head">
-            <h2>Compare features by category</h2>
-            <p>
-              Compare plans side by side to understand exactly what unlocks as
-              your team scales.
-            </p>
-          </div>
-
-          <div class="compare-tabs" role="tablist" aria-label="Feature categories">
-            <button type="button" class="active" data-compare-tab="all" aria-selected="true">
-              View All
-            </button>
-            <button type="button" data-compare-tab="core" aria-selected="false">
-              Core features
-            </button>
-            <button type="button" data-compare-tab="custom" aria-selected="false">
-              Customizations
-            </button>
-            <button type="button" data-compare-tab="team" aria-selected="false">
-              Team tools
-            </button>
-            <button type="button" data-compare-tab="integrations" aria-selected="false">
-              Integrations
-            </button>
-            <button type="button" data-compare-tab="security" aria-selected="false">
-              Security and control
-            </button>
-            <button type="button" data-compare-tab="support" aria-selected="false">
-              Support
-            </button>
-          </div>
-
-          <div class="compare-table-wrap">
-            <table class="compare-table" aria-label="Feature comparison table">
-              <thead>
-                <tr>
-                  <th scope="col">Feature</th>
-                  <th scope="col">Free</th>
-                  <th scope="col">Standard</th>
-                  <th scope="col">Teams</th>
-                  <th scope="col">Enterprise</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr class="group-row" data-cat="core">
-                  <th colspan="5" scope="rowgroup">Core features</th>
-                </tr>
-                <tr data-cat="core">
-                  <th scope="row">Meeting polls</th>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="core">
-                  <th scope="row">One-on-one event types</th>
-                  <td><span class="limit">Only 1</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="core">
-                  <th scope="row">Group event types</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="core">
-                  <th scope="row">Email notifications for bookings</th>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="core">
-                  <th scope="row">Email reminders and follow-ups</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="core">
-                  <th scope="row">Routing forms</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-
-                <tr class="group-row" data-cat="custom">
-                  <th colspan="5" scope="rowgroup">Customizations</th>
-                </tr>
-                <tr data-cat="custom">
-                  <th scope="row">Custom branding on booking page</th>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="custom">
-                  <th scope="row">Remove Meetscheduling branding</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="custom">
-                  <th scope="row">Custom cancellation policy message</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="custom">
-                  <th scope="row">Custom colors for embeds</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-
-                <tr class="group-row" data-cat="team">
-                  <th colspan="5" scope="rowgroup">Team tools</th>
-                </tr>
-                <tr data-cat="team">
-                  <th scope="row">View analytics and insights</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="team">
-                  <th scope="row">Manage users and groups</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="team">
-                  <th scope="row">Managed events and workflows</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="team">
-                  <th scope="row">Round robin event routing</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-
-                <tr class="group-row" data-cat="integrations">
-                  <th colspan="5" scope="rowgroup">Integrations</th>
-                </tr>
-                <tr data-cat="integrations">
-                  <th scope="row">Google Meet, Zoom, Teams</th>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="integrations">
-                  <th scope="row">Connect multiple calendars</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="integrations">
-                  <th scope="row">Webhooks and API delivery</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="integrations">
-                  <th scope="row">Stripe and PayPal payments</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="integrations">
-                  <th scope="row">Salesforce and Marketo sync</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-
-                <tr class="group-row" data-cat="security">
-                  <th colspan="5" scope="rowgroup">Security and control</th>
-                </tr>
-                <tr data-cat="security">
-                  <th scope="row">Data deletion for compliance</th>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="security">
-                  <th scope="row">SAML single sign-on (SSO)</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="addon">Add-on</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="security">
-                  <th scope="row">SCIM provisioning</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="security">
-                  <th scope="row">Domain control and oversight</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="security">
-                  <th scope="row">Automated group provisioning</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-
-                <tr class="group-row" data-cat="support">
-                  <th colspan="5" scope="rowgroup">Support</th>
-                </tr>
-                <tr data-cat="support">
-                  <th scope="row">Email support</th>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="limit">Expedited</span></td>
-                </tr>
-                <tr data-cat="support">
-                  <th scope="row">Live chat support</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="support">
-                  <th scope="row">Phone support</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-                <tr data-cat="support">
-                  <th scope="row">Dedicated account partner</th>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="dash">-</span></td>
-                  <td><span class="check">✓</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section class="section-spacing section-soft">
-        <div class="container">
-          <div class="section-head reveal">
-            <h2>Discover how businesses grow with Meetscheduling</h2>
-            <p>Trusted by top teams to scale faster with less scheduling friction.</p>
-          </div>
-
-          <div class="stories-grid">
-            <article class="story-card reveal" data-tilt>
-              <h3>HackerOne</h3>
-              <p class="story-number" data-count="169">0%</p>
-              <p>Return on investment after replacing manual scheduling.</p>
-            </article>
-            <article class="story-card reveal delay-1" data-tilt>
-              <h3>Vonage</h3>
-              <p class="story-number" data-count="160">0%</p>
-              <p>Increase in qualified meetings with routing automation.</p>
-            </article>
-            <article class="story-card reveal delay-2" data-tilt>
-              <h3>Texas A&amp;M</h3>
-              <p class="story-number" data-count="20">0%</p>
-              <p>Reduction in administrative overhead across departments.</p>
-            </article>
-            <article class="story-card reveal delay-3" data-tilt>
-              <h3>Muck Rack</h3>
-              <p class="story-number" data-count="83">0%</p>
-              <p>Improvement in sales team response speed and consistency.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section id="enterprise" class="section-spacing container">
-        <div class="section-head center reveal">
-          <h2>Built to keep your organization secure</h2>
-          <p>
-            Enterprise-grade security and compliance at every layer of your
-            scheduling infrastructure.
-          </p>
+        <div class="pricing-toggle reveal delay-1" role="tablist" aria-label="Billing cycle">
+          <button type="button" class="active" data-billing="monthly">Bill monthly</button>
+          <button type="button" data-billing="yearly">Bill yearly (save 20%)</button>
         </div>
 
-        <div class="security-badges reveal delay-1">
-          <span>SOC 2</span>
-          <span>GDPR</span>
-          <span>ISO 27001</span>
-          <span>HIPAA</span>
-          <span>CSA</span>
-          <span>FERPA</span>
-        </div>
-      </section>
-
-      <section id="resources" class="footer-cta">
-        <div class="container footer-cta-inner">
-          <div class="footer-cta-head reveal">
-            <h2>Power up your scheduling</h2>
-            <p>
-              Join millions of professionals using Meetscheduling to simplify meetings
-              and accelerate growth.
-            </p>
-          </div>
-          <div class="footer-cta-actions reveal delay-1">
+        <div class="pricing-grid reveal delay-2">
+          <article class="plan-card">
+            <h3>Free</h3>
+            <p class="plan-price" data-monthly="$0" data-yearly="$0">$0</p>
+            <p class="plan-copy">One calendar connection and one event type.</p>
+            <a class="btn btn-dark" href="signup.html">Get started</a>
+          </article>
+          <article class="plan-card">
+            <h3>Standard</h3>
+            <p class="plan-price" data-monthly="$12" data-yearly="$10">$12</p>
+            <p class="plan-copy">Automations, reminders, and branded scheduling pages.</p>
             <a class="btn btn-primary" href="signup.html">Get started</a>
-            <a class="btn btn-light" href="login.html">Talk to sales</a>
-          </div>
+          </article>
+          <article class="plan-card featured">
+            <span class="badge">Most popular</span>
+            <h3>Teams</h3>
+            <p class="plan-price" data-monthly="$20" data-yearly="$16">$20</p>
+            <p class="plan-copy">Round robin, routing, admin controls, and analytics.</p>
+            <a class="btn btn-primary" href="signup.html">Try for free</a>
+          </article>
+          <article class="plan-card">
+            <h3>Enterprise</h3>
+            <p class="plan-price" data-monthly="Starts at $15k" data-yearly="Starts at $15k">Starts at $15k</p>
+            <p class="plan-copy">Advanced security, provisioning, and dedicated success.</p>
+            <a class="btn btn-dark" href="login.html">Talk to sales</a>
+          </article>
+        </div>
+      </div>
+    </section>
 
-          <div class="footer-links reveal delay-2">
-            <div>
-              <h3>Product</h3>
-              <a href="#">Scheduling automation</a>
-              <a href="#">Event types</a>
-              <a href="#">Meeting polls</a>
-              <a href="#">Workflows</a>
-              <a href="#">Integrations</a>
-            </div>
-            <div>
-              <h3>Solutions</h3>
-              <a href="#">Sales</a>
-              <a href="#">Marketing</a>
-              <a href="#">Customer success</a>
-              <a href="#">Recruiting</a>
-              <a href="#">Education</a>
-            </div>
-            <div>
-              <h3>Resources</h3>
-              <a href="#">Help center</a>
-              <a href="#">Developers</a>
-              <a href="#">Blog</a>
-              <a href="#">Case studies</a>
-              <a href="#">Community</a>
-            </div>
-            <div>
-              <h3>Company</h3>
-              <a href="#">About</a>
-              <a href="#">Careers</a>
-              <a href="#">Press</a>
-              <a href="#">Security</a>
-              <a href="#">Contact</a>
-            </div>
-          </div>
+    <section class="section-spacing container compare-wrap">
+      <div class="compare-shell reveal">
+        <div class="compare-head">
+          <h2>Compare features by category</h2>
+          <p>
+            Compare plans side by side to understand exactly what unlocks as
+            your team scales.
+          </p>
+        </div>
 
-          <div class="footer-bottom reveal delay-3">
-            <div class="footer-badges">
-              <span>App Store</span>
-              <span>Google Play</span>
-              <span>Chrome</span>
-              <span>Edge</span>
-              <span>Firefox</span>
-            </div>
-            <p>Copyright 2026 Meetscheduling LLC. All rights reserved.</p>
+        <div class="compare-tabs" role="tablist" aria-label="Feature categories">
+          <button type="button" class="active" data-compare-tab="all" aria-selected="true">
+            View All
+          </button>
+          <button type="button" data-compare-tab="core" aria-selected="false">
+            Core features
+          </button>
+          <button type="button" data-compare-tab="custom" aria-selected="false">
+            Customizations
+          </button>
+          <button type="button" data-compare-tab="team" aria-selected="false">
+            Team tools
+          </button>
+          <button type="button" data-compare-tab="integrations" aria-selected="false">
+            Integrations
+          </button>
+          <button type="button" data-compare-tab="security" aria-selected="false">
+            Security and control
+          </button>
+          <button type="button" data-compare-tab="support" aria-selected="false">
+            Support
+          </button>
+        </div>
+
+        <div class="compare-table-wrap">
+          <table class="compare-table" aria-label="Feature comparison table">
+            <thead>
+              <tr>
+                <th scope="col">Feature</th>
+                <th scope="col">Free</th>
+                <th scope="col">Standard</th>
+                <th scope="col">Teams</th>
+                <th scope="col">Enterprise</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="group-row" data-cat="core">
+                <th colspan="5" scope="rowgroup">Core features</th>
+              </tr>
+              <tr data-cat="core">
+                <th scope="row">Meeting polls</th>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="core">
+                <th scope="row">One-on-one event types</th>
+                <td><span class="limit">Only 1</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="core">
+                <th scope="row">Group event types</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="core">
+                <th scope="row">Email notifications for bookings</th>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="core">
+                <th scope="row">Email reminders and follow-ups</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="core">
+                <th scope="row">Routing forms</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+
+              <tr class="group-row" data-cat="custom">
+                <th colspan="5" scope="rowgroup">Customizations</th>
+              </tr>
+              <tr data-cat="custom">
+                <th scope="row">Custom branding on booking page</th>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="custom">
+                <th scope="row">Remove Meetscheduling branding</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="custom">
+                <th scope="row">Custom cancellation policy message</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="custom">
+                <th scope="row">Custom colors for embeds</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+
+              <tr class="group-row" data-cat="team">
+                <th colspan="5" scope="rowgroup">Team tools</th>
+              </tr>
+              <tr data-cat="team">
+                <th scope="row">View analytics and insights</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="team">
+                <th scope="row">Manage users and groups</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="team">
+                <th scope="row">Managed events and workflows</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="team">
+                <th scope="row">Round robin event routing</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+
+              <tr class="group-row" data-cat="integrations">
+                <th colspan="5" scope="rowgroup">Integrations</th>
+              </tr>
+              <tr data-cat="integrations">
+                <th scope="row">Google Meet, Zoom, Teams</th>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="integrations">
+                <th scope="row">Connect multiple calendars</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="integrations">
+                <th scope="row">Webhooks and API delivery</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="integrations">
+                <th scope="row">Stripe and PayPal payments</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="integrations">
+                <th scope="row">Salesforce and Marketo sync</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+
+              <tr class="group-row" data-cat="security">
+                <th colspan="5" scope="rowgroup">Security and control</th>
+              </tr>
+              <tr data-cat="security">
+                <th scope="row">Data deletion for compliance</th>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="security">
+                <th scope="row">SAML single sign-on (SSO)</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="addon">Add-on</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="security">
+                <th scope="row">SCIM provisioning</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="security">
+                <th scope="row">Domain control and oversight</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="security">
+                <th scope="row">Automated group provisioning</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+
+              <tr class="group-row" data-cat="support">
+                <th colspan="5" scope="rowgroup">Support</th>
+              </tr>
+              <tr data-cat="support">
+                <th scope="row">Email support</th>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="limit">Expedited</span></td>
+              </tr>
+              <tr data-cat="support">
+                <th scope="row">Live chat support</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="support">
+                <th scope="row">Phone support</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr data-cat="support">
+                <th scope="row">Dedicated account partner</th>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="dash">-</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-spacing section-soft">
+      <div class="container">
+        <div class="section-head reveal">
+          <h2>Discover how businesses grow with Meetscheduling</h2>
+          <p>Trusted by top teams to scale faster with less scheduling friction.</p>
+        </div>
+
+        <div class="stories-grid">
+          <article class="story-card reveal" data-tilt>
+            <h3>HackerOne</h3>
+            <p class="story-number" data-count="169">0%</p>
+            <p>Return on investment after replacing manual scheduling.</p>
+          </article>
+          <article class="story-card reveal delay-1" data-tilt>
+            <h3>Vonage</h3>
+            <p class="story-number" data-count="160">0%</p>
+            <p>Increase in qualified meetings with routing automation.</p>
+          </article>
+          <article class="story-card reveal delay-2" data-tilt>
+            <h3>Texas A&amp;M</h3>
+            <p class="story-number" data-count="20">0%</p>
+            <p>Reduction in administrative overhead across departments.</p>
+          </article>
+          <article class="story-card reveal delay-3" data-tilt>
+            <h3>Muck Rack</h3>
+            <p class="story-number" data-count="83">0%</p>
+            <p>Improvement in sales team response speed and consistency.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="enterprise" class="section-spacing container">
+      <div class="section-head center reveal">
+        <h2>Built to keep your organization secure</h2>
+        <p>
+          Enterprise-grade security and compliance at every layer of your
+          scheduling infrastructure.
+        </p>
+      </div>
+
+      <div class="security-badges reveal delay-1">
+        <span>SOC 2</span>
+        <span>GDPR</span>
+        <span>ISO 27001</span>
+        <span>HIPAA</span>
+        <span>CSA</span>
+        <span>FERPA</span>
+      </div>
+    </section>
+
+    <section id="resources" class="footer-cta">
+      <div class="container footer-cta-inner">
+        <div class="footer-cta-head reveal">
+          <h2>Power up your scheduling</h2>
+          <p>
+            Join millions of professionals using Meetscheduling to simplify meetings
+            and accelerate growth.
+          </p>
+        </div>
+        <div class="footer-cta-actions reveal delay-1">
+          <a class="btn btn-primary" href="signup.html">Get started</a>
+          <a class="btn btn-light" href="login.html">Talk to sales</a>
+        </div>
+
+        <div class="footer-links reveal delay-2">
+          <div>
+            <h3>Product</h3>
+            <a href="#">Scheduling automation</a>
+            <a href="#">Event types</a>
+            <a href="#">Meeting polls</a>
+            <a href="#">Workflows</a>
+            <a href="#">Integrations</a>
+          </div>
+          <div>
+            <h3>Solutions</h3>
+            <a href="#">Sales</a>
+            <a href="#">Marketing</a>
+            <a href="#">Customer success</a>
+            <a href="#">Recruiting</a>
+            <a href="#">Education</a>
+          </div>
+          <div>
+            <h3>Resources</h3>
+            <a href="#">Help center</a>
+            <a href="#">Developers</a>
+            <a href="#">Blog</a>
+            <a href="#">Case studies</a>
+            <a href="#">Community</a>
+          </div>
+          <div>
+            <h3>Company</h3>
+            <a href="#">About</a>
+            <a href="#">Careers</a>
+            <a href="#">Press</a>
+            <a href="#">Security</a>
+            <a href="#">Contact</a>
           </div>
         </div>
-      </section>
-    </main>
 
-    <script src="/app.js?v=3"></script>
-  </body>
+        <div class="footer-bottom reveal delay-3">
+          <div class="footer-badges">
+            <span>App Store</span>
+            <span>Google Play</span>
+            <span>Chrome</span>
+            <span>Edge</span>
+            <span>Firefox</span>
+          </div>
+          <div class="footer-legal">
+            <p>Copyright 2026 Meetscheduling</p>
+            <div class="legal-links">
+              <a href="privacy-policy.html">Privacy Policy</a>
+              <a href="legal.html">Legal</a>
+              <a href="status.html">Status</a>
+              <a href="cookie-settings.html">Cookie settings</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js?v=3"></script>
+</body>
+
 </html>

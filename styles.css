@@ -108,6 +108,7 @@ textarea {
   from {
     transform: translate3d(0, 0, 0) scale(1);
   }
+
   to {
     transform: translate3d(1.5vw, -2vh, 0) scale(1.06);
   }
@@ -117,6 +118,7 @@ textarea {
   from {
     transform: translate3d(0, 0, 0) scale(1);
   }
+
   to {
     transform: translate3d(-2vw, 1.8vh, 0) scale(1.04);
   }
@@ -126,6 +128,7 @@ textarea {
   from {
     transform: translate3d(0, 0, 0) scale(1);
   }
+
   to {
     transform: translate3d(1vw, -2vh, 0) scale(1.05);
   }
@@ -143,12 +146,10 @@ textarea {
 }
 
 .site-header.is-scrolled {
-  background: linear-gradient(
-    120deg,
-    rgba(250, 252, 255, 0.58),
-    rgba(238, 246, 255, 0.46) 54%,
-    rgba(245, 242, 255, 0.44)
-  );
+  background: linear-gradient(120deg,
+      rgba(250, 252, 255, 0.58),
+      rgba(238, 246, 255, 0.46) 54%,
+      rgba(245, 242, 255, 0.44));
   border-bottom-color: rgba(172, 195, 225, 0.68);
   backdrop-filter: blur(18px) saturate(165%);
   -webkit-backdrop-filter: blur(18px) saturate(165%);
@@ -162,12 +163,10 @@ textarea {
   pointer-events: none;
   opacity: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.34);
-  background: linear-gradient(
-    110deg,
-    rgba(255, 255, 255, 0.32),
-    rgba(215, 233, 255, 0.11) 52%,
-    rgba(255, 255, 255, 0.2)
-  );
+  background: linear-gradient(110deg,
+      rgba(255, 255, 255, 0.32),
+      rgba(215, 233, 255, 0.11) 52%,
+      rgba(255, 255, 255, 0.2));
   transition: opacity 0.25s ease;
 }
 
@@ -256,9 +255,9 @@ textarea {
   transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.nav-item:hover > .nav-trigger,
-.nav-item:focus-within > .nav-trigger,
-.nav-item.open > .nav-trigger {
+.nav-item:hover>.nav-trigger,
+.nav-item:focus-within>.nav-trigger,
+.nav-item.open>.nav-trigger {
   background: #e9eef7;
   box-shadow: inset 0 -3px 0 #1a67e8;
 }
@@ -286,9 +285,9 @@ textarea {
   z-index: 40;
 }
 
-.nav-item:hover > .mega-menu,
-.nav-item:focus-within > .mega-menu,
-.nav-item.open > .mega-menu {
+.nav-item:hover>.mega-menu,
+.nav-item:focus-within>.mega-menu,
+.nav-item.open>.mega-menu {
   opacity: 1;
   pointer-events: auto;
   transform: translate(-50%, 0);
@@ -500,21 +499,25 @@ textarea {
 }
 
 @keyframes hero-panel-breathe {
+
   0%,
   100% {
     opacity: 0.92;
   }
+
   50% {
     opacity: 1;
   }
 }
 
 @keyframes hero-banner-glass {
+
   0%,
   100% {
     transform: translate3d(-50%, -50%, 0) scale(1);
     opacity: 0.86;
   }
+
   50% {
     transform: translate3d(-50%, -50%, 0) scale(1.015);
     opacity: 1;
@@ -604,12 +607,10 @@ textarea {
   font-size: 1.3rem;
   line-height: 1;
   font-weight: 800;
-  background: conic-gradient(
-    #4285f4 0deg 100deg,
-    #34a853 100deg 190deg,
-    #fbbc05 190deg 280deg,
-    #ea4335 280deg 360deg
-  );
+  background: conic-gradient(#4285f4 0deg 100deg,
+      #34a853 100deg 190deg,
+      #fbbc05 190deg 280deg,
+      #ea4335 280deg 360deg);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -763,6 +764,7 @@ textarea {
   from {
     transform: translateX(-100%);
   }
+
   to {
     transform: translateX(130%);
   }
@@ -780,10 +782,12 @@ textarea {
 }
 
 @keyframes hero-float {
+
   0%,
   100% {
     transform: translate3d(0, 0, 0);
   }
+
   50% {
     transform: translate3d(0, -8px, 0);
   }
@@ -834,7 +838,7 @@ textarea {
   min-width: 0;
 }
 
-.booking-col + .booking-col {
+.booking-col+.booking-col {
   border-left: 1px solid #d8e3f3;
 }
 
@@ -980,6 +984,7 @@ textarea {
   from {
     background-position: 180% 0;
   }
+
   to {
     background-position: -180% 0;
   }
@@ -1063,11 +1068,13 @@ textarea {
 }
 
 @keyframes date-pulse {
+
   0%,
   100% {
     box-shadow: 0 0 0 0 rgba(26, 103, 232, 0.32);
     transform: scale(1);
   }
+
   50% {
     box-shadow: 0 0 0 10px rgba(26, 103, 232, 0);
     transform: scale(1.03);
@@ -1100,7 +1107,7 @@ textarea {
   gap: 0.2rem;
 }
 
-.booking-slot-list > button,
+.booking-slot-list>button,
 .booking-confirm-row button {
   min-height: 1.68rem;
   border-radius: 0.34rem;
@@ -1133,7 +1140,7 @@ textarea {
   box-shadow: 0 4px 9px rgba(19, 99, 231, 0.24);
 }
 
-.booking-slot-list > .slot-on {
+.booking-slot-list>.slot-on {
   background: linear-gradient(180deg, #f2f7ff 0%, #e9f2ff 100%);
   border-color: #8db1eb;
   box-shadow: 0 4px 8px rgba(30, 102, 232, 0.14);
@@ -1141,10 +1148,12 @@ textarea {
 }
 
 @keyframes slot-breathe {
+
   0%,
   100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-2px);
   }
@@ -1167,48 +1176,22 @@ textarea {
   font-size: 0.95rem;
 }
 
-.logo-marquee {
-  position: relative;
-  margin-top: 0.82rem;
-  overflow: hidden;
-  isolation: isolate;
+.minimal-logo-strip {
+  background: transparent;
+  border-top: none;
+  border-bottom: 1px solid var(--line);
 }
 
-.logo-marquee::before,
-.logo-marquee::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: clamp(48px, 9vw, 124px);
-  pointer-events: none;
-  z-index: 2;
-}
-
-.logo-marquee::before {
-  left: 0;
-  background: linear-gradient(90deg, rgba(249, 252, 255, 0.98) 0%, rgba(249, 252, 255, 0) 100%);
-}
-
-.logo-marquee::after {
-  right: 0;
-  background: linear-gradient(270deg, rgba(249, 252, 255, 0.98) 0%, rgba(249, 252, 255, 0) 100%);
-}
-
-.logo-track {
+.minimal-logos {
   display: flex;
   align-items: center;
-  width: max-content;
-  gap: clamp(1.1rem, 1.9vw, 1.95rem);
-  animation: marquee 34s linear infinite;
-  will-change: transform;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: clamp(1.2rem, 3.5vw, 2.5rem);
+  margin-top: 1.5rem;
 }
 
-.logo-track:hover {
-  animation-play-state: paused;
-}
-
-.logo-item {
+.minimal-logos .logo-item {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -1216,31 +1199,22 @@ textarea {
   font-weight: 700;
   font-size: clamp(0.96rem, 1.22vw, 1.05rem);
   letter-spacing: 0.01em;
-  padding: 0.24rem 0.25rem;
-  opacity: 0.9;
-  transition: opacity 0.22s ease, transform 0.22s ease;
+  opacity: 0.55;
+  filter: grayscale(100%);
+  transition: opacity 0.25s ease, transform 0.25s ease, filter 0.25s ease;
 }
 
-.logo-item img {
+.minimal-logos .logo-item:hover {
+  opacity: 1;
+  filter: grayscale(0%);
+  transform: translateY(-2px);
+}
+
+.minimal-logos .logo-item img {
   width: 1.16rem;
   height: 1.16rem;
   object-fit: contain;
   flex-shrink: 0;
-  opacity: 0.94;
-}
-
-.logo-item:hover {
-  opacity: 1;
-  transform: translateY(-1px);
-}
-
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
 }
 
 .flow-showcase {
@@ -1266,7 +1240,7 @@ textarea {
   pointer-events: none;
 }
 
-.flow-showcase > .container {
+.flow-showcase>.container {
   position: relative;
   z-index: 1;
 }
@@ -1725,6 +1699,7 @@ textarea {
   from {
     transform: scale(1.02) translate3d(0, 0, 0);
   }
+
   to {
     transform: scale(1.04) translate3d(-10px, 6px, 0);
   }
@@ -1734,6 +1709,7 @@ textarea {
   from {
     transform: translate3d(0, 0, 0);
   }
+
   to {
     transform: translate3d(18px, -10px, 0);
   }
@@ -1743,6 +1719,7 @@ textarea {
   from {
     transform: translate3d(0, 0, 0);
   }
+
   to {
     transform: translate3d(-14px, 12px, 0);
   }
@@ -1752,6 +1729,7 @@ textarea {
   0% {
     transform: translateX(-120%);
   }
+
   22%,
   100% {
     transform: translateX(130%);
@@ -1759,11 +1737,13 @@ textarea {
 }
 
 @keyframes flow-icon-dot-pop {
+
   0%,
   100% {
     transform: scale(1);
     opacity: 0.55;
   }
+
   50% {
     transform: scale(1.25);
     opacity: 1;
@@ -1774,15 +1754,19 @@ textarea {
   0% {
     transform: rotate(0deg);
   }
+
   38% {
     transform: rotate(58deg);
   }
+
   48% {
     transform: rotate(44deg);
   }
+
   86% {
     transform: rotate(118deg);
   }
+
   100% {
     transform: rotate(92deg);
   }
@@ -1793,10 +1777,12 @@ textarea {
     transform: scale(0.58);
     opacity: 0.9;
   }
+
   75% {
     transform: scale(1.35);
     opacity: 0;
   }
+
   100% {
     transform: scale(1.35);
     opacity: 0;
@@ -1804,43 +1790,52 @@ textarea {
 }
 
 @keyframes flow-icon-knob-a {
+
   0%,
   100% {
     transform: translateX(0);
   }
+
   50% {
     transform: translateX(2.2px);
   }
 }
 
 @keyframes flow-icon-knob-b {
+
   0%,
   100% {
     transform: translateX(0);
   }
+
   50% {
     transform: translateX(-2px);
   }
 }
 
 @keyframes flow-icon-knob-c {
+
   0%,
   100% {
     transform: translateX(0);
   }
+
   50% {
     transform: translateX(1.8px);
   }
 }
 
 @keyframes flow-icon-link-sway {
+
   0%,
   100% {
     transform: rotate(0deg);
   }
+
   35% {
     transform: rotate(6deg);
   }
+
   65% {
     transform: rotate(-5deg);
   }
@@ -2530,30 +2525,32 @@ textarea {
 }
 
 .footer-bottom {
-  margin-top: 1.3rem;
-  border-top: 1px solid var(--line);
-  padding-top: 1rem;
-  display: grid;
-  gap: 0.7rem;
+  border-top: 1px solid var(--border-light);
+  padding-top: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
 }
 
 .footer-badges {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-light);
 }
 
-.footer-badges span {
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: #fff;
-  color: #355780;
-  font-size: 0.82rem;
-  font-weight: 700;
-  padding: 0.37rem 0.65rem;
+.footer-legal {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  color: var(--ink-light);
+  font-size: 0.85rem;
 }
 
-.footer-bottom p {
+.footer-legal p {
   margin: 0;
   color: #6d829f;
   font-size: 0.9rem;
@@ -2588,6 +2585,7 @@ textarea {
 }
 
 @media (max-width: 1080px) {
+
   .hero,
   .split-layout,
   .split-layout.reverse,
@@ -2703,9 +2701,9 @@ textarea {
     justify-content: flex-start;
   }
 
-  .nav-item:hover > .nav-trigger,
-  .nav-item:focus-within > .nav-trigger,
-  .nav-item.open > .nav-trigger {
+  .nav-item:hover>.nav-trigger,
+  .nav-item:focus-within>.nav-trigger,
+  .nav-item.open>.nav-trigger {
     box-shadow: none;
   }
 
@@ -2722,7 +2720,7 @@ textarea {
     display: none;
   }
 
-  .nav-item.open > .mega-menu {
+  .nav-item.open>.mega-menu {
     display: block;
   }
 
@@ -2868,7 +2866,7 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .booking-col + .booking-col {
+  .booking-col+.booking-col {
     border-left: 0;
     border-top: 1px solid #d8e3f3;
   }

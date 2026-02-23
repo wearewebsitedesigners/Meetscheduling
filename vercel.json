@@ -2,61 +2,61 @@
   "version": 2,
   "functions": {
     "api/index.js": {
-      "maxDuration": 60
+      "maxDuration": 30
     }
   },
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js"
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
     },
     {
-      "source": "/",
-      "destination": "/index.html"
+      "src": "/",
+      "dest": "/index.html"
     },
     {
-      "source": "/dashboard",
-      "destination": "/dashboard.html"
+      "src": "/dashboard",
+      "dest": "/dashboard.html"
     },
     {
-      "source": "/dashboard/(.*)",
-      "destination": "/dashboard.html"
+      "src": "/dashboard/(.*)",
+      "dest": "/dashboard.html"
     },
     {
-      "source": "/app",
-      "destination": "/dashboard.html"
+      "src": "/app",
+      "dest": "/dashboard.html"
     },
     {
-      "source": "/app/(.*)",
-      "destination": "/dashboard.html"
+      "src": "/app/(.*)",
+      "dest": "/dashboard.html"
     },
     {
-      "source": "/login",
-      "destination": "/login.html"
+      "src": "/login",
+      "dest": "/login.html"
     },
     {
-      "source": "/signup",
-      "destination": "/signup.html"
+      "src": "/signup",
+      "dest": "/signup.html"
     },
     {
-      "source": "/forgot-password",
-      "destination": "/forgot-password.html"
+      "src": "/forgot-password",
+      "dest": "/forgot-password.html"
     },
     {
-      "source": "/(meetings|scheduling|availability|contacts|workflows|integrations|routing|landing-page|analytics|admin|account)(/.*)?",
-      "destination": "/dashboard.html"
+      "src": "/(meetings|scheduling|availability|contacts|workflows|integrations|routing|landing-page|analytics|admin|account)(/.*)?",
+      "dest": "/dashboard.html"
     },
     {
-      "source": "/(pricing|product|solutions|resources|about|contact|help-center|developers|community|blog|case-studies|security|careers|press|terms|privacy|legal|status|cookie-settings)",
-      "destination": "/index.html"
+      "src": "/(pricing|product|solutions|resources|about|contact|help-center|developers|community|blog|case-studies|security|careers|press|terms|privacy|legal|status|cookie-settings)",
+      "dest": "/index.html"
     },
     {
-      "source": "/([^/]+)/([^/]+)",
-      "destination": "/booking.html"
+      "src": "/([^/]+)/([^/]+)",
+      "dest": "/booking.html"
     },
     {
-      "source": "/([^/.]+)",
-      "destination": "/public-landing.html"
+      "src": "/([^/.]+)",
+      "dest": "/public-landing.html"
     }
   ]
 }

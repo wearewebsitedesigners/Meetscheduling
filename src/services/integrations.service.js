@@ -724,8 +724,8 @@ function mapCalendarRecord(item) {
       typeof item.metadata?.syncStatus === "string" && item.metadata.syncStatus.trim()
         ? item.metadata.syncStatus
         : item.connected
-        ? "connected"
-        : "disconnected",
+          ? "connected"
+          : "disconnected",
   };
 }
 
@@ -1258,6 +1258,83 @@ async function disconnectCalendarForUser(userId, provider) {
   };
 }
 
+// --- GOOGLE CALENDAR OAUTH ---
+const { google } = require("googleapis");
+const env = require("../config/env");
+
+function getOAuth2Client() {
+  return new google.auth.OAuth2(
+    env.google.clientId,
+    env.google.clientSecret,
+    env.google.redirectUri
+  );
+}
+
+async function getGoogleCalendarAuthUrl(userId) {
+  const client = getOAuth2Client();
+  const authUrl = client.generateAuthUrl({
+    access_type: "offline", // Always get a refresh token
+    prompt: "consent", // Force consent
+    scope: [
+      "https://www.googleapis.com/auth/calendar.events",
+      "https://www.googleapis.com/auth/userinfo.email"
+    ],
+    state: userId,
+  });
+  return authUrl;
+}
+
+async function handleGoogleCalendarCallback(userIdStr, code) {
+  const client = getOAuth2Client();
+  const { tokens } = await client.getToken(code);
+  client.setCredentials(tokens);
+
+  // Attempt to get the user's email 
+  let accountEmail = "";
+  try {
+    const oauth2 = google.oauth2({ auth: client, version: "v2" });
+    const userInfo = await oauth2.userinfo.get();
+    accountEmail = userInfo.data.email || "";
+  } catch (err) {
+    console.error("Could not fetch user info for Google Calendar", err);
+  }
+
+  // Update or insert the connection
+  await upsertIntegration(userIdStr, {
+    provider: "google-calendar",
+    accountEmail,
+    connected: true,
+    metadata: tokens, // Store access/refresh tokens in metadata
+  });
+
+  // Default to this calendar if none is set
+  const settings = await upsertCalendarSettings(userIdStr, {});
+  if (!settings.selected_provider) {
+    await upsertCalendarSettings(userIdStr, { selectedProvider: "google-calendar" });
+  }
+}
+
+async function getAuthenticatedGoogleClient(userIdStr) {
+  const existingRows = await listUserCalendarRows(userIdStr);
+  const googleCal = existingRows.find((row) => row.provider === "google-calendar");
+
+  if (!googleCal || !googleCal.connected || !googleCal.metadata?.refresh_token) {
+    throw badRequest("Host has not connected or authorized Google Calendar");
+  }
+
+  const client = getOAuth2Client();
+  client.setCredentials(googleCal.metadata);
+
+  // If the client refreshes the token, save the new token
+  client.on('tokens', async (tokens) => {
+    let updatedMetadata = { ...googleCal.metadata, ...tokens };
+    await query(`UPDATE user_integrations SET metadata = $1 WHERE id = $2`, [updatedMetadata, googleCal.id]);
+  });
+
+  return google.calendar({ version: "v3", auth: client });
+}
+
+
 module.exports = {
   INTEGRATION_CATALOG,
   listIntegrationsForUser,
@@ -1272,4 +1349,7 @@ module.exports = {
   syncCalendarForUser,
   updateCalendarSettingsForUser,
   disconnectCalendarForUser,
+  getGoogleCalendarAuthUrl,
+  handleGoogleCalendarCallback,
+  getAuthenticatedGoogleClient,
 };

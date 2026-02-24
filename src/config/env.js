@@ -50,6 +50,9 @@ const env = {
     clientEmail: readEnv("GOOGLE_CLIENT_EMAIL", ""),
     privateKey: readEnv("GOOGLE_PRIVATE_KEY", ""),
     calendarId: readEnv("GOOGLE_CALENDAR_ID", ""),
+    clientId: readEnv("GOOGLE_CLIENT_ID", ""),
+    clientSecret: readEnv("GOOGLE_CLIENT_SECRET", ""),
+    redirectUri: readEnv("GOOGLE_REDIRECT_URI", `${readEnv("APP_BASE_URL", "http://localhost:8080")}/api/integrations/google-calendar/callback`),
   },
 };
 

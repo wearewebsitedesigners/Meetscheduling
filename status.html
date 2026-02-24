@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>System Status - Meetscheduling</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css?v=3" />
+    <style>
+        .legal-page {
+            padding: 4rem 1rem 6rem;
+            max-width: 800px;
+            margin: 0 auto;
+            min-height: 60vh;
+        }
+
+        .legal-page h1 {
+            font-family: 'Sora', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            color: #122136;
+        }
+
+        .legal-page p {
+            color: #526f90;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .status-box {
+            background: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .status-box h2 {
+            color: #2e7d32;
+            font-family: 'Sora', sans-serif;
+            font-size: 1.8rem;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .status-box p {
+            color: #388e3c;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .component-list {
+            margin-top: 3rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .component-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 1.2rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .component-item:last-child {
+            border-bottom: none;
+        }
+
+        .component-name {
+            font-weight: 600;
+            color: #122136;
+        }
+
+        .component-status {
+            color: #2e7d32;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .component-status::before {
+            content: "";
+            display: block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="container site-header-inner">
+            <a class="brand" href="index.html">
+                <img src="/assets/logo.png" alt="Meetscheduling logo" class="brand-logo" />
+                <span class="brand-text">Meetscheduling</span>
+            </a>
+            <div class="header-actions">
+                <a class="text-link" href="login.html">Log in</a>
+                <a class="btn btn-primary" href="signup.html">Get started</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="legal-page">
+        <h1>System Status</h1>
+
+        <div class="status-box">
+            <h2>All Systems Operational</h2>
+            <p>Last checked: Just now</p>
+        </div>
+
+        <div class="component-list">
+            <div class="component-item">
+                <span class="component-name">Web Application</span>
+                <span class="component-status">Operational</span>
+            </div>
+            <div class="component-item">
+                <span class="component-name">API</span>
+                <span class="component-status">Operational</span>
+            </div>
+            <div class="component-item">
+                <span class="component-name">Database</span>
+                <span class="component-status">Operational</span>
+            </div>
+            <div class="component-item">
+                <span class="component-name">Google Calendar Sync</span>
+                <span class="component-status">Operational</span>
+            </div>
+            <div class="component-item">
+                <span class="component-name">Microsoft Outlook Sync</span>
+                <span class="component-status">Operational</span>
+            </div>
+            <div class="component-item">
+                <span class="component-name">Email Delivery</span>
+                <span class="component-status">Operational</span>
+            </div>
+        </div>
+    </main>
+
+    <section id="resources" class="footer-cta">
+        <div class="container footer-cta-inner">
+            <div class="footer-bottom">
+                <div class="footer-badges">
+                    <span>App Store</span>
+                    <span>Google Play</span>
+                    <span>Chrome</span>
+                    <span>Edge</span>
+                    <span>Firefox</span>
+                </div>
+                <div class="footer-legal">
+                    <p>Copyright 2026 Meetscheduling</p>
+                    <div class="legal-links">
+                        <a href="privacy-policy.html">Privacy Policy</a>
+                        <a href="legal.html">Legal</a>
+                        <a href="status.html">Status</a>
+                        <a href="cookie-settings.html">Cookie settings</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+
+</html>

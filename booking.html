@@ -1,186 +1,629 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Book Meeting | Meetscheduling</title>
-    <style>
-      :root {
-        --bg: #f5f8fd;
-        --card: #ffffff;
-        --ink: #112e53;
-        --muted: #5d7899;
-        --line: #cfdcf0;
-        --brand: #1a73e8;
-      }
 
-      * {
-        box-sizing: border-box;
-      }
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book Meeting | Meetscheduling</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-color: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --border-color: #E2E8F0;
+      --brand-color: #006BFF;
+      --brand-hover: #0056D6;
+      --brand-light: #EBF4FF;
+      --success: #10B981;
+      --error: #EF4444;
+    }
 
-      body {
-        margin: 0;
-        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
-          sans-serif;
-        background: var(--bg);
-        color: var(--ink);
-      }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-      main {
-        max-width: 980px;
-        margin: 2rem auto;
-        padding: 0 1rem;
-        display: grid;
-        gap: 1rem;
-      }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
 
-      .card {
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        background: var(--card);
-        padding: 1rem;
-      }
+    .booking-wrapper {
+      width: 100%;
+      max-width: 1060px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      min-height: 600px;
+    }
 
-      h1,
-      h2 {
-        margin: 0 0 0.5rem;
+    @media(min-width: 768px) {
+      .booking-wrapper {
+        flex-direction: row;
       }
+    }
 
-      p {
-        margin: 0.4rem 0;
+    /* Left Side: Event Details */
+    .event-details {
+      padding: 2.5rem;
+      border-bottom: 1px solid var(--border-color);
+      flex: 0 0 350px;
+      background: #fff;
+    }
+
+    @media(min-width: 768px) {
+      .event-details {
+        border-bottom: none;
+        border-right: 1px solid var(--border-color);
       }
+    }
 
-      .muted {
-        color: var(--muted);
+    .host-profile {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .host-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--brand-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-color);
+      font-weight: 600;
+      font-size: 1.25rem;
+    }
+
+    .host-name {
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .event-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+
+    .event-meta-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .event-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    .event-meta-icon {
+      width: 20px;
+      height: 20px;
+      opacity: 0.7;
+    }
+
+    .event-desc {
+      color: var(--text-main);
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+
+    /* Right Side: Step Container */
+    .step-container {
+      flex: 1;
+      position: relative;
+      overflow-x: hidden;
+      overflow-y: auto;
+      background: #fff;
+    }
+
+    .step-panel {
+      padding: 2.5rem;
+      width: 100%;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .step-panel.hidden {
+      display: none;
+    }
+
+    /* Calendar & Slots UI */
+    .calendar-slots-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    @media(min-width: 900px) {
+      .calendar-slots-layout {
+        flex-direction: row;
       }
+    }
 
-      .row {
-        display: grid;
-        gap: 0.65rem;
+    .calendar-section {
+      flex: 1;
+    }
+
+    .calendar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+
+    .calendar-month-year {
+      font-weight: 600;
+      font-size: 1.125rem;
+    }
+
+    .calendar-nav-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-color);
+      transition: background 0.2s;
+    }
+
+    .calendar-nav-btn:hover {
+      background: var(--brand-light);
+    }
+
+    .calendar-nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.5rem;
+      text-align: center;
+    }
+
+    .calendar-day-name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .calendar-day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-weight: 500;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--brand-color);
+      transition: all 0.2s;
+    }
+
+    .calendar-day:hover:not(:disabled) {
+      background: var(--brand-light);
+    }
+
+    .calendar-day.selected {
+      background: var(--brand-color);
+      color: #fff;
+    }
+
+    .calendar-day:disabled {
+      color: #ccc;
+      cursor: default;
+    }
+
+    .timezone-picker {
+      margin-top: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .timezone-picker select {
+      border: none;
+      background: transparent;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      outline: none;
+      font-family: inherit;
+      font-size: 0.875rem;
+    }
+
+    /* Slots Column */
+    .slots-section {
+      flex: 0 0 220px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slots-header {
+      font-weight: 600;
+      margin-bottom: 1rem;
+      font-size: 1.125rem;
+    }
+
+    .slots-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+    }
+
+    .slots-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .slots-list::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    .slot-btn {
+      background: #fff;
+      border: 1px solid var(--brand-color);
+      color: var(--brand-color);
+      border-radius: 8px;
+      padding: 0.875rem;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      display: block;
+      width: 100%;
+    }
+
+    .slot-btn:hover {
+      border-width: 2px;
+      padding: calc(0.875rem - 1px);
+      background: var(--brand-light);
+    }
+
+    .slot-btn.active {
+      background: var(--text-muted);
+      border-color: var(--text-muted);
+      color: #fff;
+    }
+
+    .slot-action-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .slot-action-row .confirm-slot-btn {
+      flex: 1;
+      background: var(--brand-color);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .slot-action-row .confirm-slot-btn:hover {
+      background: var(--brand-hover);
+    }
+
+    /* Form UI */
+    .form-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .back-btn {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: background 0.2s;
+    }
+
+    .back-btn:hover {
+      background: var(--bg-color);
+    }
+
+    .form-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-group label {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-family: inherit;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      border-color: var(--brand-color);
+      box-shadow: 0 0 0 3px var(--brand-light);
+    }
+
+    .submit-btn {
+      background: var(--brand-color);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+
+    .submit-btn:hover {
+      background: var(--brand-hover);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      flex-direction: column;
+      gap: 1rem;
+      font-weight: 600;
+      color: var(--brand-color);
+      display: none;
+    }
+
+    .loading-overlay.active {
+      display: flex;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--brand-light);
+      border-top-color: var(--brand-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
       }
+    }
 
-      .row.two {
-        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-      }
+    .error-msg {
+      color: var(--error);
+      font-weight: 500;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: #FEF2F2;
+      border-radius: 8px;
+      display: none;
+    }
+  </style>
+</head>
 
-      label {
-        display: grid;
-        gap: 0.35rem;
-        font-weight: 600;
-      }
+<body>
 
-      input,
-      textarea,
-      select,
-      button {
-        font: inherit;
-      }
+  <div class="booking-wrapper">
+    <!-- Loading state overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="spinner"></div>
+      <span id="loading-text">Loading event...</span>
+    </div>
 
-      input,
-      textarea,
-      select {
-        border: 1px solid #a4badd;
-        border-radius: 10px;
-        padding: 0.65rem 0.75rem;
-        color: var(--ink);
-      }
+    <!-- Left Column -->
+    <aside class="event-details">
+      <div class="host-profile">
+        <div id="host-avatar" class="host-avatar">...</div>
+        <div id="host-name" class="host-name">Loading...</div>
+      </div>
+      <h1 id="event-title" class="event-title">Loading event...</h1>
 
-      textarea {
-        min-height: 96px;
-        resize: vertical;
-      }
+      <ul class="event-meta-list">
+        <li class="event-meta-item">
+          <svg class="event-meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span id="event-duration">-- min</span>
+        </li>
+        <li class="event-meta-item">
+          <svg class="event-meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z">
+            </path>
+          </svg>
+          <span id="event-location" style="text-transform: capitalize;">Web conferencing details provided upon
+            confirmation.</span>
+        </li>
+        <li class="event-meta-item" id="sidebar-datetime" style="display: none; color: var(--brand-color);">
+          <svg class="event-meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          <span id="sidebar-datetime-text"></span>
+        </li>
+      </ul>
 
-      .slots {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-      }
+      <div id="event-desc" class="event-desc"></div>
+    </aside>
 
-      .slot {
-        border: 1px solid #98b5e6;
-        background: #fff;
-        color: #1e4679;
-        border-radius: 999px;
-        padding: 0.4rem 0.75rem;
-        cursor: pointer;
-      }
+    <!-- Right Column -->
+    <main class="step-container">
+      <!-- Step 1: Calendar & Slots -->
+      <div id="step-calendar" class="step-panel">
+        <h2 class="form-title" style="margin-bottom: 2rem;">Select a Date & Time</h2>
+        <div id="error-alert" class="error-msg"></div>
 
-      .slot.active {
-        background: var(--brand);
-        border-color: var(--brand);
-        color: #fff;
-      }
+        <div class="calendar-slots-layout">
+          <div class="calendar-section">
+            <div class="calendar-header">
+              <button id="prev-month" class="calendar-nav-btn">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+              </button>
+              <div id="calendar-month-year" class="calendar-month-year">...</div>
+              <button id="next-month" class="calendar-nav-btn">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="calendar-grid">
+              <div class="calendar-day-name">Sun</div>
+              <div class="calendar-day-name">Mon</div>
+              <div class="calendar-day-name">Tue</div>
+              <div class="calendar-day-name">Wed</div>
+              <div class="calendar-day-name">Thu</div>
+              <div class="calendar-day-name">Fri</div>
+              <div class="calendar-day-name">Sat</div>
+            </div>
+            <div id="calendar-days" class="calendar-grid" style="margin-top: 0.5rem;">
+              <!-- Days generated by JS -->
+            </div>
 
-      .button {
-        border: 0;
-        border-radius: 999px;
-        background: var(--brand);
-        color: #fff;
-        font-weight: 700;
-        padding: 0.62rem 1rem;
-        cursor: pointer;
-      }
+            <div class="timezone-picker">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                </path>
+              </svg>
+              <select id="timezone-select"></select>
+            </div>
+          </div>
 
-      .status {
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 0.7rem;
-      }
-    </style>
-  </head>
-  <body>
-    <main>
-      <section class="card">
-        <h1 id="event-title">Loading event...</h1>
-        <p id="event-desc" class="muted"></p>
-        <p id="event-meta" class="muted"></p>
-      </section>
-
-      <section class="card row">
-        <div class="row two">
-          <label>
-            Date
-            <select id="date-select"></select>
-          </label>
-          <label>
-            Visitor timezone
-            <input id="timezone-input" disabled />
-          </label>
+          <div class="slots-section">
+            <div id="slots-header" class="slots-header" style="opacity: 0;">-</div>
+            <div id="slots-list" class="slots-list">
+              <!-- Slots generated by JS -->
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div>
-          <p><strong>Available times</strong></p>
-          <div id="slots" class="slots"></div>
-        </div>
-      </section>
-
-      <section class="card row">
-        <div class="row two">
-          <label>
-            Name
-            <input id="name-input" placeholder="Your name" />
-          </label>
-          <label>
-            Email
-            <input id="email-input" type="email" placeholder="you@example.com" />
-          </label>
-        </div>
-
-        <label>
-          Notes
-          <textarea id="notes-input" placeholder="Anything the host should know?"></textarea>
-        </label>
-
-        <div>
-          <button id="confirm-btn" class="button" type="button">
-            Confirm booking
+      <!-- Step 2: Details Form -->
+      <div id="step-details" class="step-panel hidden">
+        <div class="form-header">
+          <button id="form-back-btn" class="back-btn">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18">
+              </path>
+            </svg>
           </button>
+          <h2 class="form-title">Enter Details</h2>
         </div>
-      </section>
 
-      <section id="status" class="card status muted">Ready.</section>
+        <div id="form-error-alert" class="error-msg"></div>
+
+        <form id="booking-form">
+          <div class="form-group">
+            <label for="name-input">Name *</label>
+            <input type="text" id="name-input" required />
+          </div>
+          <div class="form-group">
+            <label for="email-input">Email *</label>
+            <input type="email" id="email-input" required />
+          </div>
+          <div class="form-group">
+            <label>Guest Email(s)</label>
+            <button type="button" class="slot-btn"
+              style="padding:0.5rem; text-align:left; font-size:0.875rem; border:1px dashed var(--brand-color); background:transparent; width:auto; max-width:200px;">Add
+              Guests</button>
+          </div>
+          <div class="form-group">
+            <label for="notes-input">Please share anything that will help prepare for our meeting.</label>
+            <textarea id="notes-input" rows="4"></textarea>
+          </div>
+
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height:1.5;">
+            By proceeding, you confirm that you have read and agree to Meetscheduling's Terms of Use and Privacy Notice.
+          </p>
+
+          <button type="submit" id="confirm-booking-btn" class="submit-btn">Schedule Event</button>
+        </form>
+      </div>
+
     </main>
+  </div>
 
-    <script src="/booking.js"></script>
-  </body>
+  <script src="/booking.js"></script>
+</body>
+
 </html>

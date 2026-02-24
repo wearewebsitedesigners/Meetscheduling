@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verify Two-Factor Authentication - Meetscheduling</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/login.css" />
+    <style>
+        .auth-card {
+            max-width: 400px;
+            margin: auto;
+        }
+
+        .form-group.otp-group {
+            text-align: center;
+        }
+
+        .otp-input {
+            width: 100%;
+            text-align: center;
+            letter-spacing: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .backup-link {
+            display: block;
+            text-align: center;
+            margin-top: 1rem;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .backup-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body class="auth-page">
+    <div class="auth-container">
+        <!-- Logo Header -->
+        <a href="/" class="auth-logo">
+            <svg class="nav-logo-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+                <circle cx="12" cy="15" r="2" fill="currentColor"></circle>
+            </svg>
+            <span class="nav-logo-text">Meetscheduling</span>
+        </a>
+
+        <!-- Main Card -->
+        <div class="auth-card">
+            <h1 class="auth-title" id="verify-title">Two-Step Verification</h1>
+            <p class="auth-subtitle" id="verify-subtitle">
+                Enter the 6-digit verification code from your authenticator app.
+            </p>
+
+            <!-- Error Banner -->
+            <div id="general-error" class="error-banner" style="display: none;"></div>
+
+            <!-- Verify Form -->
+            <form id="verify-form" class="auth-form" novalidate>
+                <div class="form-group otp-group">
+                    <label for="code" class="sr-only">Verification Code</label>
+                    <input type="text" id="code" name="code" class="form-control otp-input" placeholder="000000"
+                        autocomplete="one-time-code" inputmode="numeric" maxlength="6" required />
+                    <div class="error-text" id="code-error"></div>
+                </div>
+
+                <button type="submit" class="btn btn-primary auth-submit" id="submit-btn">
+                    Verify
+                </button>
+            </form>
+
+            <a class="backup-link" id="toggle-backup">Use a backup code instead</a>
+        </div>
+    </div>
+
+    <!-- Script to handle 2FA verification logic -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tempToken = urlParams.get("tempToken");
+
+            if (!tempToken) {
+                // Check localStorage as fallback if sent via json response instead of redirect
+                const storedToken = localStorage.getItem("temp2faToken");
+                if (!storedToken) {
+                    window.location.href = "/login.html";
+                    return;
+                }
+            } else {
+                localStorage.setItem("temp2faToken", tempToken);
+                // Clean up URL
+                window.history.replaceState({}, document.title, "/verify-2fa.html");
+            }
+
+            const form = document.getElementById("verify-form");
+            const codeInput = document.getElementById("code");
+            const toggleBackup = document.getElementById("toggle-backup");
+            const verifyTitle = document.getElementById("verify-title");
+            const verifySubtitle = document.getElementById("verify-subtitle");
+            const generalError = document.getElementById("general-error");
+            const submitBtn = document.getElementById("submit-btn");
+
+            let isUsingBackup = false;
+
+            // Auto focus input
+            setTimeout(() => codeInput.focus(), 100);
+
+            toggleBackup.addEventListener("click", () => {
+                isUsingBackup = !isUsingBackup;
+                if (isUsingBackup) {
+                    verifyTitle.textContent = "Use Backup Code";
+                    verifySubtitle.textContent = "Enter one of your 8-character recovery codes.";
+                    codeInput.placeholder = "XXXXXXXX";
+                    codeInput.maxLength = 8;
+                    codeInput.type = "text";
+                    codeInput.inputMode = "text";
+                    codeInput.value = "";
+                    toggleBackup.textContent = "Use authenticator app instead";
+                } else {
+                    verifyTitle.textContent = "Two-Step Verification";
+                    verifySubtitle.textContent = "Enter the 6-digit verification code from your authenticator app.";
+                    codeInput.placeholder = "000000";
+                    codeInput.maxLength = 6;
+                    codeInput.type = "text";
+                    codeInput.inputMode = "numeric";
+                    codeInput.value = "";
+                    toggleBackup.textContent = "Use a backup code instead";
+                }
+                codeInput.focus();
+            });
+
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                generalError.style.display = "none";
+                codeInput.classList.remove("invalid");
+
+                let code = codeInput.value.trim();
+                if (isUsingBackup) code = code.toUpperCase(); // Ensure backup code is uppercase
+
+                if (!code) {
+                    codeInput.classList.add("invalid");
+                    return;
+                }
+
+                // Temporary lock UI
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Verifying...";
+                const tokenToUse = tempToken || localStorage.getItem("temp2faToken");
+
+                try {
+                    const response = await fetch("/api/auth/2fa/verify-login", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            tempToken: tokenToUse,
+                            code: code
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        generalError.textContent = data.error || "Verification failed.";
+                        generalError.style.display = "block";
+                        codeInput.classList.add("invalid");
+                        codeInput.value = "";
+                        codeInput.focus();
+                    } else {
+                        // Success -> we have a standard token.
+                        localStorage.removeItem("temp2faToken"); // Cleanup
+                        localStorage.setItem("meetscheduling_token", data.token);
+                        window.location.href = `/dashboard.html?token=${data.token}`;
+                    }
+
+                } catch (error) {
+                    console.error(error);
+                    generalError.textContent = "Network error. Please try again.";
+                    generalError.style.display = "block";
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Verify";
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

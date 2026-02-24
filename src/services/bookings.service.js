@@ -147,10 +147,43 @@ async function createPublicBooking({
   verifySlotToken(slotPayload.event.id, safeStartAtUtc, slotToken);
 
   const event = slotPayload.event;
-  const meetingLink = generateMeetingLink({
-    location_type: event.locationType,
-    custom_location: event.customLocation,
-  });
+  const { getAuthenticatedGoogleClient } = require("./integrations.service");
+
+  let meetingLink = "";
+  if (event.locationType === "google_meet") {
+    try {
+      const gcal = await getAuthenticatedGoogleClient(event.userId);
+      const calendarRes = await gcal.events.insert({
+        calendarId: "primary",
+        conferenceDataVersion: 1,
+        requestBody: {
+          summary: `${event.title} with ${cleanName}`,
+          description: cleanNotes,
+          start: { dateTime: new Date(slot.startAtUtc).toISOString() },
+          end: { dateTime: new Date(slot.endAtUtc).toISOString() },
+          attendees: [{ email: cleanEmail }],
+          conferenceData: {
+            createRequest: {
+              requestId: `meet-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              conferenceSolutionKey: { type: "hangoutsMeet" },
+            },
+          },
+        },
+      });
+      meetingLink = calendarRes.data.hangoutLink || "No Meet link generated";
+    } catch (err) {
+      console.error("Failed to create Google Calendar event/Meet link:", err);
+      meetingLink = generateMeetingLink({
+        location_type: event.locationType,
+        custom_location: event.customLocation,
+      });
+    }
+  } else {
+    meetingLink = generateMeetingLink({
+      location_type: event.locationType,
+      custom_location: event.customLocation,
+    });
+  }
 
   const booking = await withTransaction(async (client) => {
     await assertBookingStillAvailable(client, { event, slot });
@@ -206,16 +239,22 @@ async function createPublicBooking({
     }
   });
 
+  const userRes = await query("SELECT email FROM users WHERE id = $1", [event.userId]);
+  const hostEmail = userRes.rows[0]?.email || "";
+
   let emailStatus = { sent: false, reason: "Not attempted" };
   try {
     emailStatus = await sendBookingConfirmation({
       toEmail: cleanEmail,
       inviteeName: cleanName,
+      hostEmail,
       hostName: event.hostName,
       eventTitle: event.title,
       startLocal: slot.startLocal,
       endLocal: slot.endLocal,
       timezone: slotPayload.visitorTimezone,
+      startUtc: slot.startAtUtc,
+      endUtc: slot.endAtUtc,
       meetingLink,
     });
   } catch (error) {

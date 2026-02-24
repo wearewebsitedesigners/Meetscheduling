@@ -23,7 +23,7 @@ function detectVisitorTimezone(req) {
   return assertZone(preferred, "timezone");
 }
 
-function nextDates(timezone, count = 14) {
+function nextDates(timezone, count = 60) {
   const today = DateTime.now().setZone(timezone).startOf("day");
   return Array.from({ length: count }, (_, index) =>
     today.plus({ days: index }).toFormat("yyyy-LL-dd")

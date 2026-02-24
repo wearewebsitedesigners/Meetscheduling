@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Booking Confirmed | Meetscheduling</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --bg-color: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-main: #0F172A;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
+            --brand-color: #006BFF;
+            --brand-light: #EBF4FF;
+            --success: #10B981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+            padding: 3rem;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            background: #D1FAE5;
+            color: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        .success-icon svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .details-box {
+            text-align: left;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .details-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .details-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .details-icon {
+            color: var(--brand-color);
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .details-text {
+            line-height: 1.5;
+        }
+
+        .label {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .value {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            display: block;
+            width: 100%;
+            background: var(--brand-color);
+            color: #fff;
+            text-decoration: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="success-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+        <h1 class="title">You are scheduled</h1>
+        <p class="subtitle">A calendar invitation has been sent to your email address.</p>
+
+        <div class="details-box">
+            <div class="details-row">
+                <svg class="details-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0a9 9 0 110-18 9 9 0 010 18v0zm-1-8a1 1 0 100-2 1 1 0 000 2zm1-8v5m0 0l3 3">
+                    </path>
+                </svg>
+                <div class="details-text">
+                    <div class="label" id="event-title">Loading...</div>
+                </div>
+            </div>
+            <div class="details-row">
+                <svg class="details-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                    </path>
+                </svg>
+                <div class="details-text">
+                    <div class="label" id="event-datetime">...</div>
+                    <div class="value" id="event-timezone">...</div>
+                </div>
+            </div>
+            <div class="details-row">
+                <svg class="details-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z">
+                    </path>
+                </svg>
+                <div class="details-text">
+                    <div class="label">Web conferencing details to follow</div>
+                    <div class="value">Provider info in email details</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/thank-you.js"></script>
+</body>
+
+</html>

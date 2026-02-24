@@ -15,10 +15,47 @@ const {
   syncCalendarForUser,
   updateCalendarSettingsForUser,
   disconnectCalendarForUser,
+  getGoogleCalendarAuthUrl,
+  handleGoogleCalendarCallback,
 } = require("../services/integrations.service");
 
 const router = express.Router();
+
+// --- PUBLIC ROUTES (No requireAuth) ---
+
+// OAuth Callback from Google Calendar
+router.get(
+  "/google-calendar/callback",
+  asyncHandler(async (req, res) => {
+    const code = req.query.code;
+    const state = req.query.state; // We encode userId in state
+
+    if (!code || !state) {
+      return res.redirect("/dashboard.html?tab=integrations&error=missing_oauth_params");
+    }
+
+    try {
+      await handleGoogleCalendarCallback(state, code);
+      res.redirect("/dashboard.html?tab=integrations&success=google_calendar_connected");
+    } catch (err) {
+      console.error("Google Calendar OAuth error:", err);
+      res.redirect(`/dashboard.html?tab=integrations&error=${encodeURIComponent(err.message)}`);
+    }
+  })
+);
+
+
+// --- PROTECTED ROUTES ---
 router.use(requireAuth);
+
+// Get OAuth URL to redirect to Google
+router.get(
+  "/google-calendar/auth-url",
+  asyncHandler(async (req, res) => {
+    const url = await getGoogleCalendarAuthUrl(req.auth.userId);
+    res.json({ url });
+  })
+);
 
 router.get(
   "/",

@@ -1,6 +1,7 @@
 const path = require("path");
 const express = require("express");
 const authRoutes = require("./routes/auth.routes");
+const auth2FaRoutes = require("./routes/2fa.routes");
 const eventTypesRoutes = require("./routes/event-types.routes");
 const availabilityRoutes = require("./routes/availability.routes");
 const publicRoutes = require("./routes/public.routes");
@@ -35,7 +36,12 @@ function buildApp() {
     });
   });
 
+  const passport = require("./passport-setup");
+
   app.use("/api/auth", authRoutes);
+  app.use("/api/auth/2fa", auth2FaRoutes);
+  app.use(passport.initialize());
+
   app.use("/api/event-types", eventTypesRoutes);
   app.use("/api/availability", availabilityRoutes);
   app.use("/api/public", publicRoutes);

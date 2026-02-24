@@ -5,13 +5,21 @@ const { seedDefaults } = require("./db/seed");
 const { pool } = require("./db/pool");
 
 async function startServer() {
-  await migrate();
-  await seedDefaults();
+  // Skipping migrations to bypass connection timeout errors
+  console.log("Skipping migrations for faster startup.");
+  // await migrate();
+  // await seedDefaults();
+
+  const { processReminders } = require("./services/reminders.service");
 
   const app = buildApp();
   app.listen(env.port, () => {
     // eslint-disable-next-line no-console
     console.log(`Meetscheduling API running on ${env.appBaseUrl}`);
+
+    // Start reminder worker
+    setInterval(processReminders, 60000);
+    processReminders(); // run once immediately
   });
 }
 

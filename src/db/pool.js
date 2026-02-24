@@ -9,8 +9,8 @@ const pool = new Pool({
   ssl:
     env.nodeEnv === "production"
       ? {
-          rejectUnauthorized: false,
-        }
+        rejectUnauthorized: false,
+      }
       : undefined,
   connectionTimeoutMillis: Number.isFinite(dbConnectTimeoutMs)
     ? dbConnectTimeoutMs
@@ -20,9 +20,23 @@ const pool = new Pool({
   max: env.nodeEnv === "production" ? 3 : 10,
 });
 
-async function query(text, params = [], client = null) {
-  if (client) return client.query(text, params);
-  return pool.query(text, params);
+// A catch-all for idle client errors from pg. 
+// This prevents Neon dropping TCP connections from crashing the node app.
+pool.on("error", (err, client) => {
+  console.error("Unexpected error on idle pg client", err);
+});
+
+async function query(text, params = [], client = null, retries = 1) {
+  try {
+    if (client) return await client.query(text, params);
+    return await pool.query(text, params);
+  } catch (error) {
+    if (retries > 0 && error.message && error.message.includes("Connection terminated unexpectedly")) {
+      console.warn("Retrying query due to connection termination...");
+      return query(text, params, client, retries - 1);
+    }
+    throw error;
+  }
 }
 
 async function withTransaction(handler) {

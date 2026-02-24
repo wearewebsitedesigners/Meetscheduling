@@ -20,6 +20,9 @@ function requireAuth(req, res, next) {
     if (!decoded || typeof decoded !== "object" || !decoded.userId) {
       throw unauthorized("Invalid token");
     }
+    if (decoded.isInterim) {
+      throw unauthorized("Token requires 2FA verification");
+    }
     req.auth = {
       userId: decoded.userId,
       email: decoded.email || "",

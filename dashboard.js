@@ -690,6 +690,14 @@ const createMenuSections = {
 bindEvents();
 renderCreateMenu();
 render();
+
+const urlParams = new URLSearchParams(window.location.search);
+const urlToken = urlParams.get("token");
+if (urlToken) {
+  localStorage.setItem(AUTH_TOKEN_KEY, urlToken);
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
 bootstrapDashboard().catch((error) => {
   showToast(error?.message || "Dashboard sync failed");
 });
@@ -768,10 +776,10 @@ function normalizeState(raw, fallback) {
         enabled: typeof row.enabled === "boolean" ? row.enabled : true,
         intervals: Array.isArray(row.intervals) && row.intervals.length
           ? row.intervals.map((slot) => ({
-              id: slot.id || makeId("slot"),
-              start: sanitizeTime(slot.start),
-              end: sanitizeTime(slot.end),
-            }))
+            id: slot.id || makeId("slot"),
+            start: sanitizeTime(slot.start),
+            end: sanitizeTime(slot.end),
+          }))
           : [{ id: makeId("slot"), start: "00:00", end: "23:45" }],
       }));
     }
@@ -1707,6 +1715,92 @@ function ensureAccountIntegrity(nextState) {
   }
 }
 
+async function openQrModal() {
+  try {
+    const payload = await apiRequest("/api/auth/2fa/setup", { method: "POST" });
+    const modal = document.getElementById("qr-modal");
+    const imgContainer = document.getElementById("qr-code-img-container");
+    const secretElem = document.getElementById("qr-code-secret");
+    const inputElem = document.getElementById("qr-code-input");
+
+    // The backend provides back a string `payload.qrCode`. If it is a data URL, put it in an img tag.
+    if (payload.qrCode && payload.qrCode.startsWith("data:image")) {
+      imgContainer.innerHTML = `<img src="${payload.qrCode}" alt="2FA QR Code" width="200" height="200" />`;
+    } else {
+      imgContainer.innerHTML = payload.qrCode || "";
+    }
+    secretElem.textContent = payload.secret || "";
+    inputElem.value = ""; // clear previous input
+
+    // Store secret temporarily in state if needed, though not strictly required
+    // until verified.
+    state.account.security._temp_secret = payload.secret;
+
+    modal.removeAttribute("hidden");
+  } catch (error) {
+    showToast(error?.message || "Could not start 2FA setup");
+  }
+}
+
+function closeQrModal() {
+  const modal = document.getElementById("qr-modal");
+  if (modal) {
+    modal.setAttribute("hidden", "true");
+  }
+}
+
+async function submitQrModal() {
+  const inputElem = document.getElementById("qr-code-input");
+  const code = inputElem.value.trim();
+
+  if (!code || code.length !== 6) {
+    showToast("Please enter a valid 6-digit code");
+    return;
+  }
+
+  try {
+    const verifyPayload = await apiRequest("/api/auth/2fa/verify-setup", {
+      method: "POST",
+      body: JSON.stringify({ code })
+    });
+
+    state.account.security.googleAuthenticatorEnabled = true;
+    state.account.security.googleAuthenticatorSecret = state.account.security._temp_secret || "";
+    state.account.security.backupCodes = verifyPayload.backupCodes || [];
+    state.account.security.lastEnabledAt = new Date().toISOString();
+    delete state.account.security._temp_secret;
+    saveState();
+    render();
+
+    closeQrModal();
+    alert(`2FA Enabled successfully.\n\nIMPORTANT: Save these backup codes somewhere safe. You will only see them once.\n\n${verifyPayload.backupCodes.join('\n')}`);
+
+  } catch (error) {
+    showToast(error?.message || "Invalid verification code");
+  }
+}
+
+async function disableTwoFactorAuth() {
+  try {
+    const confirmPassword = prompt("Please enter your password to confirm disabling 2FA:");
+    if (!confirmPassword) return;
+
+    await apiRequest("/api/auth/2fa/disable", {
+      method: "POST",
+      body: JSON.stringify({ password: confirmPassword })
+    });
+
+    state.account.security.googleAuthenticatorEnabled = false;
+    state.account.security.googleAuthenticatorSecret = "";
+    state.account.security.backupCodes = [];
+    saveState();
+    render();
+    showToast("Google Authenticator disabled");
+  } catch (error) {
+    showToast(error?.message || "Could not disable 2FA");
+  }
+}
+
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
@@ -1845,8 +1939,8 @@ function normalizeIntegrationRecord(item, index = 0) {
     typeof safe.account === "string"
       ? safe.account.trim()
       : typeof safe.account_email === "string"
-      ? safe.account_email.trim()
-      : "";
+        ? safe.account_email.trim()
+        : "";
 
   return {
     id: safe.id || makeId("int"),
@@ -1869,8 +1963,8 @@ function normalizeIntegrationRecord(item, index = 0) {
       typeof safe.lastSync === "string" && safe.lastSync.trim()
         ? safe.lastSync.trim()
         : connected
-        ? "Just now"
-        : "Never",
+          ? "Just now"
+          : "Never",
     adminOnly: typeof safe.adminOnly === "boolean" ? safe.adminOnly : !!template?.adminOnly,
     iconText:
       typeof safe.iconText === "string" && safe.iconText.trim()
@@ -2199,6 +2293,9 @@ function mapApiBookingToMeeting(booking) {
   return {
     id: booking.id,
     title,
+    inviteeName: booking.inviteeName || "Unknown",
+    meetingLink: booking.meetingLink || "",
+    locationType: booking.locationType || "",
     time: `${local.date || ""} ${local.time || ""}`.trim(),
     status: booking.status === "canceled" ? "Canceled" : "Confirmed",
   };
@@ -2296,17 +2393,17 @@ function mapApiLandingPageToUi(landingPage = {}, previous = null) {
   const fallback = previous || {};
   const eventTypes = Array.isArray(landingPage.eventTypes)
     ? landingPage.eventTypes
-        .map((item) => ({
-          id: String(item?.id || "").trim(),
-          title: String(item?.title || "").trim(),
-          slug: String(item?.slug || "").trim(),
-          durationMinutes: Number(item?.durationMinutes) || 30,
-          locationType: String(item?.locationType || "").trim(),
-        }))
-        .filter((item) => item.id && item.title)
+      .map((item) => ({
+        id: String(item?.id || "").trim(),
+        title: String(item?.title || "").trim(),
+        slug: String(item?.slug || "").trim(),
+        durationMinutes: Number(item?.durationMinutes) || 30,
+        locationType: String(item?.locationType || "").trim(),
+      }))
+      .filter((item) => item.id && item.title)
     : Array.isArray(fallback.eventTypes)
-    ? fallback.eventTypes
-    : [];
+      ? fallback.eventTypes
+      : [];
 
   return {
     username: landingPage.username || fallback.username || "meetscheduling",
@@ -2329,38 +2426,38 @@ function mapApiLandingPageToUi(landingPage = {}, previous = null) {
     primaryColor: landingPage.primaryColor || fallback.primaryColor || "#1a73e8",
     services: Array.isArray(landingPage.services)
       ? landingPage.services
-          .map((item) => ({
-            title: String(item?.title || "").trim(),
-            description: String(item?.description || "").trim(),
-          }))
-          .filter((item) => item.title)
+        .map((item) => ({
+          title: String(item?.title || "").trim(),
+          description: String(item?.description || "").trim(),
+        }))
+        .filter((item) => item.title)
       : Array.isArray(fallback.services)
-      ? fallback.services
-      : [],
+        ? fallback.services
+        : [],
     gallery: Array.isArray(landingPage.gallery)
       ? landingPage.gallery
-          .map((item) => ({
-            url: String(item?.url || "").trim(),
-            alt: String(item?.alt || "").trim(),
-          }))
-          .filter((item) => item.url)
+        .map((item) => ({
+          url: String(item?.url || "").trim(),
+          alt: String(item?.alt || "").trim(),
+        }))
+        .filter((item) => item.url)
       : Array.isArray(fallback.gallery)
-      ? fallback.gallery
-      : [],
+        ? fallback.gallery
+        : [],
     featuredEventTypeId:
       landingPage.featuredEventTypeId || fallback.featuredEventTypeId || "",
     contactFormEnabled:
       typeof landingPage.contactFormEnabled === "boolean"
         ? landingPage.contactFormEnabled
         : typeof fallback.contactFormEnabled === "boolean"
-        ? fallback.contactFormEnabled
-        : true,
+          ? fallback.contactFormEnabled
+          : true,
     isPublished:
       typeof landingPage.isPublished === "boolean"
         ? landingPage.isPublished
         : typeof fallback.isPublished === "boolean"
-        ? fallback.isPublished
-        : true,
+          ? fallback.isPublished
+          : true,
     eventTypes,
   };
 }
@@ -3138,6 +3235,7 @@ function onViewClick(event) {
       }
       break;
     }
+    case "cancel-meeting":
     case "remove-meeting": {
       const id = button.dataset.id;
       apiRequest(`/api/dashboard/bookings/${encodeURIComponent(id)}/cancel`, {
@@ -3382,7 +3480,7 @@ function onViewClick(event) {
       if (!item) return;
       const url = `https://meetscheduling.app/s/${item.slug}`;
       if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).catch(() => {});
+        navigator.clipboard.writeText(url).catch(() => { });
       }
       showToast("Link copied");
       break;
@@ -4079,25 +4177,21 @@ function onViewClick(event) {
       break;
     }
     case "account-enable-2fa":
-      state.account.security.googleAuthenticatorEnabled = true;
-      state.account.security.googleAuthenticatorSecret = generateAuthenticatorSecret();
-      state.account.security.backupCodes = generateBackupCodes();
-      state.account.security.lastEnabledAt = new Date().toISOString();
-      saveState();
-      render();
-      showToast("Google Authenticator enabled");
+      openQrModal();
+      break;
+    case "close-qr-modal":
+      closeQrModal();
+      break;
+    case "submit-qr-modal":
+      submitQrModal();
       break;
     case "account-disable-2fa":
-      state.account.security.googleAuthenticatorEnabled = false;
-      saveState();
-      render();
-      showToast("Google Authenticator disabled");
+      disableTwoFactorAuth();
       break;
     case "account-regenerate-codes":
-      state.account.security.backupCodes = generateBackupCodes();
-      saveState();
-      render();
-      showToast("Backup codes regenerated");
+      // Optional for MVP: We can either implement an endpoint for this or hide the button.
+      // Since we don't have a dedicated "regenerate only" endpoint for backup codes without disabling 2FA,
+      showToast("To regenerate backup codes, please disable and re-enable 2FA.");
       break;
     case "account-save-cookies":
       saveState();
@@ -4929,7 +5023,7 @@ async function createEventTypeFromPreset(preset) {
         availabilityLabel,
         color:
           EVENT_TYPE_ACCENT_COLORS[
-            state.scheduling.eventTypes.length % EVENT_TYPE_ACCENT_COLORS.length
+          state.scheduling.eventTypes.length % EVENT_TYPE_ACCENT_COLORS.length
           ],
         internalNote: "",
         inviteeLanguage: "English",
@@ -4999,7 +5093,7 @@ async function createEventType() {
         availabilityLabel: "Weekdays, 9 am - 5 pm",
         color:
           EVENT_TYPE_ACCENT_COLORS[
-            state.scheduling.eventTypes.length % EVENT_TYPE_ACCENT_COLORS.length
+          state.scheduling.eventTypes.length % EVENT_TYPE_ACCENT_COLORS.length
           ],
         internalNote: "",
         inviteeLanguage: "English",
@@ -5611,8 +5705,8 @@ function renderHeader() {
     const context = state.activeSection === "admin"
       ? getAdminPageMeta().context
       : state.activeSection === "account"
-      ? getAccountPageMeta().context
-      : "";
+        ? getAccountPageMeta().context
+        : "";
     pageContextEl.textContent = context;
   }
 
@@ -5782,12 +5876,12 @@ function renderAnalyticsView() {
   return `
     <section class="admin-tabs">
       ${ANALYTICS_TABS.map(
-        (item) => `
+    (item) => `
         <button class="admin-tab ${tab === item ? "active" : ""}" type="button" data-action="set-analytics-tab" data-tab="${item}">
           ${escapeHtml(item)}
         </button>
       `
-      ).join("")}
+  ).join("")}
     </section>
 
     <section class="analytics-grid">
@@ -5798,9 +5892,8 @@ function renderAnalyticsView() {
         <article class="analytics-card"><p class="label">Completion rate</p><p class="value">0%</p></article>
       </div>
 
-      ${
-        tab === "Events"
-          ? `
+      ${tab === "Events"
+      ? `
           <div class="analytics-panels">
             <article class="analytics-panel"><h3>Completed events trend</h3><div class="no-data">No data available</div></article>
             <article class="analytics-panel"><h3>Event distribution by duration</h3><div class="no-data">No data available</div></article>
@@ -5810,14 +5903,14 @@ function renderAnalyticsView() {
             <article class="analytics-panel"><h3>Users with the least events</h3><div class="no-data">No data available</div></article>
           </div>
         `
-          : `
+      : `
           <div class="analytics-panels">
             <article class="analytics-panel"><h3>Routing outcomes</h3><div class="no-data">No data available</div></article>
             <article class="analytics-panel"><h3>Average routing time</h3><div class="no-data">No data available</div></article>
             <article class="analytics-panel"><h3>Lead handoff quality</h3><div class="no-data">No data available</div></article>
           </div>
         `
-      }
+    }
     </section>
   `;
 }
@@ -5830,41 +5923,32 @@ function renderAdminView() {
         <h2>Admin center</h2>
 
         <div class="admin-menu-group">
-          <button class="admin-menu-btn ${
-            state.admin.activePage === "dashboard" ? "active" : ""
-          }" type="button" data-action="admin-set-page" data-page="dashboard">Dashboard</button>
+          <button class="admin-menu-btn ${state.admin.activePage === "dashboard" ? "active" : ""
+    }" type="button" data-action="admin-set-page" data-page="dashboard">Dashboard</button>
         </div>
 
         <div class="admin-menu-group">
           <h3>Organization settings</h3>
-          <button class="admin-menu-btn ${
-            state.admin.activePage === "users" ? "active" : ""
-          }" type="button" data-action="admin-set-page" data-page="users">Users</button>
-          <button class="admin-menu-btn ${
-            state.admin.activePage === "groups" ? "active" : ""
-          }" type="button" data-action="admin-set-page" data-page="groups">Groups</button>
-          <button class="admin-menu-btn ${
-            state.admin.activePage === "login" ? "active" : ""
-          }" type="button" data-action="admin-set-page" data-page="login">Login</button>
-          <button class="admin-menu-btn ${
-            state.admin.activePage === "billing" ? "active" : ""
-          }" type="button" data-action="admin-set-page" data-page="billing">Billing</button>
-          <button class="admin-menu-btn ${
-            state.admin.activePage === "security" ? "active" : ""
-          }" type="button" data-action="admin-set-page" data-page="security">Security</button>
+          <button class="admin-menu-btn ${state.admin.activePage === "users" ? "active" : ""
+    }" type="button" data-action="admin-set-page" data-page="users">Users</button>
+          <button class="admin-menu-btn ${state.admin.activePage === "groups" ? "active" : ""
+    }" type="button" data-action="admin-set-page" data-page="groups">Groups</button>
+          <button class="admin-menu-btn ${state.admin.activePage === "login" ? "active" : ""
+    }" type="button" data-action="admin-set-page" data-page="login">Login</button>
+          <button class="admin-menu-btn ${state.admin.activePage === "billing" ? "active" : ""
+    }" type="button" data-action="admin-set-page" data-page="billing">Billing</button>
+          <button class="admin-menu-btn ${state.admin.activePage === "security" ? "active" : ""
+    }" type="button" data-action="admin-set-page" data-page="security">Security</button>
         </div>
 
         <div class="admin-menu-group">
           <h3>Scheduling settings</h3>
-          <button class="admin-menu-btn ${
-            state.admin.activePage === "permissions" ? "active" : ""
-          }" type="button" data-action="admin-set-page" data-page="permissions">Permissions</button>
-          <button class="admin-menu-btn ${
-            state.admin.activePage === "managed-events" ? "active" : ""
-          }" type="button" data-action="admin-set-page" data-page="managed-events">Managed events</button>
-          <button class="admin-menu-btn ${
-            state.admin.activePage === "managed-workflows" ? "active" : ""
-          }" type="button" data-action="admin-set-page" data-page="managed-workflows">Managed workflows</button>
+          <button class="admin-menu-btn ${state.admin.activePage === "permissions" ? "active" : ""
+    }" type="button" data-action="admin-set-page" data-page="permissions">Permissions</button>
+          <button class="admin-menu-btn ${state.admin.activePage === "managed-events" ? "active" : ""
+    }" type="button" data-action="admin-set-page" data-page="managed-events">Managed events</button>
+          <button class="admin-menu-btn ${state.admin.activePage === "managed-workflows" ? "active" : ""
+    }" type="button" data-action="admin-set-page" data-page="managed-workflows">Managed workflows</button>
         </div>
       </aside>
 
@@ -5925,14 +6009,14 @@ function renderAdminUsersPage() {
   return `
     <section class="admin-tabs">
       ${["Active", "Pending"]
-        .map(
-          (tab) => `
+      .map(
+        (tab) => `
           <button class="admin-tab ${activeTab === tab ? "active" : ""}" type="button" data-action="admin-users-tab" data-tab="${tab}">
             ${tab}
           </button>
         `
-        )
-        .join("")}
+      )
+      .join("")}
     </section>
 
     <section class="upsell-banner">
@@ -5940,9 +6024,8 @@ function renderAdminUsersPage() {
       <button class="primary-btn" type="button" data-action="admin-upgrade">Explore the Standard plan</button>
     </section>
 
-    ${
-      users.length
-        ? `
+    ${users.length
+      ? `
         <section class="data-table-wrap">
           <table class="data-table">
             <thead>
@@ -5950,23 +6033,23 @@ function renderAdminUsersPage() {
             </thead>
             <tbody>
               ${users
-                .map(
-                  (user) => `
+        .map(
+          (user) => `
                   <tr>
                     <td>${escapeHtml(user.name)}</td>
                     <td>${escapeHtml(user.email)}</td>
                     <td><span class="status-pill ${user.status === "Active" ? "success" : "pending"}">${escapeHtml(
-                    user.status
-                  )}</span></td>
+            user.status
+          )}</span></td>
                   </tr>
                 `
-                )
-                .join("")}
+        )
+        .join("")}
             </tbody>
           </table>
         </section>
       `
-        : `
+      : `
         <section class="admin-empty">
           <h3>Scheduling is better together</h3>
           <p>As you add users to your organization, they'll appear here.</p>
@@ -5983,24 +6066,23 @@ function renderAdminGroupsPage() {
       <p>Upgrade to the Teams plan to access this feature and other advanced scheduling tools.</p>
       <button class="primary-btn" type="button" data-action="admin-upgrade">Explore the Teams plan</button>
     </section>
-    ${
-      state.admin.groups.length
-        ? `
+    ${state.admin.groups.length
+      ? `
       <section class="data-table-wrap">
         <table class="data-table">
           <thead><tr><th>Group</th><th>Members</th></tr></thead>
           <tbody>
             ${state.admin.groups
-              .map(
-                (group) => `
+        .map(
+          (group) => `
                 <tr><td>${escapeHtml(group.name)}</td><td>${group.members}</td></tr>
               `
-              )
-              .join("")}
+        )
+        .join("")}
           </tbody>
         </table>
       </section>`
-        : `
+      : `
       <section class="admin-empty">
         <h3>Organize users for better team management</h3>
         <p>Create groups based on department, job function, or location.</p>
@@ -6024,12 +6106,12 @@ function renderAdminLoginPage() {
   return `
     <section class="admin-tabs">
       ${ADMIN_LOGIN_TABS.map(
-        (item) => `
+    (item) => `
         <button class="admin-tab ${tab === item ? "active" : ""}" type="button" data-action="admin-login-tab" data-tab="${item}">
           ${escapeHtml(item)}
         </button>
       `
-      ).join("")}
+  ).join("")}
     </section>
     <section class="admin-panel">
       <div class="admin-panel-body">
@@ -6048,37 +6130,34 @@ function renderAdminPermissionsPage() {
   return `
     <section class="admin-tabs">
       ${ADMIN_PERMISSIONS_TABS.map(
-        (item) => `
+    (item) => `
         <button class="admin-tab ${tab === item ? "active" : ""}" type="button" data-action="admin-permissions-tab" data-tab="${item}">
           ${escapeHtml(item)} ${item === "Invitations" ? '<span class="status-pill pending">New</span>' : ""}
         </button>
       `
-      ).join("")}
+  ).join("")}
     </section>
 
     <section class="admin-panel">
       <div class="admin-panel-body">
-        ${
-          tab === "Event types"
-            ? `
+        ${tab === "Event types"
+      ? `
             <h2>Access to shared event types</h2>
             <p class="text-muted">Shared event types allow members of your organization to create Round Robin and Co-hosted event types.</p>
             <h3>Who can create new shared event types?</h3>
             <div class="radio-group">
-              <label><input type="radio" name="permission-create" value="all-members" data-action="admin-permission-choice" ${
-                state.admin.permissionCreateShared === "all-members" ? "checked" : ""
-              } />All members of my organization</label>
-              <label><input type="radio" name="permission-create" value="no-one" data-action="admin-permission-choice" ${
-                state.admin.permissionCreateShared === "no-one" ? "checked" : ""
-              } />No one</label>
+              <label><input type="radio" name="permission-create" value="all-members" data-action="admin-permission-choice" ${state.admin.permissionCreateShared === "all-members" ? "checked" : ""
+      } />All members of my organization</label>
+              <label><input type="radio" name="permission-create" value="no-one" data-action="admin-permission-choice" ${state.admin.permissionCreateShared === "no-one" ? "checked" : ""
+      } />No one</label>
             </div>
             <div class="admin-inline-row">
               <button class="soft-btn" type="button" data-action="admin-cancel-permissions">Cancel</button>
               <button class="primary-btn" type="button" data-action="admin-save-permissions">Save</button>
             </div>
           `
-            : tab === "Workflows"
-            ? `
+      : tab === "Workflows"
+        ? `
             <h2>Workflow permissions</h2>
             <p class="text-muted">Control who can create and publish organization workflows.</p>
             <div class="radio-group">
@@ -6087,7 +6166,7 @@ function renderAdminPermissionsPage() {
               <label><input type="radio" />Everyone</label>
             </div>
           `
-            : `
+        : `
             <h2>Invitation permissions</h2>
             <p class="text-muted">Set who can invite new members and assign roles.</p>
             <div class="radio-group">
@@ -6095,7 +6174,7 @@ function renderAdminPermissionsPage() {
               <label><input type="radio" />Admins and team leads</label>
             </div>
           `
-        }
+    }
       </div>
     </section>
   `;
@@ -6107,23 +6186,22 @@ function renderAdminManagedEventsPage() {
       <p>Upgrade to the Teams plan to access this feature and other advanced scheduling tools.</p>
       <button class="primary-btn" type="button" data-action="admin-upgrade">Explore the Teams plan</button>
     </section>
-    ${
-      state.admin.managedEvents.length
-        ? `
+    ${state.admin.managedEvents.length
+      ? `
         <section class="data-list">
           ${state.admin.managedEvents
-            .map(
-              (item) => `
+        .map(
+          (item) => `
               <article class="data-item">
                 <div><strong>${escapeHtml(item.title)}</strong><p>Owner: ${escapeHtml(item.owner)}</p></div>
                 <button class="mini-btn" type="button" data-action="admin-remove-managed-event" data-id="${item.id}">Delete</button>
               </article>
             `
-            )
-            .join("")}
+        )
+        .join("")}
         </section>
       `
-        : `
+      : `
         <section class="admin-empty">
           <h3>Prepare standardized meetings for your team</h3>
           <p>Keep meetings consistent with admin-controlled events.</p>
@@ -6140,23 +6218,22 @@ function renderAdminManagedWorkflowsPage() {
       <p>Upgrade to the Teams plan to use managed workflow automation.</p>
       <button class="primary-btn" type="button" data-action="admin-upgrade">Explore the Teams plan</button>
     </section>
-    ${
-      state.admin.managedWorkflows.length
-        ? `
+    ${state.admin.managedWorkflows.length
+      ? `
         <section class="data-list">
           ${state.admin.managedWorkflows
-            .map(
-              (item) => `
+        .map(
+          (item) => `
               <article class="data-item">
                 <div><strong>${escapeHtml(item.title)}</strong><p>Trigger: ${escapeHtml(item.trigger)}</p></div>
                 <button class="mini-btn" type="button" data-action="admin-remove-managed-workflow" data-id="${item.id}">Delete</button>
               </article>
             `
-            )
-            .join("")}
+        )
+        .join("")}
         </section>
       `
-        : `
+      : `
         <section class="admin-empty">
           <h3>No managed workflows yet</h3>
           <p>Create consistent workflow templates for your organization.</p>
@@ -6172,17 +6249,16 @@ function renderAdminSecurityPage() {
   return `
     <section class="admin-tabs">
       ${ADMIN_SECURITY_TABS.map(
-        (item) => `
+    (item) => `
         <button class="admin-tab ${tab === item ? "active" : ""}" type="button" data-action="admin-security-tab" data-tab="${item}">
           ${escapeHtml(item)}
         </button>
       `
-      ).join("")}
+  ).join("")}
     </section>
-    ${
-      tab === "Booking"
-        ? renderAdminSecurityBooking()
-        : tab === "Activity log"
+    ${tab === "Booking"
+      ? renderAdminSecurityBooking()
+      : tab === "Activity log"
         ? renderAdminSecurityActivity()
         : renderAdminSecurityDataDeletion()
     }
@@ -6203,8 +6279,8 @@ function renderAdminSecurityBooking() {
         <label class="search-box">
           <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 1 0 5.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/></svg>
           <input data-action="admin-security-search" value="${escapeHtml(
-            state.admin.securityBookingSearch
-          )}" placeholder="Search event types" />
+    state.admin.securityBookingSearch
+  )}" placeholder="Search event types" />
         </label>
 
         <div class="data-table-wrap">
@@ -6220,26 +6296,24 @@ function renderAdminSecurityBooking() {
               </tr>
             </thead>
             <tbody>
-              ${
-                rows.length
-                  ? rows
-                      .map(
-                        (item) => `
+              ${rows.length
+      ? rows
+        .map(
+          (item) => `
                         <tr>
                           <td>${escapeHtml(item.name)}</td>
-                          <td><input type="checkbox" data-action="admin-booking-verification" data-id="${item.id}" ${
-                          item.verification ? "checked" : ""
-                        } /></td>
+                          <td><input type="checkbox" data-action="admin-booking-verification" data-id="${item.id}" ${item.verification ? "checked" : ""
+            } /></td>
                           <td>${escapeHtml(item.type)}</td>
                           <td>${escapeHtml(item.ownedBy)}</td>
                           <td>${escapeHtml(item.team || "-")}</td>
                           <td>${escapeHtml(item.lastEdited)}</td>
                         </tr>
                       `
-                      )
-                      .join("")
-                  : '<tr><td colspan="6">No matching event types.</td></tr>'
-              }
+        )
+        .join("")
+      : '<tr><td colspan="6">No matching event types.</td></tr>'
+    }
             </tbody>
           </table>
         </div>
@@ -6325,14 +6399,13 @@ function renderAdminBillingPage() {
         <div class="billing-compare">
           <div class="compare-tabs">
             ${ADMIN_BILLING_COMPARE_TABS.map(
-              (tab) => `
-              <button class="compare-tab ${
-                tab === state.admin.billingCompareTab ? "active" : ""
-              }" type="button" data-action="admin-billing-tab" data-tab="${tab}">
+    (tab) => `
+              <button class="compare-tab ${tab === state.admin.billingCompareTab ? "active" : ""
+      }" type="button" data-action="admin-billing-tab" data-tab="${tab}">
                 ${escapeHtml(tab)}
               </button>
             `
-            ).join("")}
+  ).join("")}
           </div>
           ${renderBillingFeatureTable()}
         </div>
@@ -6361,24 +6434,24 @@ function renderBillingFeatureTable() {
       </thead>
       <tbody>
         ${categories
-          .map(
-            (category) => `
+      .map(
+        (category) => `
             <tr><th colspan="5">${escapeHtml(category.name)}</th></tr>
             ${category.rows
-              .map(
-                (row) => `
+            .map(
+              (row) => `
                 <tr>
                   <td>${escapeHtml(row.label)}</td>
                   ${["free", "standard", "teams", "enterprise"]
-                    .map((plan) => `<td class="center">${renderFeatureValue(row.values[plan])}</td>`)
-                    .join("")}
+                  .map((plan) => `<td class="center">${renderFeatureValue(row.values[plan])}</td>`)
+                  .join("")}
                 </tr>
               `
-              )
-              .join("")}
+            )
+            .join("")}
           `
-          )
-          .join("")}
+      )
+      .join("")}
       </tbody>
     </table>
   `;
@@ -6409,16 +6482,15 @@ function renderAccountView() {
         <div class="account-menu-group">
           <h3>Account</h3>
           ${menuItems
-            .map(
-              (item) => `
-              <button class="account-menu-btn ${
-                state.account.activePage === item.page ? "active" : ""
-              }" type="button" data-action="account-set-page" data-page="${item.page}">
+      .map(
+        (item) => `
+              <button class="account-menu-btn ${state.account.activePage === item.page ? "active" : ""
+          }" type="button" data-action="account-set-page" data-page="${item.page}">
                 ${escapeHtml(item.label)}
               </button>
             `
-            )
-            .join("")}
+      )
+      .join("")}
         </div>
         <div class="account-menu-foot">
           <button class="account-menu-btn" type="button" data-action="account-contact-support">Help</button>
@@ -6462,11 +6534,10 @@ function renderAccountProfilePage() {
     <section class="account-panel">
       <div class="account-panel-body">
         <div class="account-avatar-row">
-          ${
-            logoUrl
-              ? `<img class="account-avatar" src="${escapeHtml(logoUrl)}" alt="Profile avatar" />`
-              : `<span class="account-avatar">${escapeHtml(avatarText)}</span>`
-          }
+          ${logoUrl
+      ? `<img class="account-avatar" src="${escapeHtml(logoUrl)}" alt="Profile avatar" />`
+      : `<span class="account-avatar">${escapeHtml(avatarText)}</span>`
+    }
           <button class="soft-btn" type="button" data-action="account-update-logo">Update</button>
           <button class="soft-btn" type="button" data-action="account-remove-logo">Remove</button>
         </div>
@@ -6474,15 +6545,15 @@ function renderAccountProfilePage() {
         <label class="account-field">
           <span>Name</span>
           <input class="account-input" type="text" data-action="account-profile-field" data-field="name" value="${escapeHtml(
-            profile.name
-          )}" />
+      profile.name
+    )}" />
         </label>
 
         <label class="account-field">
           <span>Welcome Message</span>
           <textarea class="account-textarea" data-action="account-profile-field" data-field="welcomeMessage">${escapeHtml(
-            profile.welcomeMessage
-          )}</textarea>
+      profile.welcomeMessage
+    )}</textarea>
         </label>
 
         <div class="account-grid-two">
@@ -6490,44 +6561,40 @@ function renderAccountProfilePage() {
             <span>Language</span>
             <select class="account-select" data-action="account-profile-field" data-field="language">
               ${LANGUAGE_OPTIONS.map(
-                (item) =>
-                  `<option value="${escapeHtml(item)}" ${
-                    profile.language === item ? "selected" : ""
-                  }>${escapeHtml(item)}</option>`
-              ).join("")}
+      (item) =>
+        `<option value="${escapeHtml(item)}" ${profile.language === item ? "selected" : ""
+        }>${escapeHtml(item)}</option>`
+    ).join("")}
             </select>
           </label>
           <label class="account-field">
             <span>Date Format</span>
             <select class="account-select" data-action="account-profile-field" data-field="dateFormat">
               ${DATE_FORMAT_OPTIONS.map(
-                (item) =>
-                  `<option value="${escapeHtml(item)}" ${
-                    profile.dateFormat === item ? "selected" : ""
-                  }>${escapeHtml(item)}</option>`
-              ).join("")}
+      (item) =>
+        `<option value="${escapeHtml(item)}" ${profile.dateFormat === item ? "selected" : ""
+        }>${escapeHtml(item)}</option>`
+    ).join("")}
             </select>
           </label>
           <label class="account-field">
             <span>Time Format</span>
             <select class="account-select" data-action="account-profile-field" data-field="timeFormat">
               ${TIME_FORMAT_OPTIONS.map(
-                (item) =>
-                  `<option value="${escapeHtml(item)}" ${
-                    profile.timeFormat === item ? "selected" : ""
-                  }>${escapeHtml(item)}</option>`
-              ).join("")}
+      (item) =>
+        `<option value="${escapeHtml(item)}" ${profile.timeFormat === item ? "selected" : ""
+        }>${escapeHtml(item)}</option>`
+    ).join("")}
             </select>
           </label>
           <label class="account-field">
             <span>Country</span>
             <select class="account-select" data-action="account-profile-field" data-field="country">
               ${COUNTRY_OPTIONS.map(
-                (item) =>
-                  `<option value="${escapeHtml(item)}" ${
-                    profile.country === item ? "selected" : ""
-                  }>${escapeHtml(item)}</option>`
-              ).join("")}
+      (item) =>
+        `<option value="${escapeHtml(item)}" ${profile.country === item ? "selected" : ""
+        }>${escapeHtml(item)}</option>`
+    ).join("")}
             </select>
           </label>
         </div>
@@ -6539,11 +6606,10 @@ function renderAccountProfilePage() {
           </span>
           <select class="account-select" data-action="account-profile-field" data-field="timezone">
             ${TIMEZONES.map(
-              (item) =>
-                `<option value="${escapeHtml(item)}" ${
-                  profile.timezone === item ? "selected" : ""
-                }>${escapeHtml(item)}</option>`
-            ).join("")}
+      (item) =>
+        `<option value="${escapeHtml(item)}" ${profile.timezone === item ? "selected" : ""
+        }>${escapeHtml(item)}</option>`
+    ).join("")}
           </select>
         </label>
 
@@ -6569,9 +6635,8 @@ function renderAccountBrandingPage() {
         <h3>Logo</h3>
         <p class="text-muted">Your company branding appears at the top-left corner of your scheduling page.</p>
         <label class="inline-toggle">
-          <input type="checkbox" data-action="account-branding-toggle" data-field="applyOrgLogo" ${
-            branding.applyOrgLogo ? "checked" : ""
-          } />
+          <input type="checkbox" data-action="account-branding-toggle" data-field="applyOrgLogo" ${branding.applyOrgLogo ? "checked" : ""
+    } />
           <span>Apply to all users in your organization</span>
         </label>
 
@@ -6587,16 +6652,14 @@ function renderAccountBrandingPage() {
 
         <label class="inline-toggle with-switch">
           <span>Use Meetscheduling branding</span>
-          <input type="checkbox" data-action="account-branding-toggle" data-field="useMeetschedulingBranding" ${
-            branding.useMeetschedulingBranding ? "checked" : ""
-          } />
+          <input type="checkbox" data-action="account-branding-toggle" data-field="useMeetschedulingBranding" ${branding.useMeetschedulingBranding ? "checked" : ""
+    } />
           <span class="switch"></span>
         </label>
         <p class="brand-info-box">Meetscheduling's branding will be displayed on your scheduling page, notifications, and confirmations.</p>
         <label class="inline-toggle">
-          <input type="checkbox" data-action="account-branding-toggle" data-field="applyOrgBranding" ${
-            branding.applyOrgBranding ? "checked" : ""
-          } />
+          <input type="checkbox" data-action="account-branding-toggle" data-field="applyOrgBranding" ${branding.applyOrgBranding ? "checked" : ""
+    } />
           <span>Apply to all users in your organization</span>
         </label>
 
@@ -6619,8 +6682,8 @@ function renderAccountLinkPage() {
           <div class="link-input-row">
             <span class="link-prefix">meetscheduling.com/</span>
             <input class="account-input" data-action="account-link-input" value="${escapeHtml(
-              state.account.myLink.slug
-            )}" />
+    state.account.myLink.slug
+  )}" />
           </div>
         </label>
         <div class="account-actions">
@@ -6639,9 +6702,8 @@ function renderAccountCommunicationPage() {
         <h3>Email notifications when added to event types</h3>
         <label class="inline-toggle with-switch">
           <span>Receive an email when someone adds you as a host to an event type</span>
-          <input type="checkbox" data-action="account-communication-toggle" data-field="emailWhenAddedToEventType" ${
-            state.account.communication.emailWhenAddedToEventType ? "checked" : ""
-          } />
+          <input type="checkbox" data-action="account-communication-toggle" data-field="emailWhenAddedToEventType" ${state.account.communication.emailWhenAddedToEventType ? "checked" : ""
+    } />
           <span class="switch"></span>
         </label>
         <p class="text-muted"><strong>Your changes to this page are saved automatically.</strong></p>
@@ -6659,20 +6721,18 @@ function renderAccountLoginPreferencesPage() {
         <div class="login-provider-row">
           <strong>${escapeHtml(providerLabel)}</strong>
           <p class="text-muted">
-            ${
-              login.connected
-                ? `You log in with a ${providerLabel} account.`
-                : `No ${providerLabel} account is connected.`
-            }
+            ${login.connected
+      ? `You log in with a ${providerLabel} account.`
+      : `No ${providerLabel} account is connected.`
+    }
           </p>
         </div>
 
         <div class="account-inline-actions">
-          ${
-            login.connected
-              ? '<button class="soft-btn" type="button" data-action="account-login-unlink">Unlink</button>'
-              : '<button class="soft-btn" type="button" data-action="account-login-link-google">Connect account</button>'
-          }
+          ${login.connected
+      ? '<button class="soft-btn" type="button" data-action="account-login-unlink">Unlink</button>'
+      : '<button class="soft-btn" type="button" data-action="account-login-link-google">Connect account</button>'
+    }
           <button class="soft-btn" type="button" data-action="account-login-change-email">Change email</button>
         </div>
 
@@ -6695,19 +6755,17 @@ function renderAccountSecurityPage() {
   return `
     <section class="admin-tabs">
       ${ACCOUNT_SECURITY_TABS.map(
-        (item) => `
-          <button class="admin-tab ${
-            state.account.security.activeTab === item ? "active" : ""
-          }" type="button" data-action="account-security-tab" data-tab="${escapeHtml(item)}">
+    (item) => `
+          <button class="admin-tab ${state.account.security.activeTab === item ? "active" : ""
+      }" type="button" data-action="account-security-tab" data-tab="${escapeHtml(item)}">
             ${escapeHtml(item)}
           </button>
         `
-      ).join("")}
+  ).join("")}
     </section>
-    ${
-      state.account.security.activeTab === "Booking"
-        ? renderAccountSecurityBooking()
-        : renderAccountSecurityAuthenticator()
+    ${state.account.security.activeTab === "Booking"
+      ? renderAccountSecurityBooking()
+      : renderAccountSecurityAuthenticator()
     }
   `;
 }
@@ -6728,8 +6786,8 @@ function renderAccountSecurityBooking() {
         <label class="search-box">
           <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 1 0 5.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/></svg>
           <input data-action="account-security-search" value="${escapeHtml(
-            state.account.security.bookingSearch
-          )}" placeholder="Search event types" />
+    state.account.security.bookingSearch
+  )}" placeholder="Search event types" />
         </label>
 
         <div class="data-table-wrap">
@@ -6745,26 +6803,24 @@ function renderAccountSecurityBooking() {
               </tr>
             </thead>
             <tbody>
-              ${
-                rows.length
-                  ? rows
-                      .map(
-                        (item) => `
+              ${rows.length
+      ? rows
+        .map(
+          (item) => `
                         <tr>
                           <td>${escapeHtml(item.name)}</td>
-                          <td><input type="checkbox" data-action="account-security-booking-verification" data-id="${item.id}" ${
-                          item.verification ? "checked" : ""
-                        } /></td>
+                          <td><input type="checkbox" data-action="account-security-booking-verification" data-id="${item.id}" ${item.verification ? "checked" : ""
+            } /></td>
                           <td>${escapeHtml(item.type)}</td>
                           <td>${escapeHtml(item.ownedBy)}</td>
                           <td>${escapeHtml(item.team || "-")}</td>
                           <td>${escapeHtml(item.lastEdited)}</td>
                         </tr>
                       `
-                      )
-                      .join("")
-                  : '<tr><td colspan="6">No matching event types.</td></tr>'
-              }
+        )
+        .join("")
+      : '<tr><td colspan="6">No matching event types.</td></tr>'
+    }
             </tbody>
           </table>
         </div>
@@ -6783,33 +6839,31 @@ function renderAccountSecurityAuthenticator() {
       <div class="account-panel-body account-narrow">
         <h2>Google Authenticator</h2>
         <p class="text-muted">Use Google Authenticator to add two-factor authentication when logging in.</p>
-        <p><strong>Status:</strong> ${
-          security.googleAuthenticatorEnabled ? "Enabled" : "Disabled"
-        }</p>
+        <p><strong>Status:</strong> ${security.googleAuthenticatorEnabled ? "Enabled" : "Disabled"
+    }</p>
         <p><strong>Last updated:</strong> ${escapeHtml(enabledDate)}</p>
 
-        ${
-          security.googleAuthenticatorEnabled
-            ? `
+        ${security.googleAuthenticatorEnabled
+      ? `
               <div class="auth-secret-box">
                 <p class="text-muted">Authenticator key</p>
                 <code>${escapeHtml(security.googleAuthenticatorSecret)}</code>
               </div>
               <div class="auth-code-grid">
                 ${security.backupCodes
-                  .map((code) => `<code>${escapeHtml(code)}</code>`)
-                  .join("")}
+        .map((code) => `<code>${escapeHtml(code)}</code>`)
+        .join("")}
               </div>
               <div class="account-actions">
                 <button class="soft-btn" type="button" data-action="account-regenerate-codes">Regenerate backup codes</button>
                 <button class="soft-btn" type="button" data-action="account-disable-2fa">Disable</button>
               </div>
             `
-            : `
+      : `
               <p class="warning-box">Two-factor authentication is currently disabled.</p>
               <button class="primary-btn" type="button" data-action="account-enable-2fa">Set up Google Authenticator</button>
             `
-        }
+    }
       </div>
     </section>
   `;
@@ -6829,23 +6883,20 @@ function renderAccountCookiePage() {
           </label>
           <label class="inline-toggle with-switch">
             <span>Functional cookies</span>
-            <input type="checkbox" data-action="account-cookie-toggle" data-field="functional" ${
-              state.account.cookies.functional ? "checked" : ""
-            } />
+            <input type="checkbox" data-action="account-cookie-toggle" data-field="functional" ${state.account.cookies.functional ? "checked" : ""
+    } />
             <span class="switch"></span>
           </label>
           <label class="inline-toggle with-switch">
             <span>Analytics cookies</span>
-            <input type="checkbox" data-action="account-cookie-toggle" data-field="analytics" ${
-              state.account.cookies.analytics ? "checked" : ""
-            } />
+            <input type="checkbox" data-action="account-cookie-toggle" data-field="analytics" ${state.account.cookies.analytics ? "checked" : ""
+    } />
             <span class="switch"></span>
           </label>
           <label class="inline-toggle with-switch">
             <span>Marketing cookies</span>
-            <input type="checkbox" data-action="account-cookie-toggle" data-field="marketing" ${
-              state.account.cookies.marketing ? "checked" : ""
-            } />
+            <input type="checkbox" data-action="account-cookie-toggle" data-field="marketing" ${state.account.cookies.marketing ? "checked" : ""
+    } />
             <span class="switch"></span>
           </label>
         </div>
@@ -6868,9 +6919,8 @@ function renderMeetingsView() {
         </button>
         <label class="toggle-field">
           <span>Show buffers</span>
-          <input type="checkbox" data-action="set-show-buffers" ${
-            state.meetings.showBuffers ? "checked" : ""
-          } />
+          <input type="checkbox" data-action="set-show-buffers" ${state.meetings.showBuffers ? "checked" : ""
+    } />
           <span class="switch"></span>
         </label>
       </div>
@@ -6881,13 +6931,13 @@ function renderMeetingsView() {
       <div class="events-head">
         <div class="events-tab-row">
           ${MEETING_TABS.map(
-            (tab) => `
+      (tab) => `
             <button class="events-tab ${activeTab === tab ? "active" : ""}" type="button" data-action="set-meeting-tab" data-tab="${tab}">
               ${escapeHtml(tab)}
               ${tab === "Date Range" ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 9.3 12 13.9l4.6-4.6 1.4 1.4-5.3 5.3a1 1 0 0 1-1.4 0L6 10.7l1.4-1.4Z"/></svg>' : ""}
             </button>
           `
-          ).join("")}
+    ).join("")}
         </div>
         <div class="events-actions">
           <button class="pill-btn" type="button" data-action="meetings-export">
@@ -6901,27 +6951,29 @@ function renderMeetingsView() {
         </div>
       </div>
       <div class="events-body">
-        ${
-          events.length
-            ? `<div class="event-list">
+        ${events.length
+      ? `<div class="event-list">
                 ${events
-                  .map(
-                    (event) => `
+        .map(
+          (event) => `
                     <article class="event-item">
                       <div>
                         <strong>${escapeHtml(event.title)}</strong>
+                        <p>with ${escapeHtml(event.inviteeName)}</p>
                         <p>${escapeHtml(event.time)}</p>
+                        ${event.meetingLink ? `<a href="${escapeHtml(event.meetingLink)}" target="_blank" class="link-btn" style="margin-top:4px;display:inline-block;">Join Meeting</a>` : ''}
                       </div>
                       <div class="actions">
                         <span class="state">${escapeHtml(event.status || "Confirmed")}</span>
+                        ${event.status !== "Canceled" ? `<button class="mini-btn" type="button" data-action="cancel-meeting" data-id="${event.id}">Cancel</button>` : ''}
                         <button class="mini-btn" type="button" data-action="remove-meeting" data-id="${event.id}">Delete</button>
                       </div>
                     </article>
                   `
-                  )
-                  .join("")}
+        )
+        .join("")}
               </div>`
-            : `<div class="empty-illustration">
+      : `<div class="empty-illustration">
                 <div class="empty-calendar">
                   <svg viewBox="0 0 96 96">
                     <rect x="10" y="16" width="76" height="70" rx="8"></rect>
@@ -6936,7 +6988,7 @@ function renderMeetingsView() {
                 </div>
                 <h2>No ${escapeHtml(activeTab)} Events</h2>
               </div>`
-        }
+    }
       </div>
     </section>
   `;
@@ -6966,34 +7018,30 @@ function renderSchedulingView() {
         <label class="search-box">
           <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 1 0 5.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/></svg>
           <input data-action="scheduling-search" value="${escapeHtml(
-            state.scheduling.search
-          )}" placeholder="${escapeHtml(getSearchPlaceholder(activeTab))}" />
+    state.scheduling.search
+  )}" placeholder="${escapeHtml(getSearchPlaceholder(activeTab))}" />
         </label>
-        ${
-          activeTab === "Event types"
-            ? ""
-            : `<select class="filter-select" data-action="scheduling-filter">
+        ${activeTab === "Event types"
+      ? ""
+      : `<select class="filter-select" data-action="scheduling-filter">
           ${filterOptions
-            .map(
-              (option) =>
-                `<option value="${option.value}" ${
-                  option.value === activeFilter ? "selected" : ""
-                }>${escapeHtml(option.label)}</option>`
-            )
-            .join("")}
+        .map(
+          (option) =>
+            `<option value="${option.value}" ${option.value === activeFilter ? "selected" : ""
+            }>${escapeHtml(option.label)}</option>`
+        )
+        .join("")}
         </select>`
-        }
+    }
       </div>
-      ${
-        activeTab === "Event types"
-          ? '<button class="pill-btn" type="button" data-action="create-event-type">+ Create event type</button>'
-          : ""
-      }
+      ${activeTab === "Event types"
+      ? '<button class="pill-btn" type="button" data-action="create-event-type">+ Create event type</button>'
+      : ""
+    }
     </section>
-    ${
-      activeTab === "Event types"
-        ? renderEventTypes(filtered)
-        : activeTab === "Single-use links"
+    ${activeTab === "Event types"
+      ? renderEventTypes(filtered)
+      : activeTab === "Single-use links"
         ? renderSingleUseLinks(filtered)
         : renderMeetingPolls(filtered)
     }
@@ -7083,17 +7131,17 @@ function renderEventTypes(items) {
 
       <section class="event-type-list">
         ${items
-          .map((rawItem, index) => {
-            const item = normalizeEventTypeRecord(rawItem, index);
-            const meta = [
-              `${item.duration} min`,
-              item.locationType || "No location set",
-              item.eventKind || "One-on-One",
-            ];
-            const showWarning = item.locationType === "No location set";
-            const menuOpen = openEventTypeMenuId === item.id;
+      .map((rawItem, index) => {
+        const item = normalizeEventTypeRecord(rawItem, index);
+        const meta = [
+          `${item.duration} min`,
+          item.locationType || "No location set",
+          item.eventKind || "One-on-One",
+        ];
+        const showWarning = item.locationType === "No location set";
+        const menuOpen = openEventTypeMenuId === item.id;
 
-            return `
+        return `
               <article class="event-type-row ${item.active ? "" : "is-inactive"}">
                 <span class="event-type-accent" style="--event-color:${escapeHtml(item.color)};"></span>
                 <div class="event-type-main">
@@ -7102,11 +7150,10 @@ function renderEventTypes(items) {
                     <h3>${escapeHtml(item.name)}</h3>
                   </div>
                   <p class="event-type-meta">
-                    ${
-                      showWarning
-                        ? '<span class="event-meta-alert" title="Location not set">!</span>'
-                        : ""
-                    }
+                    ${showWarning
+            ? '<span class="event-meta-alert" title="Location not set">!</span>'
+            : ""
+          }
                     ${escapeHtml(meta.join(" • "))}
                   </p>
                   <p class="event-type-hours">${escapeHtml(item.availabilityLabel)}</p>
@@ -7131,9 +7178,8 @@ function renderEventTypes(items) {
                     >
                       ⋮
                     </button>
-                    ${
-                      menuOpen
-                        ? `
+                    ${menuOpen
+            ? `
                           <div class="event-type-menu" role="menu">
                             <button class="event-menu-item" type="button" data-action="view-event-booking-page" data-id="${item.id}">View booking page</button>
                             <button class="event-menu-item" type="button" data-action="edit-event-type" data-id="${item.id}">Edit</button>
@@ -7145,9 +7191,8 @@ function renderEventTypes(items) {
                               <small>${escapeHtml(item.inviteeLanguage)}</small>
                             </button>
                             <div class="event-menu-divider"></div>
-                            <button class="event-menu-item" type="button" data-action="toggle-event-secret" data-id="${item.id}">${
-                              item.secret ? "Make public" : "Make secret"
-                            }</button>
+                            <button class="event-menu-item" type="button" data-action="toggle-event-secret" data-id="${item.id}">${item.secret ? "Make public" : "Make secret"
+            }</button>
                             <button class="event-menu-item" type="button" data-action="duplicate-event-type" data-id="${item.id}">Duplicate</button>
                             <button class="event-menu-item danger" type="button" data-action="delete-event-type" data-id="${item.id}">Delete</button>
                             <div class="event-menu-divider"></div>
@@ -7165,14 +7210,14 @@ function renderEventTypes(items) {
                             </div>
                           </div>
                         `
-                        : ""
-                    }
+            : ""
+          }
                   </div>
                 </div>
               </article>
             `;
-          })
-          .join("")}
+      })
+      .join("")}
       </section>
     </section>
   `;
@@ -7207,11 +7252,10 @@ function renderSingleUseLinks(items) {
   return `
     <section class="data-list">
       <button class="pill-btn" type="button" data-action="create-single-link">+ Create single-use link</button>
-      ${
-        items.length
-          ? items
-              .map(
-                (item) => `
+      ${items.length
+      ? items
+        .map(
+          (item) => `
                 <article class="data-item">
                   <div>
                     <strong>${escapeHtml(item.title)}</strong>
@@ -7223,10 +7267,10 @@ function renderSingleUseLinks(items) {
                   </div>
                 </article>
               `
-              )
-              .join("")
-          : '<p class="text-muted small">No single-use links match your search.</p>'
-      }
+        )
+        .join("")
+      : '<p class="text-muted small">No single-use links match your search.</p>'
+    }
     </section>
   `;
 }
@@ -7261,11 +7305,10 @@ function renderMeetingPolls(items) {
   return `
     <section class="data-list">
       <button class="pill-btn" type="button" data-action="create-poll">+ Create meeting poll</button>
-      ${
-        items.length
-          ? items
-              .map(
-                (item) => `
+      ${items.length
+      ? items
+        .map(
+          (item) => `
                 <article class="data-item">
                   <div>
                     <strong>${escapeHtml(item.title)}</strong>
@@ -7279,10 +7322,10 @@ function renderMeetingPolls(items) {
                   </div>
                 </article>
               `
-              )
-              .join("")
-          : '<p class="text-muted small">No meeting polls match your search.</p>'
-      }
+        )
+        .join("")
+      : '<p class="text-muted small">No meeting polls match your search.</p>'
+    }
     </section>
   `;
 }
@@ -7314,8 +7357,8 @@ function renderContactsView() {
         <label class="search-box">
           <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 1 0 5.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/></svg>
           <input data-action="contacts-search" value="${escapeHtml(
-            state.contacts.search
-          )}" placeholder="Search contacts" />
+    state.contacts.search
+  )}" placeholder="Search contacts" />
         </label>
         <select class="filter-select" data-action="contacts-filter">
           <option value="all" ${filter === "all" ? "selected" : ""}>All contacts</option>
@@ -7326,37 +7369,34 @@ function renderContactsView() {
       </div>
       <button class="pill-btn" type="button" data-action="create-contact">+ New contact</button>
       </section>
-    ${
-      items.length
-        ? `<section class="data-list resource-list">
+    ${items.length
+      ? `<section class="data-list resource-list">
             ${items
-              .map(
-                (item) => `
+        .map(
+          (item) => `
                 <article class="data-item">
                   <div>
                     <strong>${escapeHtml(item.name)}</strong>
                     <p>${escapeHtml(item.email)} • ${escapeHtml(item.company)} • ${escapeHtml(
-                  item.type
-                )}</p>
-                    <p>Last meeting: ${escapeHtml(item.lastMeeting || "Never")} ${
-                  (item.tags || []).length
-                    ? `• Tags: ${escapeHtml((item.tags || []).join(", "))}`
-                    : ""
-                }</p>
+            item.type
+          )}</p>
+                    <p>Last meeting: ${escapeHtml(item.lastMeeting || "Never")} ${(item.tags || []).length
+              ? `• Tags: ${escapeHtml((item.tags || []).join(", "))}`
+              : ""
+            }</p>
                   </div>
                   <div class="actions">
-                    <button class="mini-btn" type="button" data-action="toggle-contact-vip" data-id="${item.id}">${
-                  (item.tags || []).includes("VIP") ? "Remove VIP" : "Mark VIP"
-                }</button>
+                    <button class="mini-btn" type="button" data-action="toggle-contact-vip" data-id="${item.id}">${(item.tags || []).includes("VIP") ? "Remove VIP" : "Mark VIP"
+            }</button>
                     <button class="mini-btn" type="button" data-action="edit-contact" data-id="${item.id}">Edit</button>
                     <button class="mini-btn" type="button" data-action="delete-contact" data-id="${item.id}">Delete</button>
                   </div>
                 </article>
               `
-              )
-              .join("")}
+        )
+        .join("")}
           </section>`
-        : '<section class="panel resource-empty"><p class="text-muted">No contacts match your search.</p></section>'
+      : '<section class="panel resource-empty"><p class="text-muted">No contacts match your search.</p></section>'
     }
     </section>
   `;
@@ -7383,8 +7423,8 @@ function renderWorkflowsView() {
         <label class="search-box">
           <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 1 0 5.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/></svg>
           <input data-action="workflows-search" value="${escapeHtml(
-            state.workflows.search
-          )}" placeholder="Search workflows" />
+    state.workflows.search
+  )}" placeholder="Search workflows" />
         </label>
         <select class="filter-select" data-action="workflows-filter">
           <option value="all" ${filter === "all" ? "selected" : ""}>All statuses</option>
@@ -7395,41 +7435,38 @@ function renderWorkflowsView() {
       </div>
       <button class="pill-btn" type="button" data-action="create-workflow">+ New workflow</button>
       </section>
-    ${
-      items.length
-        ? `<section class="data-list resource-list">
+    ${items.length
+      ? `<section class="data-list resource-list">
             ${items
-              .map(
-                (item) => `
+        .map(
+          (item) => `
                 <article class="data-item">
                   <div>
                     <strong>${escapeHtml(item.name)}</strong>
                     <p>${escapeHtml(item.trigger)} • ${escapeHtml(item.channel)} • ${escapeHtml(
-                  item.offset
-                )}</p>
+            item.offset
+          )}</p>
                     <p>Last run: ${escapeHtml(item.lastRun || "Never")}</p>
                   </div>
                   <div class="actions">
-                    <span class="status-pill ${
-                      item.status === "active"
-                        ? "success"
-                        : item.status === "paused"
-                        ? "pending"
-                        : ""
-                    }">${escapeHtml(item.status)}</span>
+                    <span class="status-pill ${item.status === "active"
+              ? "success"
+              : item.status === "paused"
+                ? "pending"
+                : ""
+            }">${escapeHtml(item.status)}</span>
                     <button class="mini-btn" type="button" data-action="run-workflow" data-id="${item.id}">Run</button>
-                    <button class="mini-btn" type="button" data-action="toggle-workflow-status" data-id="${item.id}">${
-                  item.status === "active" ? "Pause" : "Activate"
-                }</button>
+                    <button class="mini-btn" type="button" data-action="toggle-workflow-status" data-id="${item.id}">${item.status === "active" ? "Pause" : "Activate"
+            }</button>
                     <button class="mini-btn" type="button" data-action="duplicate-workflow" data-id="${item.id}">Duplicate</button>
                     <button class="mini-btn" type="button" data-action="delete-workflow" data-id="${item.id}">Delete</button>
                   </div>
                 </article>
               `
-              )
-              .join("")}
+        )
+        .join("")}
           </section>`
-        : '<section class="panel resource-empty"><p class="text-muted">No workflows match your search.</p></section>'
+      : '<section class="panel resource-empty"><p class="text-muted">No workflows match your search.</p></section>'
     }
     </section>
   `;
@@ -7480,9 +7517,8 @@ function renderIntegrationsView() {
 
   return `
     <section class="integrations-shell">
-      ${
-        activeTab === "Discover" && state.integrations.showBanner
-          ? `
+      ${activeTab === "Discover" && state.integrations.showBanner
+      ? `
           <article class="integration-banner">
             <button class="integration-banner-close" type="button" data-action="dismiss-integration-banner" aria-label="Dismiss banner">×</button>
             <div class="integration-banner-media">
@@ -7501,8 +7537,8 @@ function renderIntegrationsView() {
             </div>
           </article>
         `
-          : ""
-      }
+      : ""
+    }
 
       <section class="utility-row integrations-controls">
         <div class="left">
@@ -7510,8 +7546,8 @@ function renderIntegrationsView() {
           <label class="search-box">
             <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 1 0 5.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/></svg>
             <input data-action="integrations-search" value="${escapeHtml(
-              state.integrations.search
-            )}" placeholder="Find integrations, apps, and more" />
+      state.integrations.search
+    )}" placeholder="Find integrations, apps, and more" />
           </label>
         </div>
         <div class="integrations-toolbar">
@@ -7522,92 +7558,83 @@ function renderIntegrationsView() {
           </select>
           <select class="filter-select" data-action="integrations-sort" aria-label="Integration sort">
             ${INTEGRATION_SORT_OPTIONS.map(
-              (option) =>
-                `<option value="${escapeHtml(option)}" ${
-                  option === sort ? "selected" : ""
-                }>${escapeHtml(option)}</option>`
-            ).join("")}
+      (option) =>
+        `<option value="${escapeHtml(option)}" ${option === sort ? "selected" : ""
+        }>${escapeHtml(option)}</option>`
+    ).join("")}
           </select>
-          ${
-            activeTab === "Discover"
-              ? `
+          ${activeTab === "Discover"
+      ? `
                 <button class="pill-btn" type="button" data-action="connect-integration">+ Add custom app</button>
                 <button class="pill-btn" type="button" data-action="connect-all-integrations">Connect all apps</button>
               `
-              : `
-                <button class="pill-btn" type="button" data-action="disconnect-all-integrations" ${
-                  connectedCount === 0 ? "disabled" : ""
-                }>Disconnect all</button>
+      : `
+                <button class="pill-btn" type="button" data-action="disconnect-all-integrations" ${connectedCount === 0 ? "disabled" : ""
+      }>Disconnect all</button>
               `
-          }
+    }
         </div>
       </section>
 
-      ${
-        sorted.length
-          ? `<section class="integration-grid">
+      ${sorted.length
+      ? `<section class="integration-grid">
               ${sorted
-                .map(
-                  (item) => `
+        .map(
+          (item) => `
                   <article class="integration-card ${item.connected ? "is-connected" : ""}">
                     <div class="integration-card-head">
                       <span class="integration-icon" style="--icon-bg:${escapeHtml(
-                        item.iconBg
-                      )};">${escapeHtml(item.iconText)}</span>
-                      ${
-                        item.adminOnly
-                          ? '<span class="integration-admin-badge">Admin</span>'
-                          : ""
-                      }
+            item.iconBg
+          )};">${escapeHtml(item.iconText)}</span>
+                      ${item.adminOnly
+              ? '<span class="integration-admin-badge">Admin</span>'
+              : ""
+            }
                     </div>
                     <h3>${escapeHtml(item.name)}</h3>
                     <p>${escapeHtml(item.description)}</p>
                     <div class="integration-meta-row">
                       <span class="integration-category">${escapeHtml(item.category)}</span>
-                      <span class="status-pill ${
-                        item.connected ? "success" : "pending"
-                      }">${item.connected ? "Connected" : "Available"}</span>
+                      <span class="status-pill ${item.connected ? "success" : "pending"
+            }">${item.connected ? "Connected" : "Available"}</span>
                     </div>
                     <div class="integration-meta-sub">
-                      ${
-                        item.connected
-                          ? `
+                      ${item.connected
+              ? `
                             <span>${escapeHtml(
-                              item.account || "Connected"
-                            )}</span>
+                item.account || "Connected"
+              )}</span>
                             <span>Sync: ${escapeHtml(item.lastSync)}</span>
                           `
-                          : "<span>Not connected</span>"
-                      }
+              : "<span>Not connected</span>"
+            }
                     </div>
                     <div class="integration-actions">
-                      ${
-                        item.connected
-                          ? `
+                      ${item.connected
+              ? `
                             <button class="mini-btn" type="button" data-action="configure-integration" data-id="${item.id}">Configure</button>
                             <button class="mini-btn" type="button" data-action="toggle-integration" data-id="${item.id}">Disconnect</button>
                           `
-                          : `
+              : `
                             <button class="mini-btn mini-btn-primary" type="button" data-action="toggle-integration" data-id="${item.id}">Connect</button>
                           `
-                      }
+            }
                     </div>
                   </article>
                 `
-                )
-                .join("")}
+        )
+        .join("")}
             </section>`
-          : `
+      : `
             <section class="panel integration-empty">
               <h3>${escapeHtml(emptyMessage)}</h3>
-              ${
-                activeTab === "Manage"
-                  ? '<button class="primary-btn" type="button" data-action="switch-integrations-tab" data-tab="Discover">Go to Discover</button>'
-                  : ""
-              }
+              ${activeTab === "Manage"
+        ? '<button class="primary-btn" type="button" data-action="switch-integrations-tab" data-tab="Discover">Go to Discover</button>'
+        : ""
+      }
             </section>
           `
-      }
+    }
     </section>
   `;
 }
@@ -7640,47 +7667,44 @@ function renderLandingPageView() {
     ? `
       <option value="">Auto (first published event)</option>
       ${eventTypes
-        .map(
-          (eventType) => `
-            <option value="${escapeHtml(eventType.id)}" ${
-              String(page.featuredEventTypeId || "") === String(eventType.id) ? "selected" : ""
-            }>
+      .map(
+        (eventType) => `
+            <option value="${escapeHtml(eventType.id)}" ${String(page.featuredEventTypeId || "") === String(eventType.id) ? "selected" : ""
+          }>
               ${escapeHtml(eventType.title)} (${Math.max(1, Number(eventType.durationMinutes) || 30)} min)
             </option>
           `
-        )
-        .join("")}
+      )
+      .join("")}
     `
     : '<option value="">No active event types found</option>';
 
   const eventTypeCards = eventTypes.length
     ? eventTypes
-        .map((eventType) => {
-          const duration = Math.max(1, Number(eventType.durationMinutes) || 30);
-          const slug = sanitizeSlug(eventType.slug);
-          const location = String(eventType.locationType || "custom")
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, (char) => char.toUpperCase());
-          return `
-            <article class="landing-event-card ${
-              String(page.featuredEventTypeId || "") === String(eventType.id) ? "is-featured" : ""
-            }">
+      .map((eventType) => {
+        const duration = Math.max(1, Number(eventType.durationMinutes) || 30);
+        const slug = sanitizeSlug(eventType.slug);
+        const location = String(eventType.locationType || "custom")
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (char) => char.toUpperCase());
+        return `
+            <article class="landing-event-card ${String(page.featuredEventTypeId || "") === String(eventType.id) ? "is-featured" : ""
+          }">
               <h4>${escapeHtml(eventType.title)}</h4>
               <p>${duration} min • ${escapeHtml(location || "Custom")}</p>
               <div class="landing-event-foot">
                 <span>/ ${escapeHtml(username)} / ${escapeHtml(slug || "event-slug")}</span>
-                ${
-                  slug
-                    ? `<a class="pill-btn" href="/${escapeHtml(username)}/${escapeHtml(
-                        slug
-                      )}" target="_blank" rel="noopener">Open booking link</a>`
-                    : '<span class="text-muted small">Missing slug</span>'
-                }
+                ${slug
+            ? `<a class="pill-btn" href="/${escapeHtml(username)}/${escapeHtml(
+              slug
+            )}" target="_blank" rel="noopener">Open booking link</a>`
+            : '<span class="text-muted small">Missing slug</span>'
+          }
               </div>
             </article>
           `;
-        })
-        .join("")
+      })
+      .join("")
     : `
       <article class="landing-empty">
         <h4>Create event types first</h4>
@@ -7693,8 +7717,8 @@ function renderLandingPageView() {
 
   const serviceCards = services.length
     ? services
-        .map(
-          (service, index) => `
+      .map(
+        (service, index) => `
             <article class="landing-collection-item">
               <div class="landing-collection-head">
                 <h4>Service ${index + 1}</h4>
@@ -7726,8 +7750,8 @@ function renderLandingPageView() {
               </label>
             </article>
           `
-        )
-        .join("")
+      )
+      .join("")
     : `
       <article class="landing-empty">
         <p>Add service cards so visitors understand what your business provides before booking.</p>
@@ -7736,8 +7760,8 @@ function renderLandingPageView() {
 
   const galleryCards = gallery.length
     ? gallery
-        .map(
-          (image, index) => `
+      .map(
+        (image, index) => `
             <article class="landing-collection-item landing-gallery-item">
               <div class="landing-collection-head">
                 <h4>Photo ${index + 1}</h4>
@@ -7773,8 +7797,8 @@ function renderLandingPageView() {
               </label>
             </article>
           `
-        )
-        .join("")
+      )
+      .join("")
     : `
       <article class="landing-empty">
         <p>Add profile or portfolio images for a stronger trust-building landing page.</p>
@@ -7783,15 +7807,15 @@ function renderLandingPageView() {
 
   const leadCards = leads.length
     ? leads
-        .map((lead) => {
-          const status = LANDING_LEAD_STATUS_FILTERS.includes(String(lead.status || "").toLowerCase())
-            ? String(lead.status || "").toLowerCase()
-            : "new";
-          const createdLabel = formatUiDateTime(lead.createdAt, "Just now");
-          const queryPreview = String(lead.query || "").trim();
-          const trimmedQuery =
-            queryPreview.length > 280 ? `${queryPreview.slice(0, 277)}...` : queryPreview;
-          return `
+      .map((lead) => {
+        const status = LANDING_LEAD_STATUS_FILTERS.includes(String(lead.status || "").toLowerCase())
+          ? String(lead.status || "").toLowerCase()
+          : "new";
+        const createdLabel = formatUiDateTime(lead.createdAt, "Just now");
+        const queryPreview = String(lead.query || "").trim();
+        const trimmedQuery =
+          queryPreview.length > 280 ? `${queryPreview.slice(0, 277)}...` : queryPreview;
+        return `
             <article class="landing-lead-card">
               <div class="landing-lead-top">
                 <div>
@@ -7814,28 +7838,27 @@ function renderLandingPageView() {
                   Status
                   <select data-action="landing-lead-status" data-id="${escapeHtml(lead.id)}">
                     ${LANDING_LEAD_STATUS_FILTERS.filter((value) => value !== "all")
-                      .map(
-                        (value) => `
+            .map(
+              (value) => `
                           <option value="${escapeHtml(value)}" ${status === value ? "selected" : ""}>
                             ${escapeHtml(leadStatusLabels[value])}
                           </option>
                         `
-                      )
-                      .join("")}
+            )
+            .join("")}
                   </select>
                 </label>
-                ${
-                  lead.sourceUrl
-                    ? `<a class="link-btn" href="${escapeHtml(
-                        lead.sourceUrl
-                      )}" target="_blank" rel="noopener">Source page</a>`
-                    : "<span></span>"
-                }
+                ${lead.sourceUrl
+            ? `<a class="link-btn" href="${escapeHtml(
+              lead.sourceUrl
+            )}" target="_blank" rel="noopener">Source page</a>`
+            : "<span></span>"
+          }
               </div>
             </article>
           `;
-        })
-        .join("")
+      })
+      .join("")
     : `
       <article class="landing-empty">
         <p>No leads in this filter yet. Share your landing page to start receiving custom queries.</p>
@@ -7855,9 +7878,8 @@ function renderLandingPageView() {
           <div class="landing-builder-actions">
             <button class="pill-btn" type="button" data-action="landing-copy-link">Copy link</button>
             <button class="pill-btn" type="button" data-action="landing-preview">Preview</button>
-            <button class="primary-btn" type="button" data-action="landing-save" ${
-              landingState.saving ? "disabled" : ""
-            }>
+            <button class="primary-btn" type="button" data-action="landing-save" ${landingState.saving ? "disabled" : ""
+    }>
               ${landingState.saving ? "Saving..." : "Save changes"}
             </button>
           </div>
@@ -7869,11 +7891,10 @@ function renderLandingPageView() {
             ${page.isPublished ? "Live" : "Draft"}
           </span>
         </div>
-        ${
-          landingState.loading
-            ? '<p class="landing-syncing">Syncing latest landing page and leads...</p>'
-            : ""
-        }
+        ${landingState.loading
+      ? '<p class="landing-syncing">Syncing latest landing page and leads...</p>'
+      : ""
+    }
       </article>
 
       <section class="landing-layout-grid">
@@ -8062,17 +8083,16 @@ function renderLandingPageView() {
                 <span>Status</span>
                 <select data-action="landing-leads-status">
                   ${LANDING_LEAD_STATUS_FILTERS.map(
-                    (status) => `
+      (status) => `
                       <option value="${escapeHtml(status)}" ${leadsStatus === status ? "selected" : ""}>
                         ${escapeHtml(leadStatusLabels[status])}
                       </option>
                     `
-                  ).join("")}
+    ).join("")}
                 </select>
               </label>
-              <button class="mini-btn" type="button" data-action="landing-refresh-leads" ${
-                landingState.loading ? "disabled" : ""
-              }>
+              <button class="mini-btn" type="button" data-action="landing-refresh-leads" ${landingState.loading ? "disabled" : ""
+    }>
                 Refresh
               </button>
             </div>
@@ -8115,8 +8135,8 @@ function renderRoutingView() {
         <label class="search-box">
           <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 1 0 5.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/></svg>
           <input data-action="routing-search" value="${escapeHtml(
-            state.routing.search
-          )}" placeholder="Search forms and leads" />
+    state.routing.search
+  )}" placeholder="Search forms and leads" />
         </label>
         <select class="filter-select" data-action="routing-filter">
           <option value="all" ${filter === "all" ? "selected" : ""}>All forms</option>
@@ -8132,69 +8152,64 @@ function renderRoutingView() {
 
     <section class="panel routing-panel resource-panel">
       <h2>Routing forms</h2>
-      ${
-        forms.length
-          ? `<div class="data-list">
+      ${forms.length
+      ? `<div class="data-list">
               ${forms
-                .map(
-                  (form) => `
+        .map(
+          (form) => `
                   <article class="data-item">
                     <div>
                       <strong>${escapeHtml(form.name)}</strong>
                       <p>Destination: ${escapeHtml(form.destination)} • Priority: ${escapeHtml(
-                    form.priority
-                  )}</p>
+            form.priority
+          )}</p>
                       <p>Submissions today: ${escapeHtml(form.submissionsToday)} • Conversion: ${escapeHtml(
-                    form.conversionRate
-                  )}%</p>
+            form.conversionRate
+          )}%</p>
                     </div>
                     <div class="actions">
-                      <span class="status-pill ${
-                        form.active ? "success" : "pending"
-                      }">${form.active ? "Active" : "Paused"}</span>
-                      <button class="mini-btn" type="button" data-action="toggle-routing-form" data-id="${form.id}">${
-                    form.active ? "Pause" : "Resume"
-                  }</button>
+                      <span class="status-pill ${form.active ? "success" : "pending"
+            }">${form.active ? "Active" : "Paused"}</span>
+                      <button class="mini-btn" type="button" data-action="toggle-routing-form" data-id="${form.id}">${form.active ? "Pause" : "Resume"
+            }</button>
                       <button class="mini-btn" type="button" data-action="delete-routing-form" data-id="${form.id}">Delete</button>
                     </div>
                   </article>
                 `
-                )
-                .join("")}
+        )
+        .join("")}
             </div>`
-          : '<p class="text-muted resource-empty-copy">No routing forms found for this filter.</p>'
-      }
+      : '<p class="text-muted resource-empty-copy">No routing forms found for this filter.</p>'
+    }
     </section>
 
     <section class="panel routing-panel resource-panel">
       <h2>Unassigned and routed leads</h2>
-      ${
-        leads.length
-          ? `<div class="data-list">
+      ${leads.length
+      ? `<div class="data-list">
               ${leads
-                .map(
-                  (lead) => `
+        .map(
+          (lead) => `
                   <article class="data-item">
                     <div>
                       <strong>${escapeHtml(lead.name)}</strong>
                       <p>${escapeHtml(lead.email)} • ${escapeHtml(lead.company)}</p>
                       <p>Submitted: ${escapeHtml(lead.submittedAt)} • Route: ${escapeHtml(
-                    lead.routeTo || "Unassigned"
-                  )}</p>
+            lead.routeTo || "Unassigned"
+          )}</p>
                     </div>
                     <div class="actions">
-                      <span class="status-pill ${
-                        lead.status === "Routed" ? "success" : "pending"
-                      }">${escapeHtml(lead.status)}</span>
+                      <span class="status-pill ${lead.status === "Routed" ? "success" : "pending"
+            }">${escapeHtml(lead.status)}</span>
                       <button class="mini-btn" type="button" data-action="route-lead" data-id="${lead.id}">Route</button>
                     </div>
                   </article>
                 `
-                )
-                .join("")}
+        )
+        .join("")}
             </div>`
-          : '<p class="text-muted resource-empty-copy">No leads found for this search.</p>'
-      }
+      : '<p class="text-muted resource-empty-copy">No leads found for this search.</p>'
+    }
     </section>
     </section>
   `;
@@ -8211,117 +8226,128 @@ function renderSchedulesTab() {
   const activeCount = state.scheduling.eventTypes.filter((type) => type.active).length;
 
   return `
-    <section class="availability-card">
+    <section class="availability-card calendly-style">
       <div class="availability-top">
         <div>
-          <h2>Schedule</h2>
-          <p><strong>Working hours (default)</strong></p>
-          <p>Active on: <span class="link-btn">${activeCount} event type</span></p>
+          <h2 class="section-subtitle">Schedule</h2>
+          <div class="schedule-title-row">
+            <h3>Working hours (default)</h3>
+            <svg viewBox="0 0 24 24" class="chevron"><path d="M7 10l5 5 5-5z"/></svg>
+          </div>
+          <p class="active-on-text">Active on: <span class="link-btn">${activeCount} event type</span> <svg viewBox="0 0 24 24" class="chevron"><path d="M7 10l5 5 5-5z"/></svg></p>
         </div>
-        <div class="list-calendar-toggle">
-          ${["List", "Calendar"]
-            .map(
-              (view) => `
-              <button class="${state.availability.view === view ? "active" : ""}" type="button" data-action="set-availability-view" data-view="${view}">
-                ${view}
-              </button>
-            `
-            )
-            .join("")}
+        <div class="availability-actions">
+          <div class="list-calendar-toggle">
+            ${["List", "Calendar"]
+      .map(
+        (view) => `
+                <button class="${state.availability.view === view ? "active" : ""}" type="button" data-action="set-availability-view" data-view="${view}">
+                  ${view === 'List' ? '<svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 002 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/></svg>'}
+                  ${view}
+                </button>
+              `
+      )
+      .join("")}
+          </div>
+          <button class="icon-btn context-menu-btn">⋮</button>
         </div>
       </div>
 
       <div class="availability-body">
-        <div class="two-col">
-          <section class="availability-block">
-            <h3>Weekly hours</h3>
-            <p>Set when you are typically available for meetings</p>
+        <div class="availability-grid">
+          
+          <section class="availability-block weekly-block">
+            <div class="block-header">
+              <svg viewBox="0 0 24 24" class="header-icon"><path d="M12 4V2H8v2H6a2 2 0 00-2 2v14c0 1.1.9 2 2 2h12a2 2 0 002-2V6c0-1.1-.9-2-2-2h-2zm0 16H6V10h12v10zm-6-8h2v6H6v-6z"/></svg>
+              <div>
+                <h3>Weekly hours</h3>
+                <p>Set when you are typically available for meetings</p>
+              </div>
+            </div>
+            
             <div class="day-list">
               ${state.availability.weeklyHours
-                .map((dayRow, dayIndex) => {
-                  const intervals = dayRow.intervals
-                    .map(
-                      (slot, slotIndex) => `
-                      <div class="interval-row">
-                        <input class="time-input" type="time" value="${escapeHtml(
-                          slot.start
-                        )}" data-action="interval-change" data-field="start" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" />
-                        <span class="sep">→</span>
-                        <input class="time-input" type="time" value="${escapeHtml(
-                          slot.end
-                        )}" data-action="interval-change" data-field="end" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" />
-                        <div class="slot-actions">
-                          <button class="tiny-icon-btn danger" type="button" data-action="remove-interval" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" title="Remove slot">−</button>
-                          <button class="tiny-icon-btn" type="button" data-action="add-interval" data-day-index="${dayIndex}" title="Add slot">+</button>
-                          <button class="tiny-icon-btn copy-btn" type="button" data-action="copy-day" data-day-index="${dayIndex}" title="Copy to next day">⧉</button>
+      .map((dayRow, dayIndex) => {
+        const intervals = dayRow.intervals
+          .map(
+            (slot, slotIndex) => `
+                        <div class="interval-row">
+                          <input class="time-input" type="time" value="${escapeHtml(slot.start)}" data-action="interval-change" data-field="start" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" />
+                          <span class="sep">-</span>
+                          <input class="time-input" type="time" value="${escapeHtml(slot.end)}" data-action="interval-change" data-field="end" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" />
+                          <div class="slot-actions">
+                            <button class="action-btn" type="button" data-action="remove-interval" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" title="Remove">✕</button>
+                            <button class="action-btn" type="button" data-action="add-interval" data-day-index="${dayIndex}" title="Add">+</button>
+                            <button class="action-btn copy" type="button" data-action="copy-day" data-day-index="${dayIndex}" title="Copy">⧉</button>
+                          </div>
                         </div>
-                      </div>
-                    `
-                    )
-                    .join("");
+                      `
+          )
+          .join("");
 
-                  return `
-                    <article class="day-row ${dayRow.enabled ? "" : "disabled"}">
-                      <button class="day-badge ${dayRow.enabled ? "" : "off"}" type="button" data-action="toggle-day" data-day-index="${dayIndex}" title="${escapeHtml(
-                    dayRow.label
-                  )}">
-                        ${escapeHtml(dayRow.day)}
-                      </button>
-                      <div class="day-main">
-                        <div class="day-head">
-                          <strong>${escapeHtml(dayRow.label)}</strong>
-                          <span>${dayRow.enabled ? "Active" : "Unavailable"}</span>
-                        </div>
-                        <div class="interval-list">${intervals}</div>
+        return `
+                    <article class="day-row ${dayRow.enabled ? "active" : "disabled"}">
+                      <div class="day-controller">
+                        <button class="day-badge" type="button" data-action="toggle-day" data-day-index="${dayIndex}">
+                          ${escapeHtml(dayRow.day)}
+                        </button>
+                        ${!dayRow.enabled ? `<span class="unavailable-text">Unavailable</span> <button class="action-btn minimal" data-action="add-interval" data-day-index="${dayIndex}">+</button>` : ''}
                       </div>
+                      ${dayRow.enabled ? `
+                        <div class="interval-list">
+                          ${intervals}
+                        </div>
+                      ` : ''}
                     </article>
                   `;
-                })
-                .join("")}
-            </div>
-            <div class="timezone-wrap">
-              <label class="small text-muted" for="timezone-select">Timezone</label>
-              <select id="timezone-select" class="timezone-select" data-action="set-timezone">
-                ${TIMEZONES.map(
-                  (tz) =>
-                    `<option value="${escapeHtml(tz)}" ${
-                      tz === state.availability.timezone ? "selected" : ""
-                    }>${escapeHtml(tz)}</option>`
-                ).join("")}
-              </select>
+      })
+      .join("")}
             </div>
           </section>
 
-          <section class="date-hours-panel availability-block">
-            <div class="date-hours-head">
+          <section class="availability-block specific-block">
+            <div class="block-header">
+              <svg viewBox="0 0 24 24" class="header-icon"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
               <div>
                 <h3>Date-specific hours</h3>
                 <p>Adjust hours for specific days</p>
               </div>
-              <button class="pill-btn" type="button" data-action="add-date-specific">+ Hours</button>
+              <button class="ghost-btn add-hours-btn" type="button" data-action="add-date-specific">+ Hours</button>
             </div>
+            
             <ul class="date-hours-list">
-              ${
-                state.availability.dateSpecific.length
-                  ? state.availability.dateSpecific
-                      .map(
-                        (row) => `
+              ${state.availability.dateSpecific.length
+      ? state.availability.dateSpecific
+        .map(
+          (row) => `
                         <li>
                           <div class="date-hours-left">
                             <span class="date-hours-chip">${escapeHtml(row.date)}</span>
-                            <span class="date-hours-time">${escapeHtml(row.start)} - ${escapeHtml(
-                          row.end
-                        )}</span>
+                            <span class="date-hours-time">${escapeHtml(row.start)} - ${escapeHtml(row.end)}</span>
                           </div>
                           <button class="mini-btn ghost-danger" type="button" data-action="remove-date-specific" data-id="${row.id}">Remove</button>
                         </li>
                       `
-                      )
-                      .join("")
-                  : '<li class="small text-muted empty-date-hours">No date-specific hours added.</li>'
-              }
+        )
+        .join("")
+      : ''
+    }
             </ul>
           </section>
+          
+        </div>
+        
+        <div class="timezone-footer">
+          <label class="timezone-select-label" for="timezone-select">
+            <select id="timezone-select" class="timezone-select" data-action="set-timezone">
+              ${TIMEZONES.map(
+      (tz) =>
+        `<option value="${escapeHtml(tz)}" ${tz === state.availability.timezone ? "selected" : ""
+        }>${escapeHtml(tz)}</option>`
+    ).join("")}
+            </select>
+            <svg viewBox="0 0 24 24" class="chevron"><path d="M7 10l5 5 5-5z"/></svg>
+          </label>
         </div>
       </div>
     </section>
@@ -8347,35 +8373,34 @@ function renderCalendarSettingsTab() {
           <p><button class="pill-btn" type="button" data-action="connect-calendar">+ Connect calendar account</button></p>
 
           <div class="calendar-list">
-            ${
-              calendar.connected.length
-                ? calendar.connected
-                    .map(
-                      (item) => `
+            ${calendar.connected.length
+      ? calendar.connected
+        .map(
+          (item) => `
                       <article class="calendar-entry">
                         <div class="left">
                           <span class="provider-mark">${escapeHtml(
-                            getCalendarProviderMark(item.providerKey)
-                          )}</span>
+            getCalendarProviderMark(item.providerKey)
+          )}</span>
                           <div class="calendar-label">
                             <strong>${escapeHtml(item.provider)}</strong>
                             <p>${escapeHtml(item.email)}<br/>Checking ${item.checkCount} calendar • Last sync ${escapeHtml(
-                          item.lastSync || "Never"
-                        )}</p>
+            item.lastSync || "Never"
+          )}</p>
                           </div>
                         </div>
                         <div class="calendar-entry-actions">
                           <button class="mini-btn" type="button" data-action="sync-calendar" data-provider="${escapeHtml(
-                            item.providerKey
-                          )}">Sync now</button>
+            item.providerKey
+          )}">Sync now</button>
                           <button class="tiny-icon-btn" type="button" data-action="remove-calendar" data-id="${item.id}" title="Disconnect">x</button>
                         </div>
                       </article>
                     `
-                    )
-                    .join("")
-                : '<p class="small text-muted">No connected calendars yet.</p>'
-            }
+        )
+        .join("")
+      : '<p class="small text-muted">No connected calendars yet.</p>'
+    }
           </div>
         </section>
 
@@ -8383,21 +8408,19 @@ function renderCalendarSettingsTab() {
           <h3>Calendar to add events to</h3>
           <p class="text-muted">Select where newly booked events are created</p>
           <select class="calendar-select" data-action="set-calendar-target">
-            ${
-              calendar.connected.length
-                ? calendar.connected
-                    .map(
-                      (item) => `
-                      <option value="${item.id}" ${
-                        item.id === calendar.selectedCalendarId ? "selected" : ""
-                      }>
+            ${calendar.connected.length
+      ? calendar.connected
+        .map(
+          (item) => `
+                      <option value="${item.id}" ${item.id === calendar.selectedCalendarId ? "selected" : ""
+            }>
                         ${escapeHtml(item.email)}
                       </option>
                     `
-                    )
-                    .join("")
-                : '<option value="">No calendars connected</option>'
-            }
+        )
+        .join("")
+      : '<option value="">No calendars connected</option>'
+    }
           </select>
         </section>
 
@@ -8405,15 +8428,13 @@ function renderCalendarSettingsTab() {
           <h3>Sync settings</h3>
           <div class="checkbox-row">
             <label>
-              <input type="checkbox" data-action="set-calendar-option" data-field="includeBuffers" ${
-                calendar.includeBuffers ? "checked" : ""
-              } />
+              <input type="checkbox" data-action="set-calendar-option" data-field="includeBuffers" ${calendar.includeBuffers ? "checked" : ""
+    } />
               Include buffers on this calendar
             </label>
             <label>
-              <input type="checkbox" data-action="set-calendar-option" data-field="autoSync" ${
-                calendar.autoSync ? "checked" : ""
-              } />
+              <input type="checkbox" data-action="set-calendar-option" data-field="autoSync" ${calendar.autoSync ? "checked" : ""
+    } />
               Automatically sync changes from this calendar to Meetscheduling
             </label>
           </div>
@@ -8442,22 +8463,21 @@ function renderAdvancedSettingsTab() {
           <p class="text-muted">Set a maximum number of total meetings. You can also set specific limits within individual events.</p>
           <p><button class="link-btn" type="button" data-action="add-meeting-limit">+ Add a meeting limit</button></p>
           <ul class="limits-list">
-            ${
-              advanced.meetingLimits.length
-                ? advanced.meetingLimits
-                    .map(
-                      (item) => `
+            ${advanced.meetingLimits.length
+      ? advanced.meetingLimits
+        .map(
+          (item) => `
                       <li>
                         <span>${escapeHtml(item.label)}: <strong>${escapeHtml(
-                        item.value
-                      )}</strong></span>
+            item.value
+          )}</strong></span>
                         <button class="mini-btn" type="button" data-action="remove-meeting-limit" data-id="${item.id}">Remove</button>
                       </li>
                     `
-                    )
-                    .join("")
-                : '<li class="text-muted small">No limits configured yet.</li>'
-            }
+        )
+        .join("")
+      : '<li class="text-muted small">No limits configured yet.</li>'
+    }
           </ul>
         </section>
 
@@ -8471,14 +8491,13 @@ function renderAdvancedSettingsTab() {
                 <label class="holiday-country">
                   <select data-action="set-country">
                     ${Object.keys(HOLIDAY_DATA)
-                      .map(
-                        (country) => `
-                        <option value="${escapeHtml(country)}" ${
-                          country === advanced.country ? "selected" : ""
-                        }>${escapeHtml(country)}</option>
+      .map(
+        (country) => `
+                        <option value="${escapeHtml(country)}" ${country === advanced.country ? "selected" : ""
+          }>${escapeHtml(country)}</option>
                       `
-                      )
-                      .join("")}
+      )
+      .join("")}
                   </select>
                 </label>
               </div>
@@ -8486,23 +8505,22 @@ function renderAdvancedSettingsTab() {
 
             <ul class="holiday-list">
               ${holidays
-                .map(
-                  (holiday, index) => `
+      .map(
+        (holiday, index) => `
                   <li>
                     <span>${escapeHtml(holiday.name)}</span>
                     <span class="date">Next: ${escapeHtml(holiday.next)}</span>
                     <label class="toggle-field">
-                      <input type="checkbox" data-action="toggle-holiday" data-holiday-index="${index}" ${
-                    advanced.holidayToggles[advanced.country][holiday.name]
-                      ? "checked"
-                      : ""
-                  } />
+                      <input type="checkbox" data-action="toggle-holiday" data-holiday-index="${index}" ${advanced.holidayToggles[advanced.country][holiday.name]
+            ? "checked"
+            : ""
+          } />
                       <span class="switch"></span>
                     </label>
                   </li>
                 `
-                )
-                .join("")}
+      )
+      .join("")}
             </ul>
           </div>
         </section>

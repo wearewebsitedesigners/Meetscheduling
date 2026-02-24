@@ -1,20 +1,67 @@
 # Meetscheduling Deployment Guide
 
-This guide is for taking your project live with production-safe settings and repeatable checks.
+This repo is set up for deployment to a VPS through GitHub Actions.
 
-## 1) Choose hosting
+## 1) GitHub Actions -> VPS (recommended)
 
-Recommended stack:
+Workflow file: `.github/workflows/deploy.yml`
 
-- App host: Railway or Render
-- Database: Managed PostgreSQL (Railway Postgres, Neon, Supabase, Render Postgres)
+Trigger:
 
-## 2) Required environment variables
+- Push to `main`
+- Manual run from Actions tab (`workflow_dispatch`)
 
-Set these on your hosting platform:
+Deploy behavior on VPS:
+
+- `git fetch` + `git pull --ff-only origin main`
+- `npm ci --omit=dev`
+- `npm run build --if-present`
+- optional `npm run migrate` (when `RUN_MIGRATIONS=true`)
+- restart app with PM2 (`meetscheduling`)
+
+## 2) Configure GitHub secrets/variables
+
+Add these in GitHub repository settings:
+
+Required secrets:
+
+- `VPS_HOST` (example: `meetscheduling.com`)
+- `VPS_USER` (SSH user on server)
+- `VPS_SSH_PRIVATE_KEY` (private key matching VPS `authorized_keys`)
+
+Optional secrets:
+
+- `VPS_SSH_PASSPHRASE` (only if your private key is encrypted)
+
+Optional repository variables:
+
+- `VPS_APP_DIR` (default used by workflow: `/var/www/meetscheduling`)
+- `RUN_MIGRATIONS` (`true` or `false`; default behavior is skip)
+
+## 3) One-time VPS bootstrap
+
+Install prerequisites on server:
+
+- Node.js 18+
+- npm
+- PM2 (`npm i -g pm2`)
+- Git
+
+Initial app setup:
+
+```bash
+mkdir -p /var/www/meetscheduling
+cd /var/www/meetscheduling
+git clone <your-repo-ssh-url> .
+cp .env.example .env
+npm ci
+pm2 start src/server.js --name meetscheduling --time
+pm2 save
+```
+
+Then set real production values in `.env`:
 
 - `NODE_ENV=production`
-- `PORT` (platform usually injects this automatically)
 - `APP_BASE_URL=https://your-domain.com`
 - `DATABASE_URL=postgresql://...`
 - `JWT_SECRET=<long-random-secret>`
@@ -22,41 +69,25 @@ Set these on your hosting platform:
 
 Optional:
 
-- `HOST_DEFAULT_TIMEZONE=UTC`
-- `SLOT_INTERVAL_MINUTES=15`
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`
-- `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CALENDAR_ID`
+- `HOST_DEFAULT_TIMEZONE`, `SLOT_INTERVAL_MINUTES`
+- SMTP vars (`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`)
+- Google vars (`GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CALENDAR_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`)
 
-## 3) Build/start commands
+## 4) Manual VPS deploy (optional fallback)
 
-This project uses Node runtime directly.
+Use `deploy.sh` with environment variables:
 
-- Install: `npm install`
-- Start: `npm start`
+```bash
+DEPLOY_HOST=meetscheduling.com DEPLOY_USER=admin ./deploy.sh
+```
 
-Server boot already runs migrations and seed defaults.
+Optional overrides:
 
-## 4) Deploy on Railway (quick path)
+- `DEPLOY_PORT` (default `22`)
+- `DEPLOY_PATH` (default `/var/www/meetscheduling`)
+- `DEPLOY_REF` (default `main`)
 
-1. Push project to GitHub.
-2. Create Railway project -> Deploy from GitHub repo.
-3. Add PostgreSQL plugin.
-4. Set env vars from section 2.
-5. Add custom domain and SSL.
-
-## 5) Deploy on Render
-
-1. New Web Service -> connect GitHub repo.
-2. Runtime: Node.
-3. Build command: `npm install`
-4. Start command: `npm start`
-5. Add managed PostgreSQL and connect `DATABASE_URL`.
-6. Set all env vars.
-7. Add custom domain + SSL.
-
-## 6) Post-deploy smoke checks
-
-Run:
+## 5) Post-deploy smoke checks
 
 ```bash
 APP_URL=https://your-domain.com bash scripts/smoke.sh
@@ -69,12 +100,11 @@ Expected:
 - protected routes work with token
 - frontend pages return HTTP 200
 
-## 7) Production checklist
+## 6) Production checklist
 
 - Replace all placeholder secrets.
 - Configure SMTP for booking confirmation emails.
-- Configure Google credentials for calendar sync depth.
-- Enable backups on PostgreSQL.
+- Configure Google credentials for calendar sync.
+- Enable PostgreSQL backups.
 - Add uptime monitoring for `/api/health`.
-- Run smoke script after each deploy.
-
+- Run smoke tests after every deploy.

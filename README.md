@@ -190,7 +190,7 @@ APP_URL=https://your-domain.com bash scripts/smoke.sh
 
 ## Deployment
 
-See `DEPLOYMENT.md` for Railway/Render deployment steps and production checklist.
+See `DEPLOYMENT.md` for GitHub Actions -> VPS deployment steps and production checklist.
 
 ---
 

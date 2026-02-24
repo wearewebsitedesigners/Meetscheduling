@@ -3070,3 +3070,113 @@ textarea {
     scroll-behavior: auto !important;
   }
 }
+
+/* Orbital Hero Animation */
+.orbital-hero {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+
+.orbital-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  box-shadow: 0 0 0 15px rgba(21, 107, 232, 0.08),
+    0 0 0 35px rgba(21, 107, 232, 0.04),
+    0 0 0 60px rgba(21, 107, 232, 0.02);
+}
+
+.orbital-track {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--track-size);
+  height: var(--track-size);
+  margin-left: calc(var(--track-size) / -2);
+  margin-top: calc(var(--track-size) / -2);
+  border-radius: 50%;
+  border: 1px dashed rgba(21, 107, 232, 0.2);
+  animation: orbit-spin var(--duration) linear infinite;
+  z-index: 1;
+}
+
+@keyframes orbit-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.orbital-node {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform: rotate(var(--angle)) translateX(calc(var(--track-size) / 2));
+}
+
+.orbital-counter-angle {
+  position: absolute;
+  transform: rotate(calc(-1 * var(--angle)));
+}
+
+.orbital-icon {
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: counter-orbit-spin var(--duration) linear infinite;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.orbital-icon:hover {
+  transform: scale(1.1);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+}
+
+@keyframes counter-orbit-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(-360deg);
+  }
+}
+
+.orbital-icon img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+@media (max-width: 768px) {
+  .orbital-hero {
+    transform: scale(0.8);
+    margin: 2rem auto;
+  }
+}

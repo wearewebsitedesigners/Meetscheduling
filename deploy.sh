@@ -1,0 +1,1 @@
+export SSHPASS='King@15thanks' && sshpass -e ssh -o StrictHostKeyChecking=no admin@meetscheduling.com 'cd /var/www/meetscheduling && git pull origin main && npm install && npm run build && pm2 restart all'

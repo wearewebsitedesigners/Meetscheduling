@@ -3569,9 +3569,11 @@ function onViewClick(event) {
       queueAvailabilitySync();
       break;
     }
-    case "add-date-specific":
-      addDateSpecificHours();
+    case "add-date-specific": {
+      const date = button.dataset.date;
+      addDateSpecificHours(date);
       break;
+    }
     case "remove-date-specific": {
       const id = button.dataset.id;
       state.availability.dateSpecific = state.availability.dateSpecific.filter(
@@ -5546,8 +5548,8 @@ async function routeLeadRemote(leadId, routeTo) {
   showToast("Lead routed");
 }
 
-function addDateSpecificHours() {
-  const date = prompt("Date (YYYY-MM-DD)", todayIso());
+function addDateSpecificHours(presetDate) {
+  const date = prompt("Date (YYYY-MM-DD)", presetDate || todayIso());
   if (!date) return;
   const start = prompt("Start time (HH:MM)", "09:00");
   if (!start) return;
@@ -8222,6 +8224,61 @@ function renderAvailabilityView() {
   return renderAdvancedSettingsTab();
 }
 
+function generateAvailabilityCalendarHTML() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayIndex = new Date(year, month, 1).getDay();
+
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const currentMonthName = monthNames[month];
+
+  let html = `
+    <div class="availability-month-header">
+      <h4>${currentMonthName} ${year}</h4>
+      <div class="month-nav">
+        <button class="icon-btn" disabled><svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/></svg></button>
+        <button class="icon-btn" disabled><svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg></button>
+      </div>
+    </div>
+    <div class="availability-calendar-grid">
+      <div class="cal-weekday">Sun</div>
+      <div class="cal-weekday">Mon</div>
+      <div class="cal-weekday">Tue</div>
+      <div class="cal-weekday">Wed</div>
+      <div class="cal-weekday">Thu</div>
+      <div class="cal-weekday">Fri</div>
+      <div class="cal-weekday">Sat</div>
+  `;
+
+  for (let i = 0; i < firstDayIndex; i++) {
+    html += `<div class="cal-day empty"></div>`;
+  }
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    const d = new Date(year, month, i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const dateString = `${yyyy}-${mm}-${dd}`;
+
+    // Check if this date has specific hours
+    const hasSpecific = state.availability.dateSpecific.some(r => r.date === dateString);
+
+    html += `
+      <div class="cal-day ${hasSpecific ? 'has-override' : ''}" data-action="add-date-specific" data-date="${dateString}" title="${hasSpecific ? 'Edit override' : 'Add override'}">
+        <span class="day-num">${i}</span>
+        ${hasSpecific ? '<span class="override-dot"></span>' : ''}
+      </div>
+    `;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
 function renderSchedulesTab() {
   const activeCount = state.scheduling.eventTypes.filter((type) => type.active).length;
 
@@ -8255,43 +8312,59 @@ function renderSchedulesTab() {
 
       <div class="availability-body">
         <div class="availability-grid">
-          
+          ${state.availability.view === "List" ? `
           <section class="availability-block weekly-block">
-            <div class="block-header">
+            <div class="block-header weekly-header">
               <svg viewBox="0 0 24 24" class="header-icon"><path d="M12 4V2H8v2H6a2 2 0 00-2 2v14c0 1.1.9 2 2 2h12a2 2 0 002-2V6c0-1.1-.9-2-2-2h-2zm0 16H6V10h12v10zm-6-8h2v6H6v-6z"/></svg>
-              <div>
+              <div class="header-text-group">
                 <h3>Weekly hours</h3>
-                <p>Set when you are typically available for meetings</p>
+                <dl>
+                  <dt>Set when you are typically available for meetings</dt>
+                </dl>
               </div>
+            </div>
+            
+            <div class="timezone-header">
+              <label class="timezone-select-label" for="timezone-select">
+                <svg viewBox="0 0 24 24" class="globe-icon"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                <select id="timezone-select" class="timezone-select" data-action="set-timezone">
+                  ${TIMEZONES.map(
+        (tz) =>
+          `<option value="${escapeHtml(tz)}" ${tz === state.availability.timezone ? "selected" : ""
+          }>${escapeHtml(tz)}</option>`
+      ).join("")}
+                </select>
+                <svg viewBox="0 0 24 24" class="chevron"><path d="M7 10l5 5 5-5z"/></svg>
+              </label>
             </div>
             
             <div class="day-list">
               ${state.availability.weeklyHours
-      .map((dayRow, dayIndex) => {
-        const intervals = dayRow.intervals
-          .map(
-            (slot, slotIndex) => `
+        .map((dayRow, dayIndex) => {
+          const intervals = dayRow.intervals
+            .map(
+              (slot, slotIndex) => `
                         <div class="interval-row">
                           <input class="time-input" type="time" value="${escapeHtml(slot.start)}" data-action="interval-change" data-field="start" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" />
                           <span class="sep">-</span>
                           <input class="time-input" type="time" value="${escapeHtml(slot.end)}" data-action="interval-change" data-field="end" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" />
                           <div class="slot-actions">
-                            <button class="action-btn" type="button" data-action="remove-interval" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" title="Remove">✕</button>
-                            <button class="action-btn" type="button" data-action="add-interval" data-day-index="${dayIndex}" title="Add">+</button>
-                            <button class="action-btn copy" type="button" data-action="copy-day" data-day-index="${dayIndex}" title="Copy">⧉</button>
+                            <button class="action-btn icon-only" type="button" data-action="remove-interval" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" title="Remove"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg></button>
+                            ${slotIndex === dayRow.intervals.length - 1 ? `<button class="action-btn icon-only" type="button" data-action="add-interval" data-day-index="${dayIndex}" title="Add"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>` : ''}
+                            ${slotIndex === 0 ? `<button class="action-btn icon-only copy" type="button" data-action="copy-day" data-day-index="${dayIndex}" title="Copy to another day"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>` : ''}
                           </div>
                         </div>
                       `
-          )
-          .join("");
+            )
+            .join("");
 
-        return `
+          return `
                     <article class="day-row ${dayRow.enabled ? "active" : "disabled"}">
                       <div class="day-controller">
-                        <button class="day-badge" type="button" data-action="toggle-day" data-day-index="${dayIndex}">
-                          ${escapeHtml(dayRow.day)}
+                        <button class="day-badge-circle ${dayRow.enabled ? 'enabled' : ''}" type="button" data-action="toggle-day" data-day-index="${dayIndex}" title="Toggle ${escapeHtml(dayRow.day)}">
+                          ${escapeHtml(dayRow.day.charAt(0))}
                         </button>
-                        ${!dayRow.enabled ? `<span class="unavailable-text">Unavailable</span> <button class="action-btn minimal" data-action="add-interval" data-day-index="${dayIndex}">+</button>` : ''}
+                        ${!dayRow.enabled ? `<span class="unavailable-text">Unavailable</span> <button class="action-btn icon-only add-first" data-action="add-interval" data-day-index="${dayIndex}" title="Add hours"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>` : ''}
                       </div>
                       ${dayRow.enabled ? `
                         <div class="interval-list">
@@ -8300,15 +8373,30 @@ function renderSchedulesTab() {
                       ` : ''}
                     </article>
                   `;
-      })
-      .join("")}
+        })
+        .join("")}
             </div>
           </section>
+          ` : `
+          <section class="availability-block calendar-block">
+            <div class="block-header date-header">
+              <svg viewBox="0 0 24 24" class="header-icon"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-1.99.9-1.99 2L3 19a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
+              <div class="header-text-group">
+                <h3>Date-specific hours</h3>
+                <dl><dt>Override your weekly hours for specific dates</dt></dl>
+              </div>
+            </div>
+            
+            <div class="calendar-grid-container">
+              ${generateAvailabilityCalendarHTML()}
+            </div>
+          </section>
+          `}
 
           <section class="availability-block specific-block">
-            <div class="block-header">
-              <svg viewBox="0 0 24 24" class="header-icon"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
-              <div>
+            <div class="block-header date-header">
+              <svg viewBox="0 0 24 24" class="header-icon"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-1.99.9-1.99 2L3 19a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
+              <div class="header-text-group">
                 <h3>Date-specific hours</h3>
                 <p>Adjust hours for specific days</p>
               </div>
@@ -8325,29 +8413,16 @@ function renderSchedulesTab() {
                             <span class="date-hours-chip">${escapeHtml(row.date)}</span>
                             <span class="date-hours-time">${escapeHtml(row.start)} - ${escapeHtml(row.end)}</span>
                           </div>
-                          <button class="mini-btn ghost-danger" type="button" data-action="remove-date-specific" data-id="${row.id}">Remove</button>
+                          <button class="mini-btn icon-only ghost-danger" type="button" data-action="remove-date-specific" data-id="${row.id}"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg></button>
                         </li>
                       `
         )
         .join("")
-      : ''
+      : '<p class="empty-state-text">No date-specific hours set.</p>'
     }
             </ul>
           </section>
           
-        </div>
-        
-        <div class="timezone-footer">
-          <label class="timezone-select-label" for="timezone-select">
-            <select id="timezone-select" class="timezone-select" data-action="set-timezone">
-              ${TIMEZONES.map(
-      (tz) =>
-        `<option value="${escapeHtml(tz)}" ${tz === state.availability.timezone ? "selected" : ""
-        }>${escapeHtml(tz)}</option>`
-    ).join("")}
-            </select>
-            <svg viewBox="0 0 24 24" class="chevron"><path d="M7 10l5 5 5-5z"/></svg>
-          </label>
         </div>
       </div>
     </section>

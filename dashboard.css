@@ -3920,21 +3920,32 @@ body.sidebar-collapsed .sidebar .menu {
   border-radius: 999px;
 }
 
-.timezone-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--line);
-  background: #f8fafc;
+.timezone-header {
+  padding: 0 0 1.5rem 0;
+  display: flex;
+  align-items: center;
 }
 
 .timezone-select-label {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  color: var(--brand);
-  font-weight: 600;
+  gap: 0.5rem;
+  color: #334155;
+  font-weight: 500;
   font-size: 0.95rem;
   cursor: pointer;
   position: relative;
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
+}
+
+.timezone-select-label:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .timezone-select-label select {
@@ -3949,71 +3960,101 @@ body.sidebar-collapsed .sidebar .menu {
   outline: none;
 }
 
-.timezone-select-label .chevron {
-  position: absolute;
-  right: 0;
+.timezone-select-label .globe-icon {
   width: 18px;
   height: 18px;
-  fill: currentColor;
+  color: #64748b;
+}
+
+.timezone-select-label .chevron {
+  position: absolute;
+  right: 0.75rem;
+  width: 18px;
+  height: 18px;
+  fill: #64748b;
   pointer-events: none;
 }
 
 /* Day array overrides */
 .day-list {
-  display: grid;
-  gap: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .day-row {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  align-items: start;
-  gap: 1rem;
-  padding: 0.75rem 0;
-  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 1rem 1.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  transition: all 0.2s;
 }
 
-.day-row:first-child {
-  border-top: none;
+.day-row:hover {
+  border-color: #cbd5e1;
+}
+
+.day-row.disabled {
+  background: #f8fafc;
+  border-color: transparent;
 }
 
 .day-controller {
   display: flex;
   align-items: center;
   gap: 1rem;
-  height: 40px;
+  height: 44px;
 }
 
-.day-badge {
-  width: 38px;
-  height: 38px;
+.day-row.active .day-controller {
+  min-width: 60px;
+}
+
+.day-badge-circle {
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: 1px solid var(--line-strong);
+  border: 2px solid transparent;
   background: #f1f5f9;
   color: #64748b;
   font-weight: 600;
+  font-size: 1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   flex-shrink: 0;
 }
 
-.day-row.active .day-badge {
-  background: #0f172a;
-  border-color: #0f172a;
-  color: #fff;
+.day-badge-circle.enabled {
+  background: rgba(10, 102, 194, 0.1);
+  color: var(--brand);
+  border-color: rgba(10, 102, 194, 0.2);
+}
+
+.day-badge-circle:hover {
+  background: #e2e8f0;
+}
+
+.day-badge-circle.enabled:hover {
+  background: rgba(10, 102, 194, 0.15);
 }
 
 .unavailable-text {
   color: #64748b;
   font-size: 0.95rem;
+  font-weight: 500;
 }
 
 .interval-list {
-  display: grid;
-  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.125rem;
 }
 
 .interval-row {
@@ -4025,21 +4066,26 @@ body.sidebar-collapsed .sidebar .menu {
 
 .time-input {
   border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #334155;
+  background: #fff;
+  color: #1e293b;
   border-radius: 8px;
-  padding: 0.4rem 0.6rem;
+  padding: 0.5rem 0.75rem;
   font-size: 0.95rem;
+  font-weight: 500;
   font-family: inherit;
-  width: 105px;
+  width: 110px;
   text-align: center;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.time-input:hover {
+  border-color: #cbd5e1;
 }
 
 .time-input:focus {
   outline: none;
   border-color: var(--brand);
-  background: #fff;
+  box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
 }
 
 .time-input::-webkit-calendar-picker-indicator {
@@ -4054,7 +4100,7 @@ body.sidebar-collapsed .sidebar .menu {
 .slot-actions {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.25rem;
   margin-left: 0.5rem;
   opacity: 0;
   transition: opacity 0.2s;
@@ -4064,9 +4110,9 @@ body.sidebar-collapsed .sidebar .menu {
   opacity: 1;
 }
 
-.action-btn {
-  width: 28px;
-  height: 28px;
+.action-btn.icon-only {
+  width: 36px;
+  height: 36px;
   border: none;
   background: transparent;
   color: #64748b;
@@ -4075,25 +4121,115 @@ body.sidebar-collapsed .sidebar .menu {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s;
-  font-size: 1.1rem;
+  transition: all 0.2s;
 }
 
-.action-btn:hover {
+.action-btn.icon-only svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.action-btn.icon-only:hover {
   background: #f1f5f9;
   color: #0f172a;
 }
 
-.action-btn.copy {
-  font-size: 1.2rem;
-}
-
-.action-btn.minimal {
+.action-btn.icon-only.add-first {
   opacity: 0;
 }
 
-.day-row:hover .action-btn.minimal {
+.day-row:hover .action-btn.icon-only.add-first {
   opacity: 1;
+}
+
+/* Calendar View Overrides */
+.calendar-block {
+  padding-top: 0.25rem;
+}
+
+.calendar-header {
+  margin-bottom: 1.5rem;
+}
+
+.availability-month-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.availability-month-header h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.month-nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.availability-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+}
+
+.cal-weekday {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  padding-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cal-day {
+  aspect-ratio: 1;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  color: #334155;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.cal-day:hover:not(.empty) {
+  border-color: var(--brand);
+  background: #f8fafc;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.cal-day.empty {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+
+.cal-day.has-override {
+  border-color: rgba(10, 102, 194, 0.3);
+  background: rgba(10, 102, 194, 0.05);
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.override-dot {
+  position: absolute;
+  bottom: 12%;
+  width: 5px;
+  height: 5px;
+  background-color: var(--brand);
+  border-radius: 50%;
 }
 
 /* Specific hours overrides */

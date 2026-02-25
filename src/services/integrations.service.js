@@ -1409,6 +1409,27 @@ function buildGoogleOAuthMetadata(existingMetadata = {}, tokens = {}) {
   };
 }
 
+function hasGoogleCalendarWriteScope(tokens = {}) {
+  const rawScope = String(tokens.scope || "").trim();
+  if (!rawScope) return false;
+  const scopes = rawScope
+    .split(/\s+/)
+    .map((scope) => scope.trim())
+    .filter(Boolean);
+  return (
+    scopes.includes("https://www.googleapis.com/auth/calendar") ||
+    scopes.includes("https://www.googleapis.com/auth/calendar.events")
+  );
+}
+
+function hasUsableAccessToken(tokens = {}) {
+  const accessToken = String(tokens.access_token || "").trim();
+  if (!accessToken) return false;
+  const expiry = Number(tokens.expiry_date || 0);
+  if (!Number.isFinite(expiry) || expiry <= 0) return true;
+  return expiry > Date.now() + 30_000;
+}
+
 function encodeGoogleOAuthState(userId) {
   return jwt.sign(
     {
@@ -1453,9 +1474,13 @@ async function getGoogleCalendarConnectionStatusForUser(userIdStr) {
   const googleCal = existingRows.find((row) => row.provider === GOOGLE_PROVIDER_KEY);
   const tokens = readGoogleTokensFromMetadata(googleCal?.metadata || {});
   const hasRefreshToken = Boolean(tokens.refresh_token);
+  const hasWriteScope = hasGoogleCalendarWriteScope(tokens);
+  const hasUsableToken = hasRefreshToken || hasUsableAccessToken(tokens);
   return {
-    connected: Boolean(googleCal?.connected) && hasRefreshToken,
+    connected: Boolean(googleCal?.connected) && hasWriteScope && hasUsableToken,
     hasRefreshToken,
+    hasWriteScope,
+    hasUsableToken,
     integrationId: googleCal?.id || null,
     accountEmail: googleCal?.account_email || "",
   };
@@ -1512,7 +1537,13 @@ async function getAuthenticatedGoogleClient(userIdStr) {
   let metadata = googleCal?.metadata || {};
   let tokens = readGoogleTokensFromMetadata(metadata);
 
-  if (!googleCal || !googleCal.connected || !tokens.refresh_token) {
+  if (!googleCal || !googleCal.connected) {
+    throw badRequest("Host has not connected or authorized Google Calendar");
+  }
+  if (!hasGoogleCalendarWriteScope(tokens)) {
+    throw badRequest("Google Calendar permissions are missing. Reconnect in Integrations.");
+  }
+  if (!tokens.refresh_token && !hasUsableAccessToken(tokens)) {
     throw badRequest("Host has not connected or authorized Google Calendar");
   }
 

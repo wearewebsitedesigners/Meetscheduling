@@ -740,12 +740,80 @@ async function refreshPendingGoogleMeetLinks(userId, rows) {
       if (locationType !== "google_meet") return false;
       if (String(row.meeting_link || "").trim()) return false;
       const status = String(row.meeting_link_status || "").trim().toLowerCase();
-      if (!(status === "pending_generation" || status === "generation_failed")) return false;
-      return Boolean(String(row.calendar_event_id || "").trim());
+      return (
+        status === "pending_generation" ||
+        status === "generation_failed" ||
+        status === "pending_calendar_connection"
+      );
     })
     .slice(0, 8);
 
   if (!pendingRows.length) return rows;
+
+  const resultMap = new Map(rows.map((row) => [String(row.id), row]));
+  const withEventId = [];
+  const withoutEventId = [];
+
+  for (const row of pendingRows) {
+    const eventId = String(row.calendar_event_id || "").trim();
+    if (eventId) withEventId.push(row);
+    else withoutEventId.push(row);
+  }
+
+  const markRowsAsPendingCalendarConnection = async (items = []) => {
+    for (const row of items) {
+      const rowId = String(row.id || "");
+      if (!rowId) continue;
+      const currentStatus = String(row.meeting_link_status || "").trim().toLowerCase();
+      if (currentStatus === "pending_calendar_connection") {
+        resultMap.set(rowId, row);
+        continue;
+      }
+      try {
+        const updated = await query(
+          `
+            UPDATE bookings
+            SET meeting_link_status = 'pending_calendar_connection', updated_at = NOW()
+            WHERE id = $1
+            RETURNING *
+          `,
+          [rowId]
+        );
+        const next = updated.rows[0];
+        if (next) {
+          resultMap.set(String(next.id), {
+            ...row,
+            ...next,
+            event_title: row.event_title,
+          });
+        }
+      } catch {
+        // ignore update failures during best-effort refresh
+      }
+    }
+  };
+
+  let connectionStatus = {
+    connected: false,
+    hasRefreshToken: false,
+    integrationId: null,
+    accountEmail: "",
+  };
+  try {
+    connectionStatus = await getGoogleCalendarConnectionStatusForUser(userId);
+  } catch {
+    connectionStatus = {
+      connected: false,
+      hasRefreshToken: false,
+      integrationId: null,
+      accountEmail: "",
+    };
+  }
+
+  if (!connectionStatus.connected) {
+    await markRowsAsPendingCalendarConnection(pendingRows);
+    return rows.map((row) => resultMap.get(String(row.id)) || row);
+  }
 
   let gcal;
   try {
@@ -759,39 +827,22 @@ async function refreshPendingGoogleMeetLinks(userId, rows) {
       /not connected|authorized|authorization expired|reconnect/.test(message);
 
     if (isAuthIssue) {
-      const resultMap = new Map(rows.map((row) => [String(row.id), row]));
-      for (const row of pendingRows) {
-        try {
-          const updated = await query(
-            `
-              UPDATE bookings
-              SET meeting_link_status = 'pending_calendar_connection', updated_at = NOW()
-              WHERE id = $1
-              RETURNING *
-            `,
-            [row.id]
-          );
-          const next = updated.rows[0];
-          if (next) {
-            resultMap.set(String(next.id), {
-              ...row,
-              ...next,
-              event_title: row.event_title,
-            });
-          }
-        } catch {
-          // ignore update failures during best-effort refresh
-        }
-      }
+      await markRowsAsPendingCalendarConnection(pendingRows);
       return rows.map((row) => resultMap.get(String(row.id)) || row);
     }
 
     return rows;
   }
 
-  const resultMap = new Map(rows.map((row) => [String(row.id), row]));
+  let hostTimezone = "UTC";
+  try {
+    const userRow = await query("SELECT timezone FROM users WHERE id = $1", [userId]);
+    hostTimezone = String(userRow.rows[0]?.timezone || "UTC");
+  } catch {
+    hostTimezone = "UTC";
+  }
 
-  for (const row of pendingRows) {
+  for (const row of withEventId) {
     const rowId = String(row.id || "");
     const calendarEventId = String(row.calendar_event_id || "").trim();
     if (!rowId || !calendarEventId) continue;
@@ -855,6 +906,87 @@ async function refreshPendingGoogleMeetLinks(userId, rows) {
       }
     } catch {
       // ignore best-effort lookup failures and keep current row data
+    }
+  }
+
+  for (const row of withoutEventId) {
+    const rowId = String(row.id || "");
+    if (!rowId) continue;
+
+    try {
+      const calendarResult = await createGoogleCalendarEventWithMeet({
+        calendarClient: gcal,
+        booking: { id: rowId },
+        event: {
+          title: String(row.event_title || "Meeting"),
+          hostTimezone,
+        },
+        slot: {
+          startAtUtc: row.start_at_utc,
+          endAtUtc: row.end_at_utc,
+        },
+        inviteeName: String(row.invitee_name || "Invitee"),
+        inviteeEmail: String(row.invitee_email || "").trim(),
+        notes: String(row.notes || ""),
+      });
+
+      const nextStatus = calendarResult.meetingLink ? "ready" : "generation_failed";
+      const updated = await query(
+        `
+          UPDATE bookings
+          SET
+            calendar_provider = 'google-calendar',
+            calendar_event_id = $1,
+            meeting_link = $2,
+            meeting_link_status = $3,
+            updated_at = NOW()
+          WHERE id = $4
+          RETURNING *
+        `,
+        [calendarResult.calendarEventId, calendarResult.meetingLink, nextStatus, rowId]
+      );
+      const next = updated.rows[0];
+      if (next) {
+        resultMap.set(String(next.id), {
+          ...row,
+          ...next,
+          event_title: row.event_title,
+        });
+      }
+    } catch (error) {
+      const status = parseGoogleErrorStatus(error);
+      const message = String(error?.message || "").toLowerCase();
+      const isAuthIssue =
+        status === 401 ||
+        status === 403 ||
+        /not connected|authorized|authorization expired|reconnect/.test(message);
+
+      const nextStatus = isAuthIssue ? "pending_calendar_connection" : "generation_failed";
+      const nextProvider = isAuthIssue ? null : "google-calendar";
+      try {
+        const updated = await query(
+          `
+            UPDATE bookings
+            SET
+              calendar_provider = $1,
+              meeting_link_status = $2,
+              updated_at = NOW()
+            WHERE id = $3
+            RETURNING *
+          `,
+          [nextProvider, nextStatus, rowId]
+        );
+        const next = updated.rows[0];
+        if (next) {
+          resultMap.set(String(next.id), {
+            ...row,
+            ...next,
+            event_title: row.event_title,
+          });
+        }
+      } catch {
+        // ignore update errors for best-effort repair path
+      }
     }
   }
 

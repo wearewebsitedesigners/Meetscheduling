@@ -2,6 +2,7 @@ const STORAGE_KEY = "meetscheduling_dashboard_v2";
 const SIDEBAR_COLLAPSE_KEY = "meetscheduling_sidebar_collapsed_v1";
 const AUTH_TOKEN_KEY = "meetscheduling_auth_token";
 const AUTH_USER_KEY = "meetscheduling_auth_user";
+const DASHBOARD_THEME_OPTIONS = Object.freeze(["light", "dark"]);
 const DEFAULT_INTEGRATION_ACCOUNT = "sales.wearewebsitedesigners@gmail.com";
 const CALENDAR_CONNECT_PROMPT = "google, microsoft, apple";
 const CALENDAR_PROVIDER_CHOICES = Object.freeze([
@@ -670,6 +671,7 @@ const sidebarCreateBtn = byId("sidebar-create-btn");
 const createMenu = byId("create-menu");
 const profileMenuBtn = byId("profile-menu-btn");
 const profileMenu = byId("profile-menu");
+const themeToggleBtn = byId("theme-toggle-btn");
 const toastEl = byId("toast");
 
 let toastTimer = null;
@@ -687,6 +689,7 @@ const createMenuSections = {
   moreWays: false,
 };
 
+applyDashboardTheme(state.theme);
 bindEvents();
 renderCreateMenu();
 render();
@@ -712,12 +715,39 @@ function loadState() {
   }
 }
 
+function applyDashboardTheme(nextTheme) {
+  const theme = DASHBOARD_THEME_OPTIONS.includes(nextTheme) ? nextTheme : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  if (state && typeof state === "object") {
+    state.theme = theme;
+  }
+
+  if (!(themeToggleBtn instanceof HTMLButtonElement)) return;
+
+  const isDark = theme === "dark";
+  themeToggleBtn.classList.toggle("is-dark", isDark);
+  themeToggleBtn.setAttribute("aria-pressed", String(isDark));
+  themeToggleBtn.setAttribute(
+    "aria-label",
+    isDark ? "Switch to light mode" : "Switch to dark mode"
+  );
+
+  const labelEl = themeToggleBtn.querySelector(".theme-toggle-label");
+  if (labelEl instanceof HTMLElement) {
+    labelEl.textContent = isDark ? "Dark" : "Light";
+  }
+}
+
 function normalizeState(raw, fallback) {
   if (!raw || typeof raw !== "object") return fallback;
   const merged = structuredCloneOrFallback(fallback);
 
   if (APP_SECTIONS.includes(raw.activeSection)) {
     merged.activeSection = raw.activeSection;
+  }
+
+  if (DASHBOARD_THEME_OPTIONS.includes(raw.theme)) {
+    merged.theme = raw.theme;
   }
 
   if (raw.meetings && typeof raw.meetings === "object") {
@@ -1291,6 +1321,7 @@ function createDefaultState() {
 
   return {
     activeSection: "meetings",
+    theme: "light",
     meetings: {
       activeTab: "Upcoming",
       showBuffers: true,
@@ -3014,6 +3045,13 @@ function bindEvents() {
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
+
+    if (target.closest("#theme-toggle-btn")) {
+      const nextTheme = state.theme === "dark" ? "light" : "dark";
+      applyDashboardTheme(nextTheme);
+      saveState();
+      return;
+    }
 
     const sectionBtn = target.closest("[data-section]");
     if (sectionBtn) {

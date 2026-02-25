@@ -12,6 +12,13 @@ const { verifySlotToken } = require("../utils/booking-token");
 const { conflict, notFound } = require("../utils/http-error");
 const { assertEmail, assertOptionalString, assertString } = require("../utils/validation");
 
+const BOOKING_COLUMN_CACHE_TTL_MS = 5 * 60 * 1000;
+let bookingColumnCache = {
+  expiresAt: 0,
+  data: null,
+  pending: null,
+};
+
 function mapBookingRow(row, timezone = "UTC") {
   const parseTs = (value) =>
     value instanceof Date
@@ -55,6 +62,84 @@ function mapBookingRow(row, timezone = "UTC") {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function resetBookingColumnCache() {
+  bookingColumnCache = {
+    expiresAt: 0,
+    data: null,
+    pending: null,
+  };
+}
+
+async function getBookingColumnSupport() {
+  const now = Date.now();
+  if (bookingColumnCache.data && bookingColumnCache.expiresAt > now) {
+    return bookingColumnCache.data;
+  }
+  if (bookingColumnCache.pending) {
+    return bookingColumnCache.pending;
+  }
+
+  bookingColumnCache.pending = (async () => {
+    try {
+      const result = await query(
+        `
+          SELECT column_name
+          FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = 'bookings'
+            AND column_name = ANY($1::text[])
+        `,
+        [["meeting_link_status", "calendar_provider", "calendar_event_id"]]
+      );
+      const names = new Set(result.rows.map((row) => String(row.column_name || "")));
+      const data = {
+        hasMeetingLinkStatus: names.has("meeting_link_status"),
+        hasCalendarProvider: names.has("calendar_provider"),
+        hasCalendarEventId: names.has("calendar_event_id"),
+      };
+      bookingColumnCache = {
+        data,
+        expiresAt: now + BOOKING_COLUMN_CACHE_TTL_MS,
+        pending: null,
+      };
+      return data;
+    } catch {
+      // Fail open for older DB schemas so booking still works.
+      const data = {
+        hasMeetingLinkStatus: false,
+        hasCalendarProvider: false,
+        hasCalendarEventId: false,
+      };
+      bookingColumnCache = {
+        data,
+        expiresAt: now + 30_000,
+        pending: null,
+      };
+      return data;
+    }
+  })();
+
+  return bookingColumnCache.pending;
+}
+
+function hasExtendedBookingColumns(columnSupport) {
+  return Boolean(
+    columnSupport?.hasMeetingLinkStatus &&
+    columnSupport?.hasCalendarProvider &&
+    columnSupport?.hasCalendarEventId
+  );
+}
+
+function isMissingExtendedBookingColumnError(error) {
+  if (!error || String(error.code || "") !== "42703") return false;
+  const message = String(error.message || "").toLowerCase();
+  return (
+    message.includes("meeting_link_status") ||
+    message.includes("calendar_provider") ||
+    message.includes("calendar_event_id")
+  );
 }
 
 async function assertBookingStillAvailable(client, { event, slot }) {
@@ -347,60 +432,138 @@ async function createPublicBooking({
     generatedLink: generatedMeetingLink,
     hasGoogleCalendarConnection: !!googleConnection.connected,
   });
+  const columnSupport = await getBookingColumnSupport();
+  const supportsExtendedColumns = hasExtendedBookingColumns(columnSupport);
 
   let booking = await withTransaction(async (client) => {
     await assertBookingStillAvailable(client, { event, slot });
 
     try {
-      const inserted = await query(
-        `
-          INSERT INTO bookings (
-            user_id,
-            event_type_id,
-            invitee_name,
-            invitee_email,
-            notes,
-            visitor_timezone,
-            start_at_utc,
-            end_at_utc,
-            duration_minutes,
-            buffer_before_min,
-            buffer_after_min,
-            location_type,
-            meeting_link,
-            meeting_link_status,
-            calendar_provider,
-            calendar_event_id,
-            status
+      const baseValues = [
+        event.userId,
+        event.id,
+        cleanName,
+        cleanEmail,
+        cleanNotes,
+        slotPayload.visitorTimezone,
+        slot.startAtUtc,
+        slot.endAtUtc,
+        event.durationMinutes,
+        event.bufferBeforeMin,
+        event.bufferAfterMin,
+        event.locationType,
+        baseMeetingState.meetingLink,
+      ];
+
+      const inserted = supportsExtendedColumns
+        ? await query(
+            `
+              INSERT INTO bookings (
+                user_id,
+                event_type_id,
+                invitee_name,
+                invitee_email,
+                notes,
+                visitor_timezone,
+                start_at_utc,
+                end_at_utc,
+                duration_minutes,
+                buffer_before_min,
+                buffer_after_min,
+                location_type,
+                meeting_link,
+                meeting_link_status,
+                calendar_provider,
+                calendar_event_id,
+                status
+              )
+              VALUES (
+                $1,$2,$3,$4,$5,$6,$7::timestamptz,$8::timestamptz,$9,$10,$11,$12,$13,$14,$15,$16,'confirmed'
+              )
+              RETURNING *
+            `,
+            [
+              ...baseValues,
+              baseMeetingState.meetingLinkStatus,
+              baseMeetingState.calendarProvider,
+              baseMeetingState.calendarEventId,
+            ],
+            client
           )
-          VALUES (
-            $1,$2,$3,$4,$5,$6,$7::timestamptz,$8::timestamptz,$9,$10,$11,$12,$13,$14,$15,$16,'confirmed'
-          )
-          RETURNING *
-        `,
-        [
-          event.userId,
-          event.id,
-          cleanName,
-          cleanEmail,
-          cleanNotes,
-          slotPayload.visitorTimezone,
-          slot.startAtUtc,
-          slot.endAtUtc,
-          event.durationMinutes,
-          event.bufferBeforeMin,
-          event.bufferAfterMin,
-          event.locationType,
-          baseMeetingState.meetingLink,
-          baseMeetingState.meetingLinkStatus,
-          baseMeetingState.calendarProvider,
-          baseMeetingState.calendarEventId,
-        ],
-        client
-      );
+        : await query(
+            `
+              INSERT INTO bookings (
+                user_id,
+                event_type_id,
+                invitee_name,
+                invitee_email,
+                notes,
+                visitor_timezone,
+                start_at_utc,
+                end_at_utc,
+                duration_minutes,
+                buffer_before_min,
+                buffer_after_min,
+                location_type,
+                meeting_link,
+                status
+              )
+              VALUES (
+                $1,$2,$3,$4,$5,$6,$7::timestamptz,$8::timestamptz,$9,$10,$11,$12,$13,'confirmed'
+              )
+              RETURNING *
+            `,
+            baseValues,
+            client
+          );
 
       return inserted.rows[0];
     } catch (error) {
+      if (isMissingExtendedBookingColumnError(error)) {
+        // Schema has not been migrated on this environment yet; retry with legacy insert.
+        resetBookingColumnCache();
+        const inserted = await query(
+          `
+            INSERT INTO bookings (
+              user_id,
+              event_type_id,
+              invitee_name,
+              invitee_email,
+              notes,
+              visitor_timezone,
+              start_at_utc,
+              end_at_utc,
+              duration_minutes,
+              buffer_before_min,
+              buffer_after_min,
+              location_type,
+              meeting_link,
+              status
+            )
+            VALUES (
+              $1,$2,$3,$4,$5,$6,$7::timestamptz,$8::timestamptz,$9,$10,$11,$12,$13,'confirmed'
+            )
+            RETURNING *
+          `,
+          [
+            event.userId,
+            event.id,
+            cleanName,
+            cleanEmail,
+            cleanNotes,
+            slotPayload.visitorTimezone,
+            slot.startAtUtc,
+            slot.endAtUtc,
+            event.durationMinutes,
+            event.bufferBeforeMin,
+            event.bufferAfterMin,
+            event.locationType,
+            baseMeetingState.meetingLink,
+          ],
+          client
+        );
+        return inserted.rows[0];
+      }
       if (error && error.code === "23505") {
         throw conflict("This slot was just booked. Please select another time.");
       }
@@ -434,20 +597,32 @@ async function createPublicBooking({
 
     if (calendarResult) {
       const nextStatus = calendarResult.meetingLink ? "ready" : "pending_generation";
-      const updated = await query(
-        `
-          UPDATE bookings
-          SET
-            calendar_provider = 'google-calendar',
-            calendar_event_id = $1,
-            meeting_link = $2,
-            meeting_link_status = $3,
-            updated_at = NOW()
-          WHERE id = $4
-          RETURNING *
-        `,
-        [calendarResult.calendarEventId, calendarResult.meetingLink, nextStatus, booking.id]
-      );
+      const updated = supportsExtendedColumns
+        ? await query(
+            `
+              UPDATE bookings
+              SET
+                calendar_provider = 'google-calendar',
+                calendar_event_id = $1,
+                meeting_link = $2,
+                meeting_link_status = $3,
+                updated_at = NOW()
+              WHERE id = $4
+              RETURNING *
+            `,
+            [calendarResult.calendarEventId, calendarResult.meetingLink, nextStatus, booking.id]
+          )
+        : await query(
+            `
+              UPDATE bookings
+              SET
+                meeting_link = $1,
+                updated_at = NOW()
+              WHERE id = $2
+              RETURNING *
+            `,
+            [calendarResult.meetingLink, booking.id]
+          );
       if (updated.rows[0]) {
         booking = updated.rows[0];
       }
@@ -462,20 +637,22 @@ async function createPublicBooking({
         ? "pending_calendar_connection"
         : "generation_failed";
       const nextProvider = authorizationIssue ? null : "google-calendar";
-      const updated = await query(
-        `
-          UPDATE bookings
-          SET
-            calendar_provider = $1,
-            meeting_link_status = $2,
-            updated_at = NOW()
-          WHERE id = $3
-          RETURNING *
-        `,
-        [nextProvider, nextStatus, booking.id]
-      );
-      if (updated.rows[0]) {
-        booking = updated.rows[0];
+      if (supportsExtendedColumns) {
+        const updated = await query(
+          `
+            UPDATE bookings
+            SET
+              calendar_provider = $1,
+              meeting_link_status = $2,
+              updated_at = NOW()
+            WHERE id = $3
+            RETURNING *
+          `,
+          [nextProvider, nextStatus, booking.id]
+        );
+        if (updated.rows[0]) {
+          booking = updated.rows[0];
+        }
       }
       console.error(
         "Failed to create Google Calendar event/Meet link:",
@@ -500,9 +677,9 @@ async function createPublicBooking({
       timezone: slotPayload.visitorTimezone,
       startUtc: slot.startAtUtc,
       endUtc: slot.endAtUtc,
-      locationType: booking.location_type,
-      meetingLink: booking.meeting_link,
-      meetingLinkStatus: booking.meeting_link_status,
+      locationType: booking.location_type || event.locationType,
+      meetingLink: booking.meeting_link || null,
+      meetingLinkStatus: booking.meeting_link_status || baseMeetingState.meetingLinkStatus,
     });
   } catch (error) {
     emailStatus = { sent: false, reason: "Email failed" };

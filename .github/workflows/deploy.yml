@@ -17,7 +17,26 @@ jobs:
     environment: production
 
     steps:
-      - name: Deploy over SSH
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Upload project files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST || vars.VPS_HOST || '72.61.0.228' }}
+          username: ${{ secrets.VPS_USER || vars.VPS_USER || 'meetscheduling' }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY || secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ vars.VPS_SSH_PORT || 22 }}
+          source: "./"
+          target: ${{ vars.VPS_APP_DIR || '/home/meetscheduling/htdocs/www.meetscheduling.com' }}
+          overwrite: true
+          rm: false
+          strip_components: 0
+          exclude: ".git,node_modules,.env,.deploy,.npm-cache,tmp,.DS_Store"
+
+      - name: Run install and restart
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST || vars.VPS_HOST || '72.61.0.228' }}
@@ -33,13 +52,11 @@ jobs:
 
             APP_DIR="${{ vars.VPS_APP_DIR }}"
             if [ -z "$APP_DIR" ]; then
-              APP_DIR="/var/www/meetscheduling"
+              APP_DIR="/home/meetscheduling/htdocs/www.meetscheduling.com"
             fi
 
+            mkdir -p "$APP_DIR"
             cd "$APP_DIR"
-
-            git fetch --all --prune
-            git pull --ff-only origin main
 
             npm ci --omit=dev
             npm run build --if-present

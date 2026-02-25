@@ -22,6 +22,7 @@ const demoSlots = [...document.querySelectorAll("[data-demo-slot]")];
 const demoDates = [...document.querySelectorAll("[data-demo-date]")];
 const flowSteps = [...document.querySelectorAll("[data-flow-step]")];
 const flowCards = [...document.querySelectorAll("[data-flow-card]")];
+const copyLinkButtons = [...document.querySelectorAll("[data-copy-link]")];
 
 function closeMenu() {
   if (!navMenu || !navToggle) return;
@@ -230,6 +231,66 @@ if (!prefersReducedMotion && hasFinePointer && parallaxItems.length) {
     },
     { passive: true }
   );
+}
+
+async function copyTextToClipboard(text) {
+  if (!text) return false;
+
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // fallback below
+    }
+  }
+
+  const fallbackInput = document.createElement("textarea");
+  fallbackInput.value = text;
+  fallbackInput.setAttribute("readonly", "");
+  fallbackInput.style.position = "fixed";
+  fallbackInput.style.top = "-1000px";
+  document.body.append(fallbackInput);
+  fallbackInput.select();
+
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    copied = false;
+  }
+
+  fallbackInput.remove();
+  return copied;
+}
+
+if (copyLinkButtons.length) {
+  copyLinkButtons.forEach((button) => {
+    button.addEventListener("click", async () => {
+      const rawTarget = button.dataset.copyTarget?.trim();
+      const target = rawTarget
+        ? new URL(rawTarget, window.location.origin).toString()
+        : `${window.location.origin}/booking.html`;
+      const labelNode = button.querySelector("[data-copy-label]");
+      const defaultLabel = button.dataset.defaultLabel?.trim() || "Copy link";
+      const copiedLabel = button.dataset.copiedLabel?.trim() || "Copied";
+      const failedLabel = "Copy failed";
+
+      const copied = await copyTextToClipboard(target);
+      button.classList.toggle("is-copied", copied);
+
+      if (labelNode instanceof HTMLElement) {
+        labelNode.textContent = copied ? copiedLabel : failedLabel;
+      }
+
+      window.setTimeout(() => {
+        button.classList.remove("is-copied");
+        if (labelNode instanceof HTMLElement) {
+          labelNode.textContent = defaultLabel;
+        }
+      }, copied ? 1800 : 2400);
+    });
+  });
 }
 
 function applyBilling(mode) {

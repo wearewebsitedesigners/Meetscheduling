@@ -430,6 +430,316 @@
       cursor: not-allowed;
     }
 
+    /* Public booking page layout */
+    .booking-public-page {
+      background:
+        radial-gradient(circle at 12% 10%, rgba(56, 130, 255, 0.14), transparent 44%),
+        radial-gradient(circle at 90% 20%, rgba(168, 85, 247, 0.1), transparent 46%),
+        #f4f7fb;
+      padding: clamp(1rem, 2.2vw, 2.2rem);
+      align-items: center;
+    }
+
+    .page-shell {
+      width: min(1320px, 100%);
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .booking-page-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      min-height: 3.4rem;
+      padding: 0.2rem 0.4rem;
+    }
+
+    .booking-page-host {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: #173a66;
+      font-weight: 700;
+      font-size: clamp(1rem, 1.8vw, 1.2rem);
+    }
+
+    .top-host-avatar {
+      width: 2.7rem;
+      height: 2.7rem;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(150deg, #865125 10%, #211b19 88%);
+      color: #ffe1bf;
+      font-size: 0.95rem;
+      font-weight: 800;
+      border: 1px solid rgba(235, 196, 155, 0.58);
+    }
+
+    .booking-page-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+
+    .topbar-link {
+      color: #1f66d4;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-right: 0.4rem;
+    }
+
+    .topbar-link:hover {
+      color: #1657b4;
+    }
+
+    .topbar-btn {
+      border: 1px solid #9ebae3;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.85);
+      color: #1b426f;
+      min-height: 2.55rem;
+      padding: 0.5rem 1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.34rem;
+      font-weight: 700;
+      font-size: 0.96rem;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .topbar-btn:hover {
+      transform: translateY(-1px);
+      background: #fff;
+      border-color: #6f99d8;
+    }
+
+    .topbar-copy-btn svg {
+      width: 1rem;
+      height: 1rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .topbar-copy-btn.is-copied {
+      border-color: rgba(16, 185, 129, 0.55);
+      background: rgba(16, 185, 129, 0.12);
+      color: #0e7a53;
+    }
+
+    .booking-wrapper {
+      max-width: none;
+      width: 100%;
+      min-height: 700px;
+      border-radius: 18px;
+      border: 1px solid #c8d8ee;
+      box-shadow:
+        0 20px 44px rgba(13, 39, 74, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.84);
+      background: rgba(255, 255, 255, 0.88);
+    }
+
+    .booking-page-ribbon {
+      position: absolute;
+      right: -2.75rem;
+      top: 1.35rem;
+      z-index: 6;
+      transform: rotate(42deg);
+      transform-origin: center;
+      background: #52667f;
+      color: #fff;
+      text-transform: uppercase;
+      font-size: 0.65rem;
+      letter-spacing: 0.04em;
+      font-weight: 700;
+      padding: 0.48rem 3.2rem;
+      box-shadow: 0 8px 14px rgba(12, 28, 48, 0.2);
+      pointer-events: none;
+    }
+
+    .event-details {
+      flex: 0 0 430px;
+      padding: 2rem 1.9rem;
+      background: rgba(255, 255, 255, 0.82);
+      border-right-color: #d5e1f2;
+      max-height: 700px;
+      overflow-y: auto;
+    }
+
+    .event-details::-webkit-scrollbar {
+      width: 7px;
+    }
+
+    .event-details::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: #c4d4ea;
+    }
+
+    .host-avatar {
+      background: linear-gradient(150deg, #865125 10%, #211b19 88%);
+      color: #ffe1bf;
+      border: 1px solid rgba(235, 196, 155, 0.58);
+      font-weight: 700;
+    }
+
+    .host-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #6a7f99;
+    }
+
+    .event-title {
+      font-size: clamp(2rem, 3.4vw, 2.8rem);
+      letter-spacing: -0.02em;
+      color: #143963;
+      margin-bottom: 1.2rem;
+    }
+
+    .event-meta-item {
+      color: #4d6c8f;
+      font-size: 1.02rem;
+      font-weight: 600;
+    }
+
+    .event-desc {
+      color: #274d78;
+      font-size: 1.06rem;
+      line-height: 1.62;
+      white-space: pre-wrap;
+    }
+
+    .step-container {
+      background: rgba(255, 255, 255, 0.76);
+    }
+
+    .step-panel {
+      padding: 2rem 2.1rem;
+    }
+
+    .form-title {
+      font-size: clamp(1.8rem, 2.8vw, 2.4rem);
+      letter-spacing: -0.01em;
+      color: #123a67;
+    }
+
+    .calendar-slots-layout {
+      gap: 1.25rem;
+      align-items: start;
+    }
+
+    .calendar-section {
+      min-width: 340px;
+    }
+
+    .slots-section {
+      flex: 0 0 300px;
+    }
+
+    .slots-header {
+      font-size: 1.75rem;
+      line-height: 1.12;
+      color: #1f426c;
+      margin-bottom: 1.05rem;
+    }
+
+    .slots-list {
+      max-height: 520px;
+      padding-right: 0.35rem;
+    }
+
+    .slot-btn {
+      min-height: 3.1rem;
+      font-size: 1.22rem;
+      border-radius: 10px;
+    }
+
+    .slot-action-row {
+      align-items: stretch;
+    }
+
+    .slot-action-row .confirm-slot-btn {
+      min-width: 6.7rem;
+      border-radius: 10px;
+      font-size: 1.08rem;
+    }
+
+    @media (max-width: 1024px) {
+      .booking-page-topbar {
+        flex-wrap: wrap;
+      }
+
+      .booking-page-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+
+      .event-details {
+        flex-basis: 390px;
+      }
+
+      .slots-section {
+        flex-basis: 250px;
+      }
+
+      .slots-header {
+        font-size: 1.32rem;
+      }
+
+      .slot-btn {
+        font-size: 1.06rem;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .booking-page-topbar {
+        align-items: flex-start;
+      }
+
+      .booking-page-actions {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+      }
+
+      .topbar-link {
+        margin-right: 0;
+      }
+
+      .booking-wrapper {
+        min-height: 0;
+      }
+
+      .booking-page-ribbon {
+        right: -3.2rem;
+        top: 1.65rem;
+        font-size: 0.58rem;
+      }
+
+      .event-details {
+        border-right: 0;
+        border-bottom: 1px solid #d5e1f2;
+        max-height: none;
+      }
+
+      .step-panel {
+        padding: 1.4rem 1rem;
+      }
+
+      .calendar-section {
+        min-width: 0;
+      }
+
+      .slots-section {
+        flex-basis: auto;
+      }
+    }
+
     /* Loading Overlay */
     .loading-overlay {
       position: absolute;
@@ -478,9 +788,31 @@
   </style>
 </head>
 
-<body>
+<body class="booking-public-page">
+  <div class="page-shell">
+    <header class="booking-page-topbar">
+      <div class="booking-page-host">
+        <span id="top-host-avatar" class="top-host-avatar">..</span>
+        <span id="top-host-name">Loading...</span>
+      </div>
+      <div class="booking-page-actions">
+        <a id="view-landing-link" class="topbar-link" href="#">View landing page</a>
+        <button id="topbar-menu-btn" class="topbar-btn" type="button" aria-label="Open menu">
+          <span>Menu</span>
+          <span aria-hidden="true">v</span>
+        </button>
+        <button id="copy-link-btn" class="topbar-btn topbar-copy-btn" type="button" aria-label="Copy booking link">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M9 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2M5 9h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" />
+          </svg>
+          <span id="copy-link-label">Copy link</span>
+        </button>
+      </div>
+    </header>
 
-  <div class="booking-wrapper">
+    <div class="booking-wrapper">
+      <span class="booking-page-ribbon">Powered by MeetScheduling</span>
     <!-- Loading state overlay -->
     <div id="loading-overlay" class="loading-overlay">
       <div class="spinner"></div>
@@ -621,6 +953,7 @@
       </div>
 
     </main>
+    </div>
   </div>
 
   <script src="/booking.js"></script>

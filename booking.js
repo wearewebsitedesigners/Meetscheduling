@@ -9,6 +9,12 @@ const eventTitle = document.getElementById("event-title");
 const eventDuration = document.getElementById("event-duration");
 const eventLocation = document.getElementById("event-location");
 const eventDesc = document.getElementById("event-desc");
+const topHostAvatar = document.getElementById("top-host-avatar");
+const topHostName = document.getElementById("top-host-name");
+const viewLandingLink = document.getElementById("view-landing-link");
+const topbarMenuBtn = document.getElementById("topbar-menu-btn");
+const copyLinkBtn = document.getElementById("copy-link-btn");
+const copyLinkLabel = document.getElementById("copy-link-label");
 
 const sidebarDatetime = document.getElementById("sidebar-datetime");
 const sidebarDatetimeText = document.getElementById("sidebar-datetime-text");
@@ -49,6 +55,7 @@ let currentViewDate = new Date(); // dictates which month we're looking at
 let selectedDate = null; // yyyy-mm-dd
 let selectedSlot = null; // The slot object
 let cachedSlots = {}; // { 'yyyy-mm-dd': [slots] }
+let copyResetTimer = null;
 
 // Timezone options (simplified for UX, could be expanded)
 const timezonesList = [
@@ -111,10 +118,24 @@ function formatYMD(year, month, day) {
 }
 
 function renderSidebarEventDetails(event) {
-  hostAvatar.textContent = (event.hostName || "H").charAt(0).toUpperCase();
-  hostName.textContent = event.hostName;
-  eventTitle.textContent = event.title;
+  const safeHostName = String(event?.hostName || "Host").trim();
+  const safeTitle = String(event?.title || "Meeting").trim();
+  const hostInitials = safeHostName
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "MS";
+
+  hostAvatar.textContent = hostInitials;
+  hostName.textContent = safeHostName;
+  eventTitle.textContent = safeTitle;
   eventDuration.textContent = `${event.durationMinutes} min`;
+
+  if (topHostAvatar) topHostAvatar.textContent = hostInitials;
+  if (topHostName) topHostName.textContent = safeHostName;
+  document.title = `${safeTitle} | MeetScheduling`;
 
   if (event.locationType === 'in_person' || event.locationType === 'custom') {
     eventLocation.textContent = "Physical Location / Custom Server";
@@ -128,6 +149,72 @@ function renderSidebarEventDetails(event) {
   if (event.description) {
     eventDesc.innerHTML = event.description.replace(/\n/g, '<br>');
   }
+}
+
+function setLandingLink() {
+  if (!(viewLandingLink instanceof HTMLAnchorElement)) return;
+  const href = `/${encodeURIComponent(username)}`;
+  viewLandingLink.href = href;
+}
+
+async function copyCurrentLink() {
+  const text = window.location.href;
+  if (!text) return false;
+
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // fallback below
+    }
+  }
+
+  const temp = document.createElement("textarea");
+  temp.value = text;
+  temp.setAttribute("readonly", "");
+  temp.style.position = "fixed";
+  temp.style.top = "-1000px";
+  document.body.append(temp);
+  temp.select();
+
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    copied = false;
+  }
+
+  temp.remove();
+  return copied;
+}
+
+if (topbarMenuBtn instanceof HTMLButtonElement) {
+  topbarMenuBtn.addEventListener("click", () => {
+    if (viewLandingLink instanceof HTMLAnchorElement) {
+      window.location.href = viewLandingLink.href;
+    }
+  });
+}
+
+if (copyLinkBtn instanceof HTMLButtonElement) {
+  copyLinkBtn.addEventListener("click", async () => {
+    const copied = await copyCurrentLink();
+    copyLinkBtn.classList.toggle("is-copied", copied);
+
+    if (copyLinkLabel) {
+      copyLinkLabel.textContent = copied ? "Copied" : "Copy failed";
+    }
+
+    if (copyResetTimer) {
+      window.clearTimeout(copyResetTimer);
+    }
+
+    copyResetTimer = window.setTimeout(() => {
+      copyLinkBtn.classList.remove("is-copied");
+      if (copyLinkLabel) copyLinkLabel.textContent = "Copy link";
+    }, copied ? 1800 : 2400);
+  });
 }
 
 function getDaysInMonth(year, month) {
@@ -396,5 +483,5 @@ bookingForm.addEventListener("submit", async (e) => {
 
 // Init
 initTimezoneSelect();
+setLandingLink();
 loadEvent();
-

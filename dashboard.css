@@ -364,6 +364,19 @@ body.sidebar-collapsed .sidebar .menu {
   cursor: pointer;
 }
 
+.create-btn span:first-child {
+  color: #4f6f97;
+  font-size: 1.2rem;
+  line-height: 1;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.create-btn:hover span:first-child,
+.create-btn:focus-visible span:first-child {
+  color: var(--brand);
+  transform: translateY(-0.5px);
+}
+
 .menu {
   display: grid;
   gap: 0.15rem;
@@ -565,6 +578,10 @@ html[data-theme="dark"] .create-btn {
   background: rgba(102, 168, 255, 0.12);
   border-color: var(--brand);
   color: var(--brand);
+}
+
+html[data-theme="dark"] .create-btn span:first-child {
+  color: #9eb7dc;
 }
 
 html[data-theme="dark"] .menu-item:hover {

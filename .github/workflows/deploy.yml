@@ -61,7 +61,8 @@ jobs:
             npm ci --omit=dev
             npm run build --if-present
 
-            if [ "${{ vars.RUN_MIGRATIONS }}" = "true" ]; then
+            RUN_MIGRATIONS="${{ vars.RUN_MIGRATIONS }}"
+            if [ -z "$RUN_MIGRATIONS" ] || [ "$RUN_MIGRATIONS" = "true" ]; then
               npm run migrate
             fi
 

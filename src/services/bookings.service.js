@@ -350,8 +350,45 @@ async function createGoogleCalendarEventWithMeet({
 
   // Google can return conference data asynchronously even after a successful insert.
   if (!meetingLink && calendarEventId) {
-    const backoffMs = [300, 700, 1200];
+    const backoffMs = [300, 700, 1200, 2000];
     for (const waitMs of backoffMs) {
+      await sleep(waitMs);
+      try {
+        const lookup = await calendarClient.events.get({
+          calendarId: "primary",
+          eventId: calendarEventId,
+          conferenceDataVersion: 1,
+        });
+        meetingLink = extractGoogleMeetLinkFromEvent(lookup?.data || {});
+        if (meetingLink) break;
+      } catch {
+        // Keep booking successful; fallback status handling happens upstream.
+      }
+    }
+  }
+
+  // Fallback: request conference data generation one more time on the same event.
+  if (!meetingLink && calendarEventId) {
+    try {
+      await calendarClient.events.patch({
+        calendarId: "primary",
+        eventId: calendarEventId,
+        conferenceDataVersion: 1,
+        requestBody: {
+          conferenceData: {
+            createRequest: {
+              requestId: randomRequestId("meet-retry"),
+              conferenceSolutionKey: { type: "hangoutsMeet" },
+            },
+          },
+        },
+      });
+    } catch {
+      // Keep booking successful; fallback status handling happens upstream.
+    }
+
+    const retryBackoffMs = [600, 1200, 2000, 3000];
+    for (const waitMs of retryBackoffMs) {
       await sleep(waitMs);
       try {
         const lookup = await calendarClient.events.get({
@@ -596,7 +633,7 @@ async function createPublicBooking({
     }
 
     if (calendarResult) {
-      const nextStatus = calendarResult.meetingLink ? "ready" : "pending_generation";
+      const nextStatus = calendarResult.meetingLink ? "ready" : "generation_failed";
       const updated = supportsExtendedColumns
         ? await query(
             `

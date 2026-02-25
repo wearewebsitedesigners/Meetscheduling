@@ -4434,3 +4434,342 @@ html[data-theme="dark"] :is(input, select, textarea)::placeholder {
     border-bottom: 1px solid var(--line);
   }
 }
+
+/* Availability schedules redesign */
+.availability-card.calendly-style.availability-schedules-shell {
+  border: 1px solid #d7e2f0;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .availability-grid.availability-grid-split {
+  grid-template-columns: minmax(620px, 1.2fr) minmax(360px, 0.8fr);
+  min-height: 640px;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .availability-block {
+  padding: 2rem 1.85rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .weekly-block {
+  border-right: 1px solid #d7e2f0;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .block-header {
+  margin-bottom: 1.5rem;
+  align-items: flex-start;
+  gap: 0.72rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .block-header .header-icon {
+  width: 1.4rem;
+  height: 1.4rem;
+  color: #123a67;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .block-header h3 {
+  margin: 0;
+  color: #102f54;
+  font-size: 1.85rem;
+  font-weight: 700;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .block-header p {
+  margin-top: 0.2rem;
+  color: #5a7597;
+  font-size: 1.08rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-header {
+  align-items: center;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-header .add-hours-btn {
+  margin-left: auto;
+  position: static;
+  transform: none;
+  border-radius: 999px;
+  border: 2px solid #6b8fb7;
+  color: #123b67;
+  background: #fff;
+  font-weight: 700;
+  min-width: 132px;
+  min-height: 48px;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-header .add-hours-btn:hover {
+  border-color: #1f6deb;
+  color: #1f6deb;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.62rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .day-row {
+  border: none;
+  background: transparent;
+  padding: 0.28rem 0;
+  border-radius: 0;
+  gap: 0.88rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .day-row:hover {
+  border-color: transparent;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .day-row.disabled {
+  background: transparent;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .day-controller {
+  min-width: 182px;
+  gap: 1rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .day-badge-circle {
+  width: 2.7rem;
+  height: 2.7rem;
+  border: none;
+  background: #0a4ea3;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.18rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .day-badge-circle.enabled,
+.availability-card.calendly-style.availability-schedules-shell .day-badge-circle:hover,
+.availability-card.calendly-style.availability-schedules-shell .day-badge-circle.enabled:hover {
+  border: none;
+  background: #0a4ea3;
+  color: #fff;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .unavailable-text {
+  color: #456287;
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .interval-list {
+  gap: 0.72rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .interval-row {
+  height: auto;
+  gap: 0.72rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .time-input {
+  width: 146px;
+  min-height: 3.2rem;
+  border: none;
+  border-radius: 14px;
+  background: #f4f6f9;
+  color: #1d3552;
+  box-shadow: none;
+  font-size: 1.02rem;
+  font-weight: 500;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .time-input:hover,
+.availability-card.calendly-style.availability-schedules-shell .time-input:focus {
+  border: none;
+  background: #eef3f8;
+  box-shadow: inset 0 0 0 2px rgba(31, 109, 235, 0.15);
+}
+
+.availability-card.calendly-style.availability-schedules-shell .sep {
+  color: #617b9d;
+  font-weight: 600;
+  font-size: 1.4rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .slot-actions {
+  margin-left: 0.48rem;
+  opacity: 1;
+  gap: 0.28rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .action-btn.icon-only {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  color: #123a67;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .action-btn.icon-only:hover {
+  color: #1f6deb;
+  background: rgba(18, 58, 103, 0.08);
+}
+
+.availability-card.calendly-style.availability-schedules-shell .action-btn.icon-only svg {
+  width: 1.45rem;
+  height: 1.45rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .action-btn.icon-only.add-first {
+  opacity: 1;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .timezone-footer {
+  margin-top: 0.84rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .timezone-select-label.timezone-select-inline {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  color: #1c62b4;
+  font-weight: 700;
+  font-size: 1.02rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .timezone-select-label.timezone-select-inline:hover {
+  border: none;
+  box-shadow: none;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .timezone-select-inline select {
+  color: inherit;
+  font-weight: inherit;
+  font-size: inherit;
+  padding-right: 1.2rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .timezone-select-inline .chevron {
+  color: #1c62b4;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-specific-editor {
+  border: 1px solid #d7e2f0;
+  border-radius: 12px;
+  background: #f7faff;
+  padding: 0.8rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-bottom: 0.95rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-specific-editor label {
+  display: grid;
+  gap: 0.3rem;
+  color: #294d78;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-specific-editor input {
+  min-height: 2.4rem;
+  border: 1px solid #c8d8ea;
+  border-radius: 10px;
+  background: #fff;
+  color: #153a64;
+  font-weight: 600;
+  padding: 0.35rem 0.6rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-specific-editor-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-hours-list {
+  display: grid;
+  gap: 0.4rem;
+  align-content: start;
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 0.2rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-hours-list li {
+  border: 1px solid #d7e2f0;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.62rem 0.72rem;
+  border-top: 1px solid #d7e2f0;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-hours-left {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-hours-chip {
+  border-radius: 999px;
+  background: #eef4fc;
+  color: #1c456f;
+  font-weight: 700;
+  font-size: 0.78rem;
+  width: fit-content;
+  padding: 0.2rem 0.5rem;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-hours-time {
+  color: #1f466f;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .date-hours-empty {
+  border: 1px dashed #d0dded;
+  border-radius: 12px;
+  background: #f9fbff;
+  color: #6480a4;
+  justify-content: flex-start;
+}
+
+@media (max-width: 1140px) {
+  .availability-card.calendly-style.availability-schedules-shell .availability-grid.availability-grid-split {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .availability-card.calendly-style.availability-schedules-shell .weekly-block {
+    border-right: 0;
+    border-bottom: 1px solid #d7e2f0;
+  }
+}
+
+@media (max-width: 760px) {
+  .availability-card.calendly-style.availability-schedules-shell .availability-block {
+    padding: 1.2rem 1rem;
+  }
+
+  .availability-card.calendly-style.availability-schedules-shell .block-header h3 {
+    font-size: 1.3rem;
+  }
+
+  .availability-card.calendly-style.availability-schedules-shell .block-header p {
+    font-size: 0.9rem;
+  }
+
+  .availability-card.calendly-style.availability-schedules-shell .day-controller {
+    min-width: 118px;
+  }
+
+  .availability-card.calendly-style.availability-schedules-shell .interval-row {
+    flex-wrap: wrap;
+  }
+
+  .availability-card.calendly-style.availability-schedules-shell .time-input {
+    width: 112px;
+    min-height: 2.65rem;
+    font-size: 1rem;
+  }
+
+  .availability-card.calendly-style.availability-schedules-shell .unavailable-text {
+    font-size: 1rem;
+  }
+
+  .availability-card.calendly-style.availability-schedules-shell .date-specific-editor {
+    grid-template-columns: 1fr;
+  }
+}

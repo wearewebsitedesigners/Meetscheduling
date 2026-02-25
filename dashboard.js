@@ -684,6 +684,7 @@ let integrationsSearchTimer = null;
 let contactsSearchTimer = null;
 let workflowsSearchTimer = null;
 let routingSearchTimer = null;
+let availabilityDateSpecificDraft = createAvailabilityDateSpecificDraft();
 const createMenuSections = {
   adminTemplates: false,
   moreWays: false,
@@ -1371,7 +1372,7 @@ function createDefaultState() {
       meetingPolls: [],
     },
     availability: {
-      activeTab: "Advanced settings",
+      activeTab: "Schedules",
       view: "List",
       timezone: "Central Time - US & Canada",
       weeklyHours: DAY_DEFS.map((day) => ({
@@ -2136,6 +2137,38 @@ function copyTextToClipboard(text) {
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function createAvailabilityDateSpecificDraft(overrides = {}) {
+  return {
+    open: false,
+    date: todayIso(),
+    start: "09:00",
+    end: "17:00",
+    sourceId: "",
+    ...overrides,
+  };
+}
+
+function openAvailabilityDateSpecificDraft(presetDate) {
+  const safeDate =
+    typeof presetDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(presetDate)
+      ? presetDate
+      : todayIso();
+  const existing =
+    state.availability.dateSpecific.find((row) => row.date === safeDate) || null;
+
+  availabilityDateSpecificDraft = createAvailabilityDateSpecificDraft({
+    open: true,
+    date: safeDate,
+    start: sanitizeTime(existing?.start || "09:00"),
+    end: sanitizeTime(existing?.end || "17:00"),
+    sourceId: existing?.id || "",
+  });
+}
+
+function closeAvailabilityDateSpecificDraft() {
+  availabilityDateSpecificDraft = createAvailabilityDateSpecificDraft();
 }
 
 function getAuthToken() {
@@ -3567,6 +3600,13 @@ function onViewClick(event) {
       const dayIndex = Number(button.dataset.dayIndex);
       const day = state.availability.weeklyHours[dayIndex];
       if (!day) return;
+      if (!day.enabled) {
+        day.enabled = true;
+        saveState();
+        render();
+        queueAvailabilitySync();
+        break;
+      }
       const last = day.intervals[day.intervals.length - 1];
       day.intervals.push({
         id: makeId("slot"),
@@ -3582,7 +3622,14 @@ function onViewClick(event) {
       const dayIndex = Number(button.dataset.dayIndex);
       const slotIndex = Number(button.dataset.slotIndex);
       const day = state.availability.weeklyHours[dayIndex];
-      if (!day || day.intervals.length <= 1) return;
+      if (!day) return;
+      if (day.intervals.length <= 1) {
+        day.enabled = false;
+        saveState();
+        render();
+        queueAvailabilitySync();
+        break;
+      }
       day.intervals.splice(slotIndex, 1);
       saveState();
       render();
@@ -3609,7 +3656,54 @@ function onViewClick(event) {
     }
     case "add-date-specific": {
       const date = button.dataset.date;
-      addDateSpecificHours(date);
+      openAvailabilityDateSpecificDraft(date);
+      render();
+      break;
+    }
+    case "cancel-date-specific": {
+      closeAvailabilityDateSpecificDraft();
+      render();
+      break;
+    }
+    case "save-date-specific": {
+      const { date, start, end, sourceId } = availabilityDateSpecificDraft;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        showToast("Select a valid date");
+        break;
+      }
+
+      const safeStart = sanitizeTime(start);
+      const safeEnd = sanitizeTime(end);
+      if (safeStart >= safeEnd) {
+        showToast("End time must be after start time");
+        break;
+      }
+
+      const existingIndex = state.availability.dateSpecific.findIndex((row) =>
+        sourceId ? row.id === sourceId : row.date === date
+      );
+
+      if (existingIndex >= 0) {
+        state.availability.dateSpecific[existingIndex] = {
+          ...state.availability.dateSpecific[existingIndex],
+          date,
+          start: safeStart,
+          end: safeEnd,
+        };
+      } else {
+        state.availability.dateSpecific.push({
+          id: makeId("date"),
+          date,
+          start: safeStart,
+          end: safeEnd,
+        });
+      }
+
+      state.availability.dateSpecific.sort((a, b) => a.date.localeCompare(b.date));
+      closeAvailabilityDateSpecificDraft();
+      saveState();
+      render();
+      queueAvailabilitySync();
       break;
     }
     case "remove-date-specific": {
@@ -3617,6 +3711,9 @@ function onViewClick(event) {
       state.availability.dateSpecific = state.availability.dateSpecific.filter(
         (item) => item.id !== id
       );
+      if (availabilityDateSpecificDraft.sourceId === id) {
+        closeAvailabilityDateSpecificDraft();
+      }
       saveState();
       render();
       queueAvailabilitySync();
@@ -4426,6 +4523,18 @@ function onViewChange(event) {
     return;
   }
 
+  if (target.matches('[data-action="date-specific-draft"]')) {
+    const field = target.dataset.field;
+    if (field === "date") {
+      availabilityDateSpecificDraft.date = String(target.value || "").slice(0, 10);
+      return;
+    }
+    if (field === "start" || field === "end") {
+      availabilityDateSpecificDraft[field] = sanitizeTime(String(target.value || ""));
+    }
+    return;
+  }
+
   if (target.matches('[data-action="set-calendar-target"]')) {
     state.availability.calendar.selectedCalendarId = target.value;
     saveState();
@@ -4612,6 +4721,18 @@ function onViewInput(event) {
         });
     }, 220);
     render();
+    return;
+  }
+
+  if (target.matches('[data-action="date-specific-draft"]')) {
+    const field = target.dataset.field;
+    if (field === "date") {
+      availabilityDateSpecificDraft.date = String(target.value || "").slice(0, 10);
+      return;
+    }
+    if (field === "start" || field === "end") {
+      availabilityDateSpecificDraft[field] = sanitizeTime(String(target.value || ""));
+    }
     return;
   }
 
@@ -5587,23 +5708,8 @@ async function routeLeadRemote(leadId, routeTo) {
 }
 
 function addDateSpecificHours(presetDate) {
-  const date = prompt("Date (YYYY-MM-DD)", presetDate || todayIso());
-  if (!date) return;
-  const start = prompt("Start time (HH:MM)", "09:00");
-  if (!start) return;
-  const end = prompt("End time (HH:MM)", "17:00");
-  if (!end) return;
-
-  state.availability.dateSpecific.unshift({
-    id: makeId("date"),
-    date,
-    start: sanitizeTime(start),
-    end: sanitizeTime(end),
-  });
-
-  saveState();
+  openAvailabilityDateSpecificDraft(presetDate);
   render();
-  queueAvailabilitySync();
 }
 
 async function connectCalendar() {
@@ -8318,150 +8424,183 @@ function generateAvailabilityCalendarHTML() {
 }
 
 function renderSchedulesTab() {
-  const activeCount = state.scheduling.eventTypes.filter((type) => type.active).length;
+  const draft = availabilityDateSpecificDraft;
+  const formatUiTime = (time) => {
+    const [hourRaw, minuteRaw] = sanitizeTime(time).split(":");
+    const hour = Number(hourRaw);
+    const minute = Number(minuteRaw);
+    const suffix = hour >= 12 ? "pm" : "am";
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${String(minute).padStart(2, "0")}${suffix}`;
+  };
+  const formatUiDate = (iso) => {
+    const parsed = new Date(`${iso}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return iso;
+    return parsed.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
   return `
-    <section class="availability-card calendly-style">
-      <div class="availability-top">
-        <div>
-          <h2 class="section-subtitle">Schedule</h2>
-          <div class="schedule-title-row">
-            <h3>Working hours (default)</h3>
-            <svg viewBox="0 0 24 24" class="chevron"><path d="M7 10l5 5 5-5z"/></svg>
+    <section class="availability-card calendly-style availability-schedules-shell">
+      <div class="availability-grid availability-grid-split">
+        <section class="availability-block weekly-block">
+          <div class="block-header weekly-header">
+            <svg viewBox="0 0 24 24" class="header-icon">
+              <path d="M7 7h11V4l5 4-5 4V9H7v4H4V7h3zm10 10H6v3l-5-4 5-4v3h11v-4h3v6h-3z"/>
+            </svg>
+            <div class="header-text-group">
+              <h3>Weekly hours</h3>
+              <p>Set when you are typically available for meetings</p>
+            </div>
           </div>
-          <p class="active-on-text">Active on: <span class="link-btn">${activeCount} event type</span> <svg viewBox="0 0 24 24" class="chevron"><path d="M7 10l5 5 5-5z"/></svg></p>
-        </div>
-        <div class="availability-actions">
-          <div class="list-calendar-toggle">
-            ${["List", "Calendar"]
-      .map(
-        (view) => `
-                <button class="${state.availability.view === view ? "active" : ""}" type="button" data-action="set-availability-view" data-view="${view}">
-                  ${view === 'List' ? '<svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 002 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/></svg>'}
-                  ${view}
-                </button>
-              `
-      )
+
+          <div class="day-list">
+            ${state.availability.weeklyHours
+      .map((dayRow, dayIndex) => {
+        const intervals = dayRow.intervals
+          .map(
+            (slot, slotIndex) => `
+                    <div class="interval-row">
+                      <input class="time-input" type="time" value="${escapeHtml(
+              slot.start
+            )}" data-action="interval-change" data-field="start" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" />
+                      <span class="sep">-</span>
+                      <input class="time-input" type="time" value="${escapeHtml(
+              slot.end
+            )}" data-action="interval-change" data-field="end" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" />
+                      <div class="slot-actions">
+                        <button class="action-btn icon-only" type="button" data-action="remove-interval" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" title="Remove interval">
+                          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+                        </button>
+                        ${slotIndex === dayRow.intervals.length - 1
+                ? `<button class="action-btn icon-only" type="button" data-action="add-interval" data-day-index="${dayIndex}" title="Add interval">
+                              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                            </button>`
+                : ""
+              }
+                        ${slotIndex === 0
+                ? `<button class="action-btn icon-only copy" type="button" data-action="copy-day" data-day-index="${dayIndex}" title="Copy to next day">
+                              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                            </button>`
+                : ""
+              }
+                      </div>
+                    </div>
+                  `
+          )
+          .join("");
+
+        return `
+                <article class="day-row ${dayRow.enabled ? "active" : "disabled"}">
+                  <div class="day-controller">
+                    <button class="day-badge-circle ${dayRow.enabled ? "enabled" : ""}" type="button" data-action="toggle-day" data-day-index="${dayIndex}" title="Toggle ${escapeHtml(
+          dayRow.label
+        )}">
+                      ${escapeHtml(dayRow.day)}
+                    </button>
+                    ${dayRow.enabled
+            ? ""
+            : `<span class="unavailable-text">Unavailable</span>
+                         <button class="action-btn icon-only add-first" type="button" data-action="add-interval" data-day-index="${dayIndex}" title="Add hours">
+                           <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                         </button>`
+          }
+                  </div>
+                  ${dayRow.enabled ? `<div class="interval-list">${intervals}</div>` : ""}
+                </article>
+              `;
+      })
       .join("")}
           </div>
-          <button class="icon-btn context-menu-btn">⋮</button>
-        </div>
-      </div>
 
-      <div class="availability-body">
-        <div class="availability-grid">
-          ${state.availability.view === "List" ? `
-          <section class="availability-block weekly-block">
-            <div class="block-header weekly-header">
-              <svg viewBox="0 0 24 24" class="header-icon"><path d="M12 4V2H8v2H6a2 2 0 00-2 2v14c0 1.1.9 2 2 2h12a2 2 0 002-2V6c0-1.1-.9-2-2-2h-2zm0 16H6V10h12v10zm-6-8h2v6H6v-6z"/></svg>
-              <div class="header-text-group">
-                <h3>Weekly hours</h3>
-                <dl>
-                  <dt>Set when you are typically available for meetings</dt>
-                </dl>
-              </div>
-            </div>
-            
-            <div class="timezone-header">
-              <label class="timezone-select-label" for="timezone-select">
-                <svg viewBox="0 0 24 24" class="globe-icon"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                <select id="timezone-select" class="timezone-select" data-action="set-timezone">
-                  ${TIMEZONES.map(
+          <div class="timezone-footer">
+            <label class="timezone-select-label timezone-select-inline" for="timezone-select">
+              <select id="timezone-select" class="timezone-select" data-action="set-timezone">
+                ${TIMEZONES.map(
         (tz) =>
           `<option value="${escapeHtml(tz)}" ${tz === state.availability.timezone ? "selected" : ""
           }>${escapeHtml(tz)}</option>`
       ).join("")}
-                </select>
-                <svg viewBox="0 0 24 24" class="chevron"><path d="M7 10l5 5 5-5z"/></svg>
-              </label>
-            </div>
-            
-            <div class="day-list">
-              ${state.availability.weeklyHours
-        .map((dayRow, dayIndex) => {
-          const intervals = dayRow.intervals
-            .map(
-              (slot, slotIndex) => `
-                        <div class="interval-row">
-                          <input class="time-input" type="time" value="${escapeHtml(slot.start)}" data-action="interval-change" data-field="start" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" />
-                          <span class="sep">-</span>
-                          <input class="time-input" type="time" value="${escapeHtml(slot.end)}" data-action="interval-change" data-field="end" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" />
-                          <div class="slot-actions">
-                            <button class="action-btn icon-only" type="button" data-action="remove-interval" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" title="Remove"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg></button>
-                            ${slotIndex === dayRow.intervals.length - 1 ? `<button class="action-btn icon-only" type="button" data-action="add-interval" data-day-index="${dayIndex}" title="Add"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>` : ''}
-                            ${slotIndex === 0 ? `<button class="action-btn icon-only copy" type="button" data-action="copy-day" data-day-index="${dayIndex}" title="Copy to another day"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>` : ''}
-                          </div>
-                        </div>
-                      `
-            )
-            .join("");
+              </select>
+              <svg viewBox="0 0 24 24" class="chevron"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+            </label>
+          </div>
+        </section>
 
-          return `
-                    <article class="day-row ${dayRow.enabled ? "active" : "disabled"}">
-                      <div class="day-controller">
-                        <button class="day-badge-circle ${dayRow.enabled ? 'enabled' : ''}" type="button" data-action="toggle-day" data-day-index="${dayIndex}" title="Toggle ${escapeHtml(dayRow.day)}">
-                          ${escapeHtml(dayRow.day.charAt(0))}
-                        </button>
-                        ${!dayRow.enabled ? `<span class="unavailable-text">Unavailable</span> <button class="action-btn icon-only add-first" data-action="add-interval" data-day-index="${dayIndex}" title="Add hours"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>` : ''}
-                      </div>
-                      ${dayRow.enabled ? `
-                        <div class="interval-list">
-                          ${intervals}
-                        </div>
-                      ` : ''}
-                    </article>
-                  `;
-        })
-        .join("")}
+        <section class="availability-block specific-block">
+          <div class="block-header date-header">
+            <svg viewBox="0 0 24 24" class="header-icon">
+              <path fill="currentColor" d="M19 3h-1V1h-2v2H8V1H6v2H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/>
+            </svg>
+            <div class="header-text-group">
+              <h3>Date-specific hours</h3>
+              <p>Adjust hours for specific days</p>
             </div>
-          </section>
-          ` : `
-          <section class="availability-block calendar-block">
-            <div class="block-header date-header">
-              <svg viewBox="0 0 24 24" class="header-icon"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-1.99.9-1.99 2L3 19a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
-              <div class="header-text-group">
-                <h3>Date-specific hours</h3>
-                <dl><dt>Override your weekly hours for specific dates</dt></dl>
-              </div>
-            </div>
-            
-            <div class="calendar-grid-container">
-              ${generateAvailabilityCalendarHTML()}
-            </div>
-          </section>
-          `}
+            <button class="ghost-btn add-hours-btn" type="button" data-action="add-date-specific">+ Hours</button>
+          </div>
 
-          <section class="availability-block specific-block">
-            <div class="block-header date-header">
-              <svg viewBox="0 0 24 24" class="header-icon"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-1.99.9-1.99 2L3 19a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
-              <div class="header-text-group">
-                <h3>Date-specific hours</h3>
-                <p>Adjust hours for specific days</p>
-              </div>
-              <button class="ghost-btn add-hours-btn" type="button" data-action="add-date-specific">+ Hours</button>
-            </div>
-            
-            <ul class="date-hours-list">
-              ${state.availability.dateSpecific.length
+          ${draft.open
+      ? `
+                <div class="date-specific-editor">
+                  <label>
+                    Date
+                    <input type="date" value="${escapeHtml(
+        draft.date
+      )}" data-action="date-specific-draft" data-field="date" />
+                  </label>
+                  <label>
+                    Start
+                    <input type="time" value="${escapeHtml(
+        draft.start
+      )}" data-action="date-specific-draft" data-field="start" />
+                  </label>
+                  <label>
+                    End
+                    <input type="time" value="${escapeHtml(
+        draft.end
+      )}" data-action="date-specific-draft" data-field="end" />
+                  </label>
+                  <div class="date-specific-editor-actions">
+                    <button class="mini-btn" type="button" data-action="cancel-date-specific">Cancel</button>
+                    <button class="pill-btn" type="button" data-action="save-date-specific">Save</button>
+                  </div>
+                </div>
+              `
+      : ""
+    }
+
+          <ul class="date-hours-list">
+            ${state.availability.dateSpecific.length
       ? state.availability.dateSpecific
+        .slice()
+        .sort((a, b) => a.date.localeCompare(b.date))
         .map(
           (row) => `
-                        <li>
-                          <div class="date-hours-left">
-                            <span class="date-hours-chip">${escapeHtml(row.date)}</span>
-                            <span class="date-hours-time">${escapeHtml(row.start)} - ${escapeHtml(row.end)}</span>
-                          </div>
-                          <button class="mini-btn icon-only ghost-danger" type="button" data-action="remove-date-specific" data-id="${row.id}"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg></button>
-                        </li>
-                      `
+                  <li>
+                    <div class="date-hours-left">
+                      <span class="date-hours-chip">${escapeHtml(
+            formatUiDate(row.date)
+          )}</span>
+                      <span class="date-hours-time">${escapeHtml(
+            `${formatUiTime(row.start)} - ${formatUiTime(row.end)}`
+          )}</span>
+                    </div>
+                    <button class="mini-btn icon-only ghost-danger" type="button" data-action="remove-date-specific" data-id="${escapeHtml(
+            row.id
+          )}" title="Remove date-specific hours">
+                      <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+                    </button>
+                  </li>
+                `
         )
         .join("")
-      : '<p class="empty-state-text">No date-specific hours set.</p>'
+      : '<li class="date-hours-empty">No date-specific hours set.</li>'
     }
-            </ul>
-          </section>
-          
-        </div>
+          </ul>
+        </section>
       </div>
     </section>
   `;

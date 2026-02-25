@@ -10,7 +10,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Sora:wght@500;700;800&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=3" />
+  <link rel="stylesheet" href="/styles.css?v=4" />
 </head>
 
 <body>
@@ -188,6 +188,16 @@
       </nav>
 
       <div class="nav-actions">
+        <div class="theme-switcher">
+          <label for="theme-picker" class="theme-switcher-label">Theme</label>
+          <select id="theme-picker" class="theme-picker" aria-label="Choose theme">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+            <option value="ocean">Ocean</option>
+            <option value="forest">Forest</option>
+            <option value="sunset">Sunset</option>
+          </select>
+        </div>
         <a class="text-link" href="login.html">Log In</a>
         <a class="btn btn-primary" href="signup.html">Get Started</a>
       </div>
@@ -534,7 +544,7 @@
     </section>
   </main>
 
-  <script src="/app.js?v=3"></script>
+  <script src="/app.js?v=4"></script>
 </body>
 
 </html>

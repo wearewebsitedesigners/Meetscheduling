@@ -4,6 +4,7 @@ const hasFinePointer = window.matchMedia("(pointer: fine)").matches;
 const siteHeader = document.querySelector(".site-header");
 const navToggle = document.getElementById("nav-toggle");
 const navMenu = document.getElementById("nav-menu");
+const themePicker = document.getElementById("theme-picker");
 const navLinks = navMenu ? [...navMenu.querySelectorAll("a")] : [];
 const megaNavItems = [...document.querySelectorAll(".nav-item.has-mega")];
 const megaNavTriggers = megaNavItems
@@ -22,6 +23,40 @@ const demoSlots = [...document.querySelectorAll("[data-demo-slot]")];
 const demoDates = [...document.querySelectorAll("[data-demo-date]")];
 const flowSteps = [...document.querySelectorAll("[data-flow-step]")];
 const flowCards = [...document.querySelectorAll("[data-flow-card]")];
+const themeStorageKey = "meetscheduling-theme";
+const availableThemes = new Set(["light", "dark", "ocean", "forest", "sunset"]);
+
+function getSavedTheme() {
+  try {
+    return localStorage.getItem(themeStorageKey) || "";
+  } catch {
+    return "";
+  }
+}
+
+function applyTheme(nextTheme, { persist = true } = {}) {
+  const theme = availableThemes.has(nextTheme) ? nextTheme : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+
+  if (persist) {
+    try {
+      localStorage.setItem(themeStorageKey, theme);
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  return theme;
+}
+
+const initialTheme = applyTheme(getSavedTheme(), { persist: false });
+
+if (themePicker instanceof HTMLSelectElement) {
+  themePicker.value = initialTheme;
+  themePicker.addEventListener("change", () => {
+    applyTheme(themePicker.value);
+  });
+}
 
 function closeMenu() {
   if (!navMenu || !navToggle) return;

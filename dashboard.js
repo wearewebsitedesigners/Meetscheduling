@@ -690,6 +690,7 @@ let state = loadState();
 let isSidebarCollapsed = loadSidebarCollapsePreference();
 let openEventTypeMenuId = null;
 let openMeetingDetailsId = null;
+let openAvailabilityTimePickerKey = null;
 let availabilitySyncTimer = null;
 let calendarSettingsSyncTimer = null;
 let integrationsSearchTimer = null;
@@ -1935,12 +1936,56 @@ function formatTimeOptionLabel(rawTime) {
   return `${displayHour}:${String(minute).padStart(2, "0")}${suffix}`;
 }
 
-function getTimePickerOptionsHtml(selectedTime) {
-  const safeValue = sanitizeTime(selectedTime);
-  return TIME_PICKER_OPTIONS.map((option) => {
-    const selected = option.value === safeValue ? " selected" : "";
-    return `<option value="${option.value}"${selected}>${option.label}</option>`;
-  }).join("");
+function renderCompactTimePicker({
+  value,
+  pickerKey,
+  field,
+  scope,
+  dayIndex = "",
+  slotIndex = "",
+}) {
+  const safeValue = sanitizeTime(value);
+  const isOpen = openAvailabilityTimePickerKey === pickerKey;
+  const numericDayIndex = Number(dayIndex);
+  const openUp =
+    scope === "weekly" && Number.isFinite(numericDayIndex) && numericDayIndex >= 4;
+  const safeKey = escapeHtml(pickerKey);
+  const safeField = escapeHtml(field);
+  const safeScope = escapeHtml(scope);
+  const safeDay = dayIndex === "" ? "" : String(dayIndex);
+  const safeSlot = slotIndex === "" ? "" : String(slotIndex);
+
+  return `
+    <div class="time-picker${openUp ? " opens-up" : ""}">
+      <button
+        class="time-input time-select-trigger${isOpen ? " open" : ""}"
+        type="button"
+        data-action="toggle-time-picker"
+        data-picker-key="${safeKey}"
+        aria-expanded="${isOpen ? "true" : "false"}"
+      >
+        <span>${escapeHtml(formatTimeOptionLabel(safeValue))}</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+      </button>
+      <div class="time-select-menu${isOpen ? " open" : ""}" role="listbox">
+        ${TIME_PICKER_OPTIONS.map((option) => `
+          <button
+            class="time-select-option${option.value === safeValue ? " active" : ""}"
+            type="button"
+            role="option"
+            aria-selected="${option.value === safeValue ? "true" : "false"}"
+            data-action="pick-time-option"
+            data-picker-key="${safeKey}"
+            data-scope="${safeScope}"
+            data-field="${safeField}"
+            data-day-index="${safeDay}"
+            data-slot-index="${safeSlot}"
+            data-value="${option.value}"
+          >${option.label}</button>
+        `).join("")}
+      </div>
+    </div>
+  `;
 }
 
 function isJoinableMeetingUrl(rawLink, locationType = "") {
@@ -3421,9 +3466,21 @@ function bindEvents() {
 
 function onViewClick(event) {
   const button = event.target.closest("[data-action]");
-  if (!button) return;
+  if (!button) {
+    if (openAvailabilityTimePickerKey) {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target || !target.closest(".time-picker")) {
+        openAvailabilityTimePickerKey = null;
+        render();
+      }
+    }
+    return;
+  }
   const action = button.dataset.action;
   if (!action) return;
+  if (action !== "toggle-time-picker" && action !== "pick-time-option") {
+    openAvailabilityTimePickerKey = null;
+  }
 
   switch (action) {
     case "set-meeting-tab": {
@@ -3432,6 +3489,40 @@ function onViewClick(event) {
         state.meetings.activeTab = tab;
         openMeetingDetailsId = null;
         saveState();
+        render();
+      }
+      break;
+    }
+    case "toggle-time-picker": {
+      const pickerKey = String(button.dataset.pickerKey || "").trim();
+      if (!pickerKey) break;
+      openAvailabilityTimePickerKey =
+        openAvailabilityTimePickerKey === pickerKey ? null : pickerKey;
+      render();
+      break;
+    }
+    case "pick-time-option": {
+      const scope = String(button.dataset.scope || "");
+      const field = String(button.dataset.field || "");
+      const value = sanitizeTime(String(button.dataset.value || ""));
+
+      if (scope === "weekly") {
+        const dayIndex = Number(button.dataset.dayIndex);
+        const slotIndex = Number(button.dataset.slotIndex);
+        const day = state.availability.weeklyHours[dayIndex];
+        const slot = day?.intervals?.[slotIndex];
+        if (!slot || (field !== "start" && field !== "end")) break;
+        slot[field] = value;
+        openAvailabilityTimePickerKey = null;
+        saveState();
+        render();
+        queueAvailabilitySync();
+        break;
+      }
+
+      if (scope === "date-specific" && (field === "start" || field === "end")) {
+        availabilityDateSpecificDraft[field] = value;
+        openAvailabilityTimePickerKey = null;
         render();
       }
       break;
@@ -8763,13 +8854,23 @@ function renderSchedulesTab() {
           .map(
             (slot, slotIndex) => `
                     <div class="interval-row">
-                      <select class="time-input time-select" data-action="interval-change" data-field="start" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" aria-label="Start time">
-                        ${getTimePickerOptionsHtml(slot.start)}
-                      </select>
+                      ${renderCompactTimePicker({
+              value: slot.start,
+              pickerKey: `weekly-${dayIndex}-${slotIndex}-start`,
+              field: "start",
+              scope: "weekly",
+              dayIndex,
+              slotIndex,
+            })}
                       <span class="sep">-</span>
-                      <select class="time-input time-select" data-action="interval-change" data-field="end" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" aria-label="End time">
-                        ${getTimePickerOptionsHtml(slot.end)}
-                      </select>
+                      ${renderCompactTimePicker({
+              value: slot.end,
+              pickerKey: `weekly-${dayIndex}-${slotIndex}-end`,
+              field: "end",
+              scope: "weekly",
+              dayIndex,
+              slotIndex,
+            })}
                       <div class="slot-actions">
                         <button class="action-btn icon-only" type="button" data-action="remove-interval" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" title="Remove interval">
                           <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
@@ -8852,15 +8953,21 @@ function renderSchedulesTab() {
                   </label>
                   <label>
                     Start
-                    <select class="time-input time-select" data-action="date-specific-draft" data-field="start" aria-label="Date-specific start time">
-                      ${getTimePickerOptionsHtml(draft.start)}
-                    </select>
+                    ${renderCompactTimePicker({
+        value: draft.start,
+        pickerKey: "date-specific-start",
+        field: "start",
+        scope: "date-specific",
+      })}
                   </label>
                   <label>
                     End
-                    <select class="time-input time-select" data-action="date-specific-draft" data-field="end" aria-label="Date-specific end time">
-                      ${getTimePickerOptionsHtml(draft.end)}
-                    </select>
+                    ${renderCompactTimePicker({
+        value: draft.end,
+        pickerKey: "date-specific-end",
+        field: "end",
+        scope: "date-specific",
+      })}
                   </label>
                   <div class="date-specific-editor-actions">
                     <button class="mini-btn" type="button" data-action="cancel-date-specific">Cancel</button>

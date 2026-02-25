@@ -729,6 +729,138 @@ async function createPublicBooking({
   };
 }
 
+async function refreshPendingGoogleMeetLinks(userId, rows) {
+  if (!Array.isArray(rows) || !rows.length) return rows;
+  const columnSupport = await getBookingColumnSupport();
+  if (!hasExtendedBookingColumns(columnSupport)) return rows;
+
+  const pendingRows = rows
+    .filter((row) => {
+      const locationType = String(row.location_type || "").trim().toLowerCase();
+      if (locationType !== "google_meet") return false;
+      if (String(row.meeting_link || "").trim()) return false;
+      const status = String(row.meeting_link_status || "").trim().toLowerCase();
+      if (!(status === "pending_generation" || status === "generation_failed")) return false;
+      return Boolean(String(row.calendar_event_id || "").trim());
+    })
+    .slice(0, 8);
+
+  if (!pendingRows.length) return rows;
+
+  let gcal;
+  try {
+    gcal = await getAuthenticatedGoogleClient(userId);
+  } catch (error) {
+    const status = parseGoogleErrorStatus(error);
+    const message = String(error?.message || "").toLowerCase();
+    const isAuthIssue =
+      status === 401 ||
+      status === 403 ||
+      /not connected|authorized|authorization expired|reconnect/.test(message);
+
+    if (isAuthIssue) {
+      const resultMap = new Map(rows.map((row) => [String(row.id), row]));
+      for (const row of pendingRows) {
+        try {
+          const updated = await query(
+            `
+              UPDATE bookings
+              SET meeting_link_status = 'pending_calendar_connection', updated_at = NOW()
+              WHERE id = $1
+              RETURNING *
+            `,
+            [row.id]
+          );
+          const next = updated.rows[0];
+          if (next) {
+            resultMap.set(String(next.id), {
+              ...row,
+              ...next,
+              event_title: row.event_title,
+            });
+          }
+        } catch {
+          // ignore update failures during best-effort refresh
+        }
+      }
+      return rows.map((row) => resultMap.get(String(row.id)) || row);
+    }
+
+    return rows;
+  }
+
+  const resultMap = new Map(rows.map((row) => [String(row.id), row]));
+
+  for (const row of pendingRows) {
+    const rowId = String(row.id || "");
+    const calendarEventId = String(row.calendar_event_id || "").trim();
+    if (!rowId || !calendarEventId) continue;
+
+    try {
+      const lookup = await gcal.events.get({
+        calendarId: "primary",
+        eventId: calendarEventId,
+        conferenceDataVersion: 1,
+      });
+      const link = extractGoogleMeetLinkFromEvent(lookup?.data || {});
+      if (link) {
+        const updated = await query(
+          `
+            UPDATE bookings
+            SET
+              meeting_link = $1,
+              meeting_link_status = 'ready',
+              updated_at = NOW()
+            WHERE id = $2
+            RETURNING *
+          `,
+          [link, rowId]
+        );
+        const next = updated.rows[0];
+        if (next) {
+          resultMap.set(String(next.id), {
+            ...row,
+            ...next,
+            event_title: row.event_title,
+          });
+        }
+        continue;
+      }
+
+      const currentStatus = String(row.meeting_link_status || "").trim().toLowerCase();
+      const createdTs = Date.parse(String(row.created_at || ""));
+      const isStalePending =
+        currentStatus === "pending_generation" &&
+        Number.isFinite(createdTs) &&
+        Date.now() - createdTs > 2 * 60 * 1000;
+
+      if (isStalePending) {
+        const updated = await query(
+          `
+            UPDATE bookings
+            SET meeting_link_status = 'generation_failed', updated_at = NOW()
+            WHERE id = $1
+            RETURNING *
+          `,
+          [rowId]
+        );
+        const next = updated.rows[0];
+        if (next) {
+          resultMap.set(String(next.id), {
+            ...row,
+            ...next,
+            event_title: row.event_title,
+          });
+        }
+      }
+    } catch {
+      // ignore best-effort lookup failures and keep current row data
+    }
+  }
+
+  return rows.map((row) => resultMap.get(String(row.id)) || row);
+}
+
 async function listBookingsForUser(
   userId,
   { fromDate = null, toDate = null, status = "all", timezone = "UTC" } = {}
@@ -765,7 +897,8 @@ async function listBookingsForUser(
     `,
     params
   );
-  return result.rows.map((row) => mapBookingRow(row, timezone));
+  const refreshedRows = await refreshPendingGoogleMeetLinks(userId, result.rows);
+  return refreshedRows.map((row) => mapBookingRow(row, timezone));
 }
 
 async function listUpcomingBookingsForUser(userId, { limit = 20, timezone = "UTC" } = {}) {
@@ -785,7 +918,8 @@ async function listUpcomingBookingsForUser(userId, { limit = 20, timezone = "UTC
     `,
     [userId, safeLimit]
   );
-  return result.rows.map((row) => mapBookingRow(row, timezone));
+  const refreshedRows = await refreshPendingGoogleMeetLinks(userId, result.rows);
+  return refreshedRows.map((row) => mapBookingRow(row, timezone));
 }
 
 async function cancelBookingForUser(userId, bookingId, reason = "") {

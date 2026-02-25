@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meetscheduling | Easy scheduling ahead</title>
+  <title>MeetScheduling | Modern scheduling for teams</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="/styles.css?v=4" />
 </head>
 
-<body>
+<body class="landing-home">
   <div class="bg-orbs" aria-hidden="true">
     <span class="orb orb-a" data-parallax="1"></span>
     <span class="orb orb-b" data-parallax="1"></span>
@@ -22,10 +22,10 @@
 
   <header class="site-header">
     <div class="container nav-wrap">
-      <a class="brand" href="#top" aria-label="Meetscheduling home">
-        <img class="brand-logo" src="assets/scheduling-logo.svg" alt="Meetscheduling logo"
+      <a class="brand" href="#top" aria-label="MeetScheduling home">
+        <img class="brand-logo" src="assets/scheduling-logo.svg" alt="MeetScheduling logo"
           onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';" />
-        <span class="brand-fallback" style="display:none;">Meetscheduling</span>
+        <span class="brand-fallback" style="display:none;">MeetScheduling</span>
       </a>
 
       <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu">
@@ -197,39 +197,30 @@
   <main id="top">
     <section class="hero container section-spacing">
       <div class="hero-copy reveal">
-        <h1>Easy scheduling ahead</h1>
+        <p class="hero-kicker">MeetScheduling for modern teams</p>
+        <h1>Book more meetings with less back-and-forth</h1>
         <p class="hero-lead">
-          <span class="hero-highlight">Join 20 million professionals who easily book meetings with the
-            #1 scheduling tool.</span>
+          <span class="hero-highlight">MeetScheduling brings availability, routing, reminders, and calendar sync into
+            one polished booking experience your clients trust.</span>
         </p>
-
-        <div class="hero-signups">
-          <a class="social-btn social-google" href="signup.html">
-            <span class="social-icon-box" aria-hidden="true">
-              <span class="google-g">G</span>
-            </span>
-            <span class="social-label">Sign up with Google</span>
-          </a>
-          <a class="social-btn social-microsoft" href="signup.html">
-            <span class="social-icon-box" aria-hidden="true">
-              <span class="ms-grid">
-                <span class="ms-red"></span>
-                <span class="ms-green"></span>
-                <span class="ms-blue"></span>
-                <span class="ms-yellow"></span>
-              </span>
-            </span>
-            <span class="social-label">Sign up with Microsoft</span>
-          </a>
-
-          <div class="signup-divider" aria-hidden="true">
-            <span>OR</span>
-          </div>
-
-          <p class="hero-signup-note">
-            <a href="signup.html">Sign up free with email.</a>
-            <span>No credit card required</span>
-          </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-hero" href="signup.html">Start free</a>
+          <a class="btn btn-light btn-hero" href="scheduling.html">View live demo</a>
+        </div>
+        <p class="hero-inline-note">No credit card required. Connect Google, Outlook, and iCloud in minutes.</p>
+        <div class="hero-proof-grid" aria-label="Core platform capabilities">
+          <article class="hero-proof-chip">
+            <strong>2-way sync</strong>
+            <span>Google, Outlook, and iCloud calendars</span>
+          </article>
+          <article class="hero-proof-chip">
+            <strong>Auto routing</strong>
+            <span>Send leads to the right owner instantly</span>
+          </article>
+          <article class="hero-proof-chip">
+            <strong>Timezone smart</strong>
+            <span>Invitees always book in local time</span>
+          </article>
         </div>
       </div>
 
@@ -238,9 +229,9 @@
           <div class="hero-ribbon"></div>
           <div class="hero-inner hero-booking-inner">
             <div class="booking-head">
-              <h2 class="booking-title">Share your booking page</h2>
+              <h2 class="booking-title">MeetScheduling booking link</h2>
               <div class="booking-head-tags">
-                <span>One-on-One</span>
+                <span>Demo</span>
                 <span>30m</span>
               </div>
             </div>
@@ -249,18 +240,18 @@
               <div class="booking-col booking-info-col">
                 <div class="booking-brand-row">
                   <span class="acme-logo-shape" aria-hidden="true"></span>
-                  <strong>ACME Inc.</strong>
+                  <strong>MeetScheduling</strong>
                 </div>
 
                 <div class="booking-profile-block">
                   <span class="booking-avatar" aria-hidden="true"></span>
-                  <p>Fatima Sy</p>
-                  <h3>Client Check-in</h3>
+                  <p>Aarav Singh</p>
+                  <h3>Product walkthrough</h3>
                 </div>
 
                 <div class="booking-meta">
                   <p><span class="booking-meta-icon clock" aria-hidden="true"></span>30 min</p>
-                  <p><span class="booking-meta-icon meet" aria-hidden="true"></span>Zoom</p>
+                  <p><span class="booking-meta-icon meet" aria-hidden="true"></span>Google Meet</p>
                 </div>
 
                 <div class="booking-skeleton" aria-hidden="true">
@@ -276,7 +267,7 @@
 
                 <div class="booking-month-nav">
                   <button type="button" aria-label="Previous month">‹</button>
-                  <span>July 2024</span>
+                  <span>February 2026</span>
                   <button type="button" aria-label="Next month">›</button>
                 </div>
 
@@ -298,12 +289,12 @@
 
                 <div class="booking-timezone">
                   <strong>Time zone</strong>
-                  <p>Eastern time - US &amp; Canada</p>
+                  <p>Pacific time - US &amp; Canada</p>
                 </div>
               </div>
 
               <div class="booking-col booking-times-col">
-                <p class="booking-day-title">Monday, July 22</p>
+                <p class="booking-day-title">Sunday, February 22</p>
 
                 <div class="calendar-slots booking-slot-list">
                   <button type="button" data-demo-slot>10:00am</button>
@@ -324,7 +315,7 @@
 
     <section class="logo-strip minimal-logo-strip section-spacing-top">
       <div class="container logo-strip-inner">
-        <p>Trusted by more than 5,000 organizations</p>
+        <p>Teams across sales, consulting, recruiting, and support trust MeetScheduling</p>
         <div class="minimal-logos" aria-label="Company logos">
           <div class="logo-track">
             <span class="logo-item"><img src="https://cdn.simpleicons.org/hubspot/123f6b" alt="" aria-hidden="true"
@@ -360,6 +351,52 @@
             <span class="logo-item"><img src="https://cdn.simpleicons.org/dropbox/123f6b" alt="" aria-hidden="true"
                 loading="lazy" decoding="async" /><span>Dropbox</span></span>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scheduling-lanes section-spacing">
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="section-kicker">Built for high-intent conversations</p>
+          <h2>Everything needed to turn website visitors into booked meetings</h2>
+          <p>Keep your landing message simple while your engine handles advanced scheduling automation behind the
+            scenes.</p>
+        </div>
+
+        <div class="lane-grid">
+          <article class="lane-card reveal">
+            <span class="lane-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M6 4h12a2 2 0 0 1 2 2v12H4V6a2 2 0 0 1 2-2Z"></path>
+                <path d="M8 2v4M16 2v4M4 10h16"></path>
+              </svg>
+            </span>
+            <h3>Scheduling automation</h3>
+            <p>Publish one link, define your rules once, and eliminate repetitive scheduling emails.</p>
+          </article>
+
+          <article class="lane-card reveal delay-1">
+            <span class="lane-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 21s7-4.4 7-10V5l-7-2-7 2v6c0 5.6 7 10 7 10Z"></path>
+                <path d="M9.5 11.5 11.5 13.5 15 10"></path>
+              </svg>
+            </span>
+            <h3>Smart lead routing</h3>
+            <p>Route inbound meetings by team, region, or qualification so every prospect hits the right rep.</p>
+          </article>
+
+          <article class="lane-card reveal delay-2">
+            <span class="lane-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M3 12a9 9 0 1 1 9 9"></path>
+                <path d="M12 7v5l3 2"></path>
+              </svg>
+            </span>
+            <h3>Follow-up workflows</h3>
+            <p>Send reminders, confirmations, and post-meeting actions automatically from one workflow builder.</p>
+          </article>
         </div>
       </div>
     </section>

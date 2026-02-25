@@ -52,6 +52,10 @@ function buildApp() {
   app.use("/api/routing", routingRoutes);
   app.use("/api/landing-page", landingPageRoutes);
 
+  app.get("/favicon.ico", (req, res) => {
+    res.sendFile(path.join(staticRoot, "assets", "favicon.svg"));
+  });
+
   app.use(express.static(staticRoot));
 
   app.get("/dashboard", (req, res) => {

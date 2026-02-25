@@ -21,6 +21,18 @@ const {
 
 const router = express.Router();
 
+function buildCallbackUrl(req) {
+  const forwardedProto = String(req.headers["x-forwarded-proto"] || "")
+    .split(",")[0]
+    .trim();
+  const forwardedHost = String(req.headers["x-forwarded-host"] || "")
+    .split(",")[0]
+    .trim();
+  const protocol = forwardedProto || req.protocol || "https";
+  const host = forwardedHost || req.get("host") || "localhost:8080";
+  return `${protocol}://${host}/api/integrations/google-calendar/callback`;
+}
+
 // --- PUBLIC ROUTES (No requireAuth) ---
 
 // OAuth Callback from Google Calendar
@@ -35,7 +47,7 @@ router.get(
     }
 
     try {
-      await handleGoogleCalendarCallback(state, code);
+      await handleGoogleCalendarCallback(state, code, buildCallbackUrl(req));
       res.redirect("/dashboard.html?tab=integrations&success=google_calendar_connected");
     } catch (err) {
       console.error("Google Calendar OAuth error:", err);
@@ -56,8 +68,12 @@ router.use(requireAuth);
 router.get(
   "/google-calendar/auth-url",
   asyncHandler(async (req, res) => {
-    const url = await getGoogleCalendarAuthUrl(req.auth.userId);
-    res.json({ url });
+    const callbackUrl = buildCallbackUrl(req);
+    const { authUrl, redirectUri } = await getGoogleCalendarAuthUrl(
+      req.auth.userId,
+      callbackUrl
+    );
+    res.json({ url: authUrl, redirectUri });
   })
 );
 

@@ -1307,17 +1307,40 @@ const GOOGLE_TOKEN_FIELDS = [
 ];
 
 function ensureGoogleOAuthConfigured() {
-  if (!env.google.clientId || !env.google.clientSecret || !env.google.redirectUri) {
+  if (!env.google.clientId || !env.google.clientSecret) {
     throw badRequest("Google Calendar OAuth is not configured on this server");
   }
 }
 
-function getOAuth2Client() {
+function normalizeGoogleRedirectUri(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return "";
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return "";
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+function resolveGoogleRedirectUri(redirectUriCandidate = "") {
+  const candidate = normalizeGoogleRedirectUri(redirectUriCandidate);
+  if (candidate) return candidate;
+
+  const fromEnv = normalizeGoogleRedirectUri(env.google.redirectUri);
+  if (fromEnv) return fromEnv;
+
+  return `${String(env.appBaseUrl || "http://localhost:8080").replace(/\/+$/, "")}/api/integrations/google-calendar/callback`;
+}
+
+function getOAuth2Client(redirectUriCandidate = "") {
   ensureGoogleOAuthConfigured();
+  const redirectUri = resolveGoogleRedirectUri(redirectUriCandidate);
   return new google.auth.OAuth2(
     env.google.clientId,
     env.google.clientSecret,
-    env.google.redirectUri
+    redirectUri
   );
 }
 
@@ -1441,21 +1464,35 @@ function encodeGoogleOAuthState(userId) {
   );
 }
 
+function encodeGoogleOAuthStateWithRedirect(userId, redirectUri = "") {
+  const payload = {
+    purpose: GOOGLE_OAUTH_STATE_PURPOSE,
+    userId: String(userId),
+  };
+  const safeRedirectUri = normalizeGoogleRedirectUri(redirectUri);
+  if (safeRedirectUri) payload.redirectUri = safeRedirectUri;
+  return jwt.sign(payload, env.jwtSecret, { expiresIn: "15m" });
+}
+
 function decodeGoogleOAuthState(stateToken) {
   try {
     const decoded = jwt.verify(String(stateToken || ""), env.jwtSecret);
     if (decoded?.purpose !== GOOGLE_OAUTH_STATE_PURPOSE || !decoded?.userId) {
       throw new Error("Invalid state payload");
     }
-    return String(decoded.userId);
+    return {
+      userId: String(decoded.userId),
+      redirectUri: normalizeGoogleRedirectUri(decoded.redirectUri || ""),
+    };
   } catch {
     throw badRequest("Invalid or expired OAuth state");
   }
 }
 
-async function getGoogleCalendarAuthUrl(userId) {
-  const client = getOAuth2Client();
-  const state = encodeGoogleOAuthState(userId);
+async function getGoogleCalendarAuthUrl(userId, redirectUriCandidate = "") {
+  const redirectUri = resolveGoogleRedirectUri(redirectUriCandidate);
+  const client = getOAuth2Client(redirectUri);
+  const state = encodeGoogleOAuthStateWithRedirect(userId, redirectUri);
   const authUrl = client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
@@ -1466,7 +1503,10 @@ async function getGoogleCalendarAuthUrl(userId) {
     ],
     state,
   });
-  return authUrl;
+  return {
+    authUrl,
+    redirectUri,
+  };
 }
 
 async function getGoogleCalendarConnectionStatusForUser(userIdStr) {
@@ -1486,9 +1526,11 @@ async function getGoogleCalendarConnectionStatusForUser(userIdStr) {
   };
 }
 
-async function handleGoogleCalendarCallback(stateToken, code) {
-  const userIdStr = decodeGoogleOAuthState(stateToken);
-  const client = getOAuth2Client();
+async function handleGoogleCalendarCallback(stateToken, code, redirectUriCandidate = "") {
+  const statePayload = decodeGoogleOAuthState(stateToken);
+  const userIdStr = statePayload.userId;
+  const redirectUri = statePayload.redirectUri || resolveGoogleRedirectUri(redirectUriCandidate);
+  const client = getOAuth2Client(redirectUri);
   const { tokens } = await client.getToken(code);
   client.setCredentials(tokens);
 

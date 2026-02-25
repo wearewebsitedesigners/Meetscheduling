@@ -708,16 +708,52 @@ bindEvents();
 renderCreateMenu();
 render();
 
+function formatIntegrationOAuthError(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return "Could not connect Google Calendar";
+  if (value === "missing_oauth_params") {
+    return "Google Calendar connection failed. Please try again.";
+  }
+  if (value === "invalid_or_expired_oauth_state") {
+    return "Google Calendar connection expired. Please reconnect.";
+  }
+  if (value === "google_calendar_connect_failed") {
+    return "Google Calendar connection failed. Please try again.";
+  }
+  return `Google Calendar connection failed: ${value.replace(/_/g, " ")}`;
+}
+
 const urlParams = new URLSearchParams(window.location.search);
 const urlToken = urlParams.get("token");
+const urlTab = urlParams.get("tab");
+const oauthSuccess = urlParams.get("success");
+const oauthError = urlParams.get("error");
+
+let startupToastMessage = "";
 if (urlToken) {
   localStorage.setItem(AUTH_TOKEN_KEY, urlToken);
+}
+if (urlTab === "integrations") {
+  state.activeSection = "integrations";
+  state.integrations.activeTab = "Manage";
+}
+if (oauthSuccess === "google_calendar_connected") {
+  startupToastMessage = "Google Calendar connected";
+}
+if (oauthError) {
+  startupToastMessage = formatIntegrationOAuthError(oauthError);
+}
+if (urlToken || urlTab || oauthSuccess || oauthError) {
   window.history.replaceState({}, document.title, window.location.pathname);
 }
 
-bootstrapDashboard().catch((error) => {
-  showToast(error?.message || "Dashboard sync failed");
-});
+bootstrapDashboard()
+  .then(() => {
+    if (startupToastMessage) showToast(startupToastMessage);
+  })
+  .catch((error) => {
+    showToast(error?.message || "Dashboard sync failed");
+  });
 
 function loadState() {
   const fallback = createDefaultState();
@@ -2466,6 +2502,9 @@ function mapApiBookingToMeeting(booking) {
     inviteeName: booking.inviteeName || "Unknown",
     inviteeEmail: booking.inviteeEmail || "",
     meetingLink: booking.meetingLink || "",
+    meetingLinkStatus: booking.meetingLinkStatus || "pending_generation",
+    calendarProvider: booking.calendarProvider || "",
+    calendarEventId: booking.calendarEventId || "",
     locationType: booking.locationType || "",
     startDate: localStart.date || "",
     startTime: localStart.time || "",
@@ -2537,6 +2576,33 @@ function describeMeetingLocation(locationType) {
   if (locationType === "zoom") return "This is a Zoom web conference.";
   if (locationType === "in_person") return "This is an in-person meeting.";
   return "Meeting location details were shared in confirmation.";
+}
+
+function hasConnectedGoogleCalendarIntegration() {
+  return state.integrations.items.some(
+    (item) => item.key === "google-calendar" && item.connected
+  );
+}
+
+function getMeetingLinkPendingCopy(event, googleCalendarConnected) {
+  const status = String(event?.meetingLinkStatus || "").trim().toLowerCase();
+  const locationType = String(event?.locationType || "").trim().toLowerCase();
+
+  if (locationType === "google_meet") {
+    if (status === "pending_calendar_connection" || !googleCalendarConnected) {
+      return "Meeting link pending. Connect Google Calendar in Integrations.";
+    }
+    if (status === "generation_failed") {
+      return "Meeting link could not be generated. Reconnect Google Calendar and try again.";
+    }
+    return "Meeting link pending. Google Meet link is being generated.";
+  }
+
+  if (locationType === "zoom") {
+    return "Meeting link pending. Add a valid Zoom link in your event settings.";
+  }
+
+  return "";
 }
 
 function mapApiIntegrationToUi(item, index = 0) {
@@ -3575,6 +3641,15 @@ function onViewClick(event) {
       if (email) {
         showToast("Contact opened");
       }
+      break;
+    }
+    case "open-integrations": {
+      state.activeSection = "integrations";
+      state.integrations.activeTab = "Manage";
+      openMeetingDetailsId = null;
+      refreshIntegrationsFromApi("Manage").catch(() => null);
+      saveState();
+      render();
       break;
     }
     case "cancel-meeting":
@@ -5832,6 +5907,15 @@ async function toggleIntegrationById(id) {
   const item = state.integrations.items.find((entry) => entry.id === id);
   if (!item) return;
 
+  if (item.key === "google-calendar" && !item.connected) {
+    try {
+      await startGoogleCalendarOAuth();
+    } catch (error) {
+      showToast(error?.message || "Could not connect Google Calendar");
+    }
+    return;
+  }
+
   try {
     await apiRequest(
       `/api/integrations/${encodeURIComponent(item.key)}/connection`,
@@ -5987,48 +6071,18 @@ function addDateSpecificHours(presetDate) {
   render();
 }
 
+async function startGoogleCalendarOAuth() {
+  const payload = await apiRequest("/api/integrations/google-calendar/auth-url");
+  const url = String(payload?.url || "").trim();
+  if (!url) throw new Error("Could not start Google Calendar OAuth");
+  window.location.assign(url);
+}
+
 async function connectCalendar() {
-  const providerInput = prompt(
-    `Calendar provider (${CALENDAR_CONNECT_PROMPT})`,
-    "google"
-  );
-  if (!providerInput) return;
-  const provider = normalizeCalendarProviderInput(providerInput);
-  if (!provider) {
-    showToast("Use provider: google, microsoft, or apple");
-    return;
-  }
-
-  const defaultEmail =
-    state.account?.loginPreferences?.email ||
-    state.availability.calendar.connected[0]?.email ||
-    DEFAULT_INTEGRATION_ACCOUNT;
-  const email = prompt(`${getCalendarProviderLabel(provider)} account email`, defaultEmail);
-  if (!email) return;
-  const normalizedEmail = String(email || "").trim().toLowerCase();
-  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
-  if (!valid) {
-    showToast("Enter a valid email");
-    return;
-  }
-
   try {
-    await apiRequest("/api/integrations/calendars/connect", {
-      method: "POST",
-      body: JSON.stringify({
-        provider,
-        accountEmail: normalizedEmail,
-      }),
-    });
-    await Promise.all([
-      refreshIntegrationsFromApi(state.integrations.activeTab),
-      refreshCalendarSettingsFromApi(),
-    ]);
-    saveState();
-    render();
-    showToast(`${getCalendarProviderLabel(provider)} connected`);
+    await startGoogleCalendarOAuth();
   } catch (error) {
-    showToast(error?.message || "Could not connect calendar");
+    showToast(error?.message || "Could not connect Google Calendar");
   }
 }
 
@@ -7358,6 +7412,7 @@ function renderMeetingsView() {
   });
   const hostName = String(state.account?.profile?.name || "").trim() || "Meeting host";
   const hostInitials = getInitials(hostName, "MH");
+  const googleCalendarConnected = hasConnectedGoogleCalendarIntegration();
 
   return `
     <section class="events-shell meetings-shell">
@@ -7397,12 +7452,16 @@ function renderMeetingsView() {
                   const id = String(event.id || "");
                   const expanded = openMeetingDetailsId === id;
                   const canJoin = isJoinableMeetingUrl(event.meetingLink, event.locationType);
-                  const pendingLinkCopy =
-                    event.locationType === "google_meet"
-                      ? "Meeting link pending. Connect Google Calendar in Integrations."
-                      : event.locationType === "zoom"
-                        ? "Meeting link pending. Add a valid Zoom link in your event settings."
-                        : "";
+                  const pendingLinkCopy = getMeetingLinkPendingCopy(
+                    event,
+                    googleCalendarConnected
+                  );
+                  const showGoogleCalendarCta =
+                    event.locationType === "google_meet" &&
+                    !canJoin &&
+                    (String(event.meetingLinkStatus || "").trim().toLowerCase() ===
+                      "pending_calendar_connection" ||
+                      !googleCalendarConnected);
                   const notesCopy = String(event.notes || "").trim() || "No notes were shared for this meeting.";
                   const createdLabel = formatMeetingCreatedDate(event.createdAt);
                   const inviteeInitials = getInitials(event.inviteeName, "IN");
@@ -7459,10 +7518,20 @@ function renderMeetingsView() {
                                       <p class="meeting-detail-copy">
                                         ${escapeHtml(describeMeetingLocation(event.locationType))}
                                         ${canJoin
-                          ? `<a href="${escapeHtml(event.meetingLink)}" target="_blank" rel="noopener" class="meeting-join-link">Join now</a>`
+                          ? `<span class="meeting-link-ready">${escapeHtml(
+                            event.locationType === "google_meet"
+                              ? "Google Meet link generated."
+                              : "Meeting link generated."
+                          )}</span><a href="${escapeHtml(
+                            event.meetingLink
+                          )}" target="_blank" rel="noopener" class="meeting-join-link">Join now</a>`
                           : pendingLinkCopy
                             ? `<span class="meeting-link-pending">${escapeHtml(pendingLinkCopy)}</span>`
                             : ""
+                        }
+                                        ${showGoogleCalendarCta
+                          ? `<button class="meeting-inline-link meeting-connect-calendar-btn" type="button" data-action="open-integrations">Connect Google Calendar</button>`
+                          : ""
                         }
                                       </p>
                                     </section>

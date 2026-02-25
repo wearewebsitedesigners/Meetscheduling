@@ -39,7 +39,11 @@ router.get(
       res.redirect("/dashboard.html?tab=integrations&success=google_calendar_connected");
     } catch (err) {
       console.error("Google Calendar OAuth error:", err);
-      res.redirect(`/dashboard.html?tab=integrations&error=${encodeURIComponent(err.message)}`);
+      const message = String(err?.message || "").toLowerCase();
+      const errorCode = /oauth state|invalid or expired/.test(message)
+        ? "invalid_or_expired_oauth_state"
+        : "google_calendar_connect_failed";
+      res.redirect(`/dashboard.html?tab=integrations&error=${encodeURIComponent(errorCode)}`);
     }
   })
 );

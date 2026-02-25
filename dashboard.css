@@ -644,6 +644,10 @@ html[data-theme="dark"] .meeting-link-pending {
   color: var(--muted);
 }
 
+html[data-theme="dark"] .meeting-link-ready {
+  color: #7fb3ff;
+}
+
 html[data-theme="dark"] .meeting-avatar {
   background: #0d1b30;
   color: #c9dcfb;
@@ -2206,10 +2210,25 @@ html[data-theme="dark"] .meeting-row-details {
   font-weight: 700;
 }
 
+.meeting-link-ready {
+  margin-left: 0.35rem;
+  color: #1858a8;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .meeting-link-pending {
   margin-left: 0.35rem;
   color: #6f86a6;
   font-size: 0.9rem;
+}
+
+.meeting-connect-calendar-btn {
+  margin-left: 0.35rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: inline;
 }
 
 .meeting-host-name {
@@ -4750,7 +4769,7 @@ html[data-theme="dark"] .meeting-row-details {
 
 /* Availability schedules redesign */
 .availability-card.calendly-style.availability-schedules-shell {
-  --availability-shell-height: min(80vh, 700px);
+  --availability-shell-height: auto;
   border: 1px solid #d7e2f0;
   border-radius: 16px;
   box-shadow: none;
@@ -4760,7 +4779,7 @@ html[data-theme="dark"] .meeting-row-details {
 
 .availability-card.calendly-style.availability-schedules-shell .availability-grid.availability-grid-split {
   grid-template-columns: minmax(0, 1.38fr) minmax(260px, 0.62fr);
-  height: 100%;
+  height: auto;
   min-height: 0;
 }
 
@@ -4777,30 +4796,30 @@ html[data-theme="dark"] .meeting-row-details {
 }
 
 .availability-card.calendly-style.availability-schedules-shell .block-header {
-  margin-bottom: 0.72rem;
+  margin-bottom: 1.55rem;
   align-items: flex-start;
-  gap: 0.45rem;
+  gap: 0.95rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .block-header .header-icon {
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 2.25rem;
+  height: 2.25rem;
   color: #123a67;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .block-header h3 {
   margin: 0;
   color: #102f54;
-  font-size: 1.03rem;
+  font-size: 2.3rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.08;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .block-header p {
-  margin-top: 0.12rem;
+  margin-top: 0.24rem;
   color: #5a7597;
-  font-size: 0.82rem;
-  line-height: 1.25;
+  font-size: 1.72rem;
+  line-height: 1.22;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-header {
@@ -4816,9 +4835,10 @@ html[data-theme="dark"] .meeting-row-details {
   color: #123b67;
   background: #fff;
   font-weight: 700;
-  min-width: 96px;
-  min-height: 36px;
-  padding: 0.34rem 0.74rem;
+  min-width: 134px;
+  min-height: 50px;
+  padding: 0.48rem 1.04rem;
+  font-size: 1.04rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-header .add-hours-btn:hover {
@@ -4829,7 +4849,7 @@ html[data-theme="dark"] .meeting-row-details {
 .availability-card.calendly-style.availability-schedules-shell .day-list {
   display: flex;
   flex-direction: column;
-  gap: 0.38rem;
+  gap: 0.9rem;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -4842,7 +4862,7 @@ html[data-theme="dark"] .meeting-row-details {
   background: transparent;
   padding: 0;
   border-radius: 0;
-  gap: 0.36rem;
+  gap: 0.82rem;
   align-items: center;
   min-height: 0;
   min-width: 0;
@@ -4857,37 +4877,42 @@ html[data-theme="dark"] .meeting-row-details {
 }
 
 .availability-card.calendly-style.availability-schedules-shell .day-controller {
-  min-width: 66px;
-  gap: 0.45rem;
+  min-width: 142px;
+  gap: 1.04rem;
   height: auto;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .day-badge-circle {
-  width: 1.78rem;
-  height: 1.78rem;
+  width: 3.95rem;
+  height: 3.95rem;
   border: none;
   background: #0a4ea3;
   color: #fff;
   font-weight: 700;
-  font-size: 0.83rem;
+  font-size: 1.86rem;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 
-.availability-card.calendly-style.availability-schedules-shell .day-badge-circle.enabled,
-.availability-card.calendly-style.availability-schedules-shell .day-badge-circle:hover,
-.availability-card.calendly-style.availability-schedules-shell .day-badge-circle.enabled:hover {
+.availability-card.calendly-style.availability-schedules-shell .day-badge-circle.enabled {
   border: none;
   background: #0a4ea3;
+  color: #fff;
+}
+
+.availability-card.calendly-style.availability-schedules-shell .day-badge-circle:hover,
+.availability-card.calendly-style.availability-schedules-shell .day-badge-circle.enabled:hover {
+  background: #0f172a;
   color: #fff;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .unavailable-text {
   color: #456287;
-  font-size: 0.84rem;
+  font-size: 1.72rem;
   line-height: 1.2;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .interval-list {
-  gap: 0.34rem;
+  gap: 0.82rem;
   flex: 1;
   min-width: 0;
   padding-top: 0;
@@ -4895,10 +4920,10 @@ html[data-theme="dark"] .meeting-row-details {
 
 .availability-card.calendly-style.availability-schedules-shell .interval-row {
   display: grid;
-  grid-template-columns: minmax(66px, 78px) 14px minmax(66px, 78px) auto;
+  grid-template-columns: minmax(164px, 196px) 31px minmax(164px, 196px) auto;
   align-items: center;
   height: auto;
-  gap: 0.12rem;
+  gap: 0.3rem;
   justify-content: start;
   min-width: 0;
   max-width: 100%;
@@ -4906,16 +4931,16 @@ html[data-theme="dark"] .meeting-row-details {
 
 .availability-card.calendly-style.availability-schedules-shell .time-input {
   width: 100%;
-  min-height: 1.56rem;
+  min-height: 3.55rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 18px;
   background: #f4f6f9;
   color: #1d3552;
   box-shadow: none;
-  font-size: 0.75rem;
+  font-size: 1.66rem;
   font-weight: 600;
-  padding: 0.12rem 0.22rem;
-  line-height: 1.1;
+  padding: 0.28rem 0.5rem;
+  line-height: 1.12;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .time-picker {
@@ -4927,14 +4952,14 @@ html[data-theme="dark"] .meeting-row-details {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.14rem;
+  gap: 0.3rem;
   cursor: pointer;
   user-select: none;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .time-select-trigger svg {
-  width: 0.52rem;
-  height: 0.52rem;
+  width: 1.12rem;
+  height: 1.12rem;
   color: #5e7a9f;
 }
 
@@ -4945,41 +4970,41 @@ html[data-theme="dark"] .meeting-row-details {
 
 .availability-card.calendly-style.availability-schedules-shell .time-select-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   z-index: 120;
   width: 100%;
-  min-width: 68px;
-  max-height: 118px;
+  min-width: 164px;
+  max-height: 286px;
   overflow: auto;
   border: 1px solid #c8d8ea;
-  border-radius: 8px;
+  border-radius: 18px;
   background: #fff;
   box-shadow: 0 10px 20px rgba(18, 45, 79, 0.16);
-  padding: 0.12rem;
+  padding: 0.3rem;
   display: none;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .time-select-menu.open {
   display: grid;
-  gap: 0.06rem;
+  gap: 0.16rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .time-picker.opens-up .time-select-menu {
   top: auto;
-  bottom: calc(100% + 4px);
+  bottom: calc(100% + 6px);
 }
 
 .availability-card.calendly-style.availability-schedules-shell .time-select-option {
   border: 0;
   background: transparent;
   color: #1d3552;
-  font-size: 0.72rem;
+  font-size: 1.56rem;
   font-weight: 600;
-  border-radius: 5px;
+  border-radius: 12px;
   text-align: center;
   white-space: nowrap;
-  padding: 0.14rem 0.18rem;
+  padding: 0.34rem 0.44rem;
   cursor: pointer;
 }
 
@@ -5019,20 +5044,20 @@ html[data-theme="dark"] .meeting-row-details {
 .availability-card.calendly-style.availability-schedules-shell .sep {
   color: #617b9d;
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 1.98rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .slot-actions {
-  margin-left: 0.16rem;
+  margin-left: 0.38rem;
   opacity: 1;
-  gap: 0.1rem;
+  gap: 0.24rem;
   justify-self: start;
   white-space: nowrap;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .action-btn.icon-only {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 3.3rem;
+  height: 3.3rem;
   border-radius: 999px;
   color: #123a67;
 }
@@ -5043,8 +5068,8 @@ html[data-theme="dark"] .meeting-row-details {
 }
 
 .availability-card.calendly-style.availability-schedules-shell .action-btn.icon-only svg {
-  width: 0.92rem;
-  height: 0.92rem;
+  width: 1.98rem;
+  height: 1.98rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .action-btn.icon-only.add-first {
@@ -5052,7 +5077,7 @@ html[data-theme="dark"] .meeting-row-details {
 }
 
 .availability-card.calendly-style.availability-schedules-shell .timezone-footer {
-  margin-top: 0.2rem;
+  margin-top: 0.28rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .timezone-select-label.timezone-select-inline {
@@ -5062,7 +5087,7 @@ html[data-theme="dark"] .meeting-row-details {
   padding: 0;
   color: #1c62b4;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 1.58rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .timezone-select-label.timezone-select-inline:hover {
@@ -5074,7 +5099,7 @@ html[data-theme="dark"] .meeting-row-details {
   color: inherit;
   font-weight: inherit;
   font-size: inherit;
-  padding-right: 1.2rem;
+  padding-right: 1.68rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .timezone-select-inline .chevron {
@@ -5083,32 +5108,32 @@ html[data-theme="dark"] .meeting-row-details {
 
 .availability-card.calendly-style.availability-schedules-shell .date-specific-editor {
   border: 1px solid #d7e2f0;
-  border-radius: 12px;
+  border-radius: 16px;
   background: #f7faff;
-  padding: 0.5rem;
+  padding: 0.7rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.35rem;
-  margin-bottom: 0.52rem;
+  gap: 0.5rem;
+  margin-bottom: 0.73rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-specific-editor label {
   display: grid;
-  gap: 0.24rem;
+  gap: 0.34rem;
   color: #294d78;
-  font-size: 0.72rem;
+  font-size: 1.01rem;
   font-weight: 700;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-specific-editor :is(input, select) {
-  min-height: 1.95rem;
+  min-height: 2.73rem;
   border: 1px solid #c8d8ea;
-  border-radius: 9px;
+  border-radius: 13px;
   background: #fff;
   color: #153a64;
   font-weight: 600;
-  padding: 0.2rem 0.42rem;
-  font-size: 0.85rem;
+  padding: 0.28rem 0.58rem;
+  font-size: 1.19rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-specific-editor .time-select {
@@ -5121,40 +5146,40 @@ html[data-theme="dark"] .meeting-row-details {
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-specific-editor .time-select-trigger {
-  min-height: 1.95rem;
+  min-height: 2.73rem;
   border: 1px solid #c8d8ea;
   background: #fff;
-  border-radius: 9px;
-  font-size: 0.84rem;
+  border-radius: 13px;
+  font-size: 1.18rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-specific-editor-actions {
   grid-column: 1 / -1;
   display: flex;
   justify-content: flex-end;
-  gap: 0.45rem;
+  gap: 0.63rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-hours-list {
   display: grid;
-  gap: 0.24rem;
+  gap: 0.34rem;
   align-content: start;
-  max-height: 240px;
+  max-height: 336px;
   overflow: auto;
   padding-right: 0.15rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-hours-list li {
   border: 1px solid #d7e2f0;
-  border-radius: 9px;
+  border-radius: 13px;
   background: #fff;
-  padding: 0.4rem 0.5rem;
+  padding: 0.56rem 0.7rem;
   border-top: 1px solid #d7e2f0;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-hours-left {
   display: grid;
-  gap: 0.3rem;
+  gap: 0.42rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-hours-chip {
@@ -5162,20 +5187,20 @@ html[data-theme="dark"] .meeting-row-details {
   background: #eef4fc;
   color: #1c456f;
   font-weight: 700;
-  font-size: 0.68rem;
+  font-size: 0.95rem;
   width: fit-content;
-  padding: 0.15rem 0.4rem;
+  padding: 0.21rem 0.56rem;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-hours-time {
   color: #1f466f;
-  font-size: 0.78rem;
+  font-size: 1.09rem;
   font-weight: 600;
 }
 
 .availability-card.calendly-style.availability-schedules-shell .date-hours-empty {
   border: 1px dashed #d0dded;
-  border-radius: 12px;
+  border-radius: 16px;
   background: #f9fbff;
   color: #6480a4;
   justify-content: flex-start;

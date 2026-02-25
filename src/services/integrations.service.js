@@ -556,17 +556,33 @@ function formatLastSync(value, connected) {
   return date.toISOString().slice(0, 10);
 }
 
+function sanitizePublicMetadata(rawMetadata) {
+  if (!rawMetadata || typeof rawMetadata !== "object" || Array.isArray(rawMetadata)) {
+    return {};
+  }
+
+  const safe = { ...rawMetadata };
+  if (safe.oauth && typeof safe.oauth === "object" && !Array.isArray(safe.oauth)) {
+    const oauth = { ...safe.oauth };
+    delete oauth.encryptedTokens;
+    safe.oauth = oauth;
+  }
+
+  return safe;
+}
+
 function mapRowToItem(row, rank) {
   const known = CATALOG_BY_KEY.get(row.provider);
   const connected = !!row.connected;
   const displayName = (row.display_name || "").trim();
+  const metadata = sanitizePublicMetadata(row.metadata);
   return {
     id: row.id,
     key: row.provider,
     name: displayName || known?.name || row.provider,
     category: row.category || known?.category || "Automation",
     description:
-      row.metadata?.description ||
+      metadata?.description ||
       known?.description ||
       "Connect this app with your scheduling workflow.",
     connected,
@@ -575,10 +591,10 @@ function mapRowToItem(row, rank) {
     adminOnly: typeof row.admin_only === "boolean" ? row.admin_only : !!known?.adminOnly,
     iconText: row.icon_text || known?.iconText || initials(displayName || row.provider),
     iconBg: row.icon_bg || known?.iconBg || "#1f6feb",
-    popularRank: Number.isFinite(Number(row.metadata?.popularRank))
-      ? Number(row.metadata.popularRank)
+    popularRank: Number.isFinite(Number(metadata?.popularRank))
+      ? Number(metadata.popularRank)
       : Number(known?.popularRank || rank + 1),
-    metadata: row.metadata || {},
+    metadata,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -928,6 +944,9 @@ async function listIntegrationsForUser(
 
 async function connectIntegration(userId, payload) {
   const normalized = normalizeConnectPayload(payload || {});
+  if (normalized.provider === "google-calendar") {
+    throw badRequest("Use Google OAuth to connect Google Calendar");
+  }
   const row = await upsertIntegration(userId, normalized);
   return mapRowToItem(row, normalized.metadata.popularRank || 9999);
 }
@@ -940,6 +959,9 @@ async function connectAllIntegrations(userId, accountEmail = "") {
   const result = await withTransaction(async (client) => {
     const rows = [];
     for (const item of INTEGRATION_CATALOG) {
+      if (item.key === "google-calendar") {
+        continue;
+      }
       const row = await upsertIntegration(
         userId,
         {
@@ -1018,6 +1040,9 @@ async function configureIntegration(userId, provider, payload = {}) {
 
 async function setIntegrationConnection(userId, provider, connected) {
   const safeProvider = normalizeProviderKey(provider);
+  if (safeProvider === "google-calendar" && !!connected) {
+    throw badRequest("Use Google OAuth to connect Google Calendar");
+  }
   const result = await query(
     `
       UPDATE user_integrations
@@ -1143,6 +1168,9 @@ async function listCalendarConnectionsForUser(userId) {
 
 async function connectCalendarForUser(userId, payload = {}) {
   const provider = normalizeCalendarProviderKey(payload.provider || payload.providerKey);
+  if (provider === "google-calendar") {
+    throw badRequest("Use Google OAuth to connect Google Calendar");
+  }
   const accountEmail = assertEmail(
     assertOptionalString(payload.accountEmail, "accountEmail", { max: 320 }),
     "accountEmail"
@@ -1259,10 +1287,33 @@ async function disconnectCalendarForUser(userId, provider) {
 }
 
 // --- GOOGLE CALENDAR OAUTH ---
+const jwt = require("jsonwebtoken");
 const { google } = require("googleapis");
 const env = require("../config/env");
+const {
+  encryptTokenPayload,
+  decryptTokenPayload,
+} = require("../utils/integration-token-crypto");
+
+const GOOGLE_PROVIDER_KEY = "google-calendar";
+const GOOGLE_OAUTH_STATE_PURPOSE = "google_calendar_oauth";
+const GOOGLE_TOKEN_FIELDS = [
+  "access_token",
+  "refresh_token",
+  "scope",
+  "token_type",
+  "expiry_date",
+  "id_token",
+];
+
+function ensureGoogleOAuthConfigured() {
+  if (!env.google.clientId || !env.google.clientSecret || !env.google.redirectUri) {
+    throw badRequest("Google Calendar OAuth is not configured on this server");
+  }
+}
 
 function getOAuth2Client() {
+  ensureGoogleOAuthConfigured();
   return new google.auth.OAuth2(
     env.google.clientId,
     env.google.clientSecret,
@@ -1270,66 +1321,227 @@ function getOAuth2Client() {
   );
 }
 
+function sanitizeGoogleTokens(tokens) {
+  if (!tokens || typeof tokens !== "object" || Array.isArray(tokens)) return {};
+  const out = {};
+  GOOGLE_TOKEN_FIELDS.forEach((key) => {
+    const value = tokens[key];
+    if (value === undefined || value === null || value === "") return;
+    if (key === "expiry_date") {
+      const asNum = Number(value);
+      if (Number.isFinite(asNum) && asNum > 0) out[key] = asNum;
+      return;
+    }
+    out[key] = String(value);
+  });
+  return out;
+}
+
+function mergeGoogleTokens(existingTokens = {}, nextTokens = {}) {
+  const safeExisting = sanitizeGoogleTokens(existingTokens);
+  const safeIncoming = sanitizeGoogleTokens(nextTokens);
+  const merged = {
+    ...safeExisting,
+    ...safeIncoming,
+  };
+  if (!merged.refresh_token && safeExisting.refresh_token) {
+    merged.refresh_token = safeExisting.refresh_token;
+  }
+  return merged;
+}
+
+function stripLegacyTokenFields(metadata = {}) {
+  const safe = metadata && typeof metadata === "object" && !Array.isArray(metadata) ? { ...metadata } : {};
+  GOOGLE_TOKEN_FIELDS.forEach((field) => {
+    delete safe[field];
+  });
+  return safe;
+}
+
+function readGoogleTokensFromMetadata(metadata = {}) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return {};
+
+  const oauthBlock =
+    metadata.oauth && typeof metadata.oauth === "object" && !Array.isArray(metadata.oauth)
+      ? metadata.oauth
+      : null;
+  if (oauthBlock?.encryptedTokens) {
+    const decrypted = decryptTokenPayload(oauthBlock.encryptedTokens);
+    if (decrypted) return sanitizeGoogleTokens(decrypted);
+  }
+
+  // Backward compatibility for previously saved plaintext token metadata.
+  return sanitizeGoogleTokens(metadata);
+}
+
+function buildGoogleOAuthMetadata(existingMetadata = {}, tokens = {}) {
+  const providerDetails = CALENDAR_PROVIDER_DETAILS[GOOGLE_PROVIDER_KEY];
+  const baseMetadata = stripLegacyTokenFields(existingMetadata);
+  const mergedTokens = sanitizeGoogleTokens(tokens);
+  const encryptedTokens = encryptTokenPayload(mergedTokens);
+  const existingOauth =
+    baseMetadata.oauth && typeof baseMetadata.oauth === "object" && !Array.isArray(baseMetadata.oauth)
+      ? baseMetadata.oauth
+      : {};
+
+  return {
+    ...baseMetadata,
+    description:
+      typeof baseMetadata.description === "string" && baseMetadata.description.trim()
+        ? baseMetadata.description
+        : providerDetails.description,
+    popularRank: Number.isFinite(Number(baseMetadata.popularRank))
+      ? Number(baseMetadata.popularRank)
+      : providerDetails.popularRank,
+    oauth: {
+      ...existingOauth,
+      provider: GOOGLE_PROVIDER_KEY,
+      encryptedTokens,
+      hasRefreshToken: Boolean(mergedTokens.refresh_token),
+      scope: mergedTokens.scope || existingOauth.scope || "",
+      expiryDate:
+        Number.isFinite(Number(mergedTokens.expiry_date))
+          ? Number(mergedTokens.expiry_date)
+          : existingOauth.expiryDate || null,
+      tokenUpdatedAt: new Date().toISOString(),
+      version: 1,
+    },
+  };
+}
+
+function encodeGoogleOAuthState(userId) {
+  return jwt.sign(
+    {
+      purpose: GOOGLE_OAUTH_STATE_PURPOSE,
+      userId: String(userId),
+    },
+    env.jwtSecret,
+    { expiresIn: "15m" }
+  );
+}
+
+function decodeGoogleOAuthState(stateToken) {
+  try {
+    const decoded = jwt.verify(String(stateToken || ""), env.jwtSecret);
+    if (decoded?.purpose !== GOOGLE_OAUTH_STATE_PURPOSE || !decoded?.userId) {
+      throw new Error("Invalid state payload");
+    }
+    return String(decoded.userId);
+  } catch {
+    throw badRequest("Invalid or expired OAuth state");
+  }
+}
+
 async function getGoogleCalendarAuthUrl(userId) {
   const client = getOAuth2Client();
+  const state = encodeGoogleOAuthState(userId);
   const authUrl = client.generateAuthUrl({
-    access_type: "offline", // Always get a refresh token
-    prompt: "consent", // Force consent
+    access_type: "offline",
+    prompt: "consent",
+    include_granted_scopes: true,
     scope: [
       "https://www.googleapis.com/auth/calendar.events",
-      "https://www.googleapis.com/auth/userinfo.email"
+      "https://www.googleapis.com/auth/userinfo.email",
     ],
-    state: userId,
+    state,
   });
   return authUrl;
 }
 
-async function handleGoogleCalendarCallback(userIdStr, code) {
+async function getGoogleCalendarConnectionStatusForUser(userIdStr) {
+  const existingRows = await listUserCalendarRows(userIdStr);
+  const googleCal = existingRows.find((row) => row.provider === GOOGLE_PROVIDER_KEY);
+  const tokens = readGoogleTokensFromMetadata(googleCal?.metadata || {});
+  const hasRefreshToken = Boolean(tokens.refresh_token);
+  return {
+    connected: Boolean(googleCal?.connected) && hasRefreshToken,
+    hasRefreshToken,
+    integrationId: googleCal?.id || null,
+    accountEmail: googleCal?.account_email || "",
+  };
+}
+
+async function handleGoogleCalendarCallback(stateToken, code) {
+  const userIdStr = decodeGoogleOAuthState(stateToken);
   const client = getOAuth2Client();
   const { tokens } = await client.getToken(code);
   client.setCredentials(tokens);
 
-  // Attempt to get the user's email 
   let accountEmail = "";
   try {
     const oauth2 = google.oauth2({ auth: client, version: "v2" });
     const userInfo = await oauth2.userinfo.get();
-    accountEmail = userInfo.data.email || "";
+    accountEmail = String(userInfo?.data?.email || "").trim().toLowerCase();
   } catch (err) {
     console.error("Could not fetch user info for Google Calendar", err);
   }
 
-  // Update or insert the connection
+  const existingRows = await listUserCalendarRows(userIdStr);
+  const existingGoogle = existingRows.find((row) => row.provider === GOOGLE_PROVIDER_KEY);
+  const mergedTokens = mergeGoogleTokens(
+    readGoogleTokensFromMetadata(existingGoogle?.metadata || {}),
+    tokens || {}
+  );
+  const metadata = buildGoogleOAuthMetadata(existingGoogle?.metadata || {}, mergedTokens);
+  const details = CALENDAR_PROVIDER_DETAILS[GOOGLE_PROVIDER_KEY];
+
   await upsertIntegration(userIdStr, {
-    provider: "google-calendar",
-    accountEmail,
-    connected: true,
-    metadata: tokens, // Store access/refresh tokens in metadata
+    provider: GOOGLE_PROVIDER_KEY,
+    displayName: details.name,
+    category: details.category,
+    iconText: details.iconText,
+    iconBg: details.iconBg,
+    adminOnly: false,
+    accountEmail: accountEmail || existingGoogle?.account_email || "",
+    metadata: {
+      ...metadata,
+      syncStatus: "connected",
+      syncSource: "oauth",
+    },
   });
 
-  // Default to this calendar if none is set
   const settings = await upsertCalendarSettings(userIdStr, {});
   if (!settings.selected_provider) {
-    await upsertCalendarSettings(userIdStr, { selectedProvider: "google-calendar" });
+    await upsertCalendarSettings(userIdStr, { selectedProvider: GOOGLE_PROVIDER_KEY });
   }
 }
 
 async function getAuthenticatedGoogleClient(userIdStr) {
   const existingRows = await listUserCalendarRows(userIdStr);
-  const googleCal = existingRows.find((row) => row.provider === "google-calendar");
+  const googleCal = existingRows.find((row) => row.provider === GOOGLE_PROVIDER_KEY);
+  let metadata = googleCal?.metadata || {};
+  let tokens = readGoogleTokensFromMetadata(metadata);
 
-  if (!googleCal || !googleCal.connected || !googleCal.metadata?.refresh_token) {
+  if (!googleCal || !googleCal.connected || !tokens.refresh_token) {
     throw badRequest("Host has not connected or authorized Google Calendar");
   }
 
   const client = getOAuth2Client();
-  client.setCredentials(googleCal.metadata);
+  client.setCredentials(tokens);
 
-  // If the client refreshes the token, save the new token
-  client.on('tokens', async (tokens) => {
-    let updatedMetadata = { ...googleCal.metadata, ...tokens };
-    await query(`UPDATE user_integrations SET metadata = $1 WHERE id = $2`, [updatedMetadata, googleCal.id]);
+  client.on("tokens", async (nextTokens) => {
+    if (!nextTokens || typeof nextTokens !== "object") return;
+    try {
+      tokens = mergeGoogleTokens(tokens, nextTokens);
+      metadata = buildGoogleOAuthMetadata(metadata, tokens);
+      await query(
+        `
+          UPDATE user_integrations
+          SET metadata = $1::jsonb, updated_at = NOW()
+          WHERE id = $2
+        `,
+        [JSON.stringify(metadata), googleCal.id]
+      );
+    } catch (error) {
+      console.error("Failed to persist refreshed Google OAuth tokens:", error?.message || error);
+    }
   });
+
+  try {
+    await client.getAccessToken();
+  } catch (error) {
+    throw badRequest("Google Calendar authorization expired. Reconnect in Integrations.");
+  }
 
   return google.calendar({ version: "v3", auth: client });
 }
@@ -1349,6 +1561,7 @@ module.exports = {
   syncCalendarForUser,
   updateCalendarSettingsForUser,
   disconnectCalendarForUser,
+  getGoogleCalendarConnectionStatusForUser,
   getGoogleCalendarAuthUrl,
   handleGoogleCalendarCallback,
   getAuthenticatedGoogleClient,

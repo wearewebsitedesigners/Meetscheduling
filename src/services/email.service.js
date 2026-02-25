@@ -21,6 +21,44 @@ function getTransport() {
   return transport;
 }
 
+function getMeetingLinkLines({
+  locationType,
+  meetingLink,
+  meetingLinkStatus,
+  hostFacing = false,
+}) {
+  const safeLink = String(meetingLink || "").trim();
+  if (safeLink) {
+    return [`Meeting link: ${safeLink}`];
+  }
+
+  const status = String(meetingLinkStatus || "").trim().toLowerCase();
+  const type = String(locationType || "").trim().toLowerCase();
+  if (type !== "google_meet") return [];
+
+  if (status === "pending_calendar_connection") {
+    const lines = [
+      "Google Meet link pending: Google Calendar is not connected for this host.",
+    ];
+    if (hostFacing) {
+      lines.push(`Connect Google Calendar: ${env.appBaseUrl}/dashboard.html?tab=integrations`);
+    }
+    return lines;
+  }
+
+  if (status === "generation_failed") {
+    return hostFacing
+      ? [
+        "Google Meet link generation failed. Please reconnect/sync Google Calendar from Integrations.",
+      ]
+      : [
+        "Google Meet link is temporarily unavailable. Please check your reminder email for an updated link.",
+      ];
+  }
+
+  return ["Google Meet link is being generated. It will be shared shortly."];
+}
+
 async function sendBookingConfirmation({
   toEmail,
   inviteeName,
@@ -32,7 +70,9 @@ async function sendBookingConfirmation({
   timezone,
   startUtc,
   endUtc,
+  locationType,
   meetingLink,
+  meetingLinkStatus,
 }) {
   const mailer = getTransport();
   if (!mailer) return { sent: false, reason: "SMTP not configured" };
@@ -40,6 +80,19 @@ async function sendBookingConfirmation({
   const formatIcsDate = (dateObj) => {
     return new Date(dateObj).toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
   };
+
+  const inviteeMeetingLines = getMeetingLinkLines({
+    locationType,
+    meetingLink,
+    meetingLinkStatus,
+    hostFacing: false,
+  });
+  const hostMeetingLines = getMeetingLinkLines({
+    locationType,
+    meetingLink,
+    meetingLinkStatus,
+    hostFacing: true,
+  });
 
   const icsData = [
     "BEGIN:VCALENDAR",
@@ -52,7 +105,7 @@ async function sendBookingConfirmation({
     `DTSTART:${formatIcsDate(startUtc)}`,
     `DTEND:${formatIcsDate(endUtc)}`,
     `SUMMARY:${eventTitle} with ${inviteeName}`,
-    `DESCRIPTION:${meetingLink ? "Meeting link: " + meetingLink : "Details to follow."}`,
+    `DESCRIPTION:${(inviteeMeetingLines[0] || "Details to follow.").replace(/\r?\n/g, " ")}`,
     "END:VEVENT",
     "END:VCALENDAR",
   ].join("\r\n");
@@ -66,9 +119,7 @@ async function sendBookingConfirmation({
     `Date: ${startLocal.date}`,
     `Time: ${startLocal.time} - ${endLocal.time} (${timezone})`,
   ];
-  if (meetingLink) {
-    lines.push(`Meeting link: ${meetingLink}`);
-  }
+  lines.push(...inviteeMeetingLines);
   lines.push("", "Thanks,", "Meetscheduling");
 
   const mailOptions = {
@@ -98,7 +149,7 @@ async function sendBookingConfirmation({
       `Date: ${startLocal.date}`,
       `Time: ${startLocal.time} - ${endLocal.time} (${timezone})`,
     ];
-    if (meetingLink) hostLines.push(`Meeting link: ${meetingLink}`);
+    hostLines.push(...hostMeetingLines);
     hostLines.push("", "Thanks,", "Meetscheduling");
 
     await mailer.sendMail({
@@ -134,9 +185,14 @@ async function sendReminderMail(bookingRow, type) {
     `Host: ${bookingRow.host_name}`,
   ];
 
-  if (bookingRow.meeting_link) {
-    lines.push(`Meeting link: ${bookingRow.meeting_link}`);
-  }
+  lines.push(
+    ...getMeetingLinkLines({
+      locationType: bookingRow.location_type,
+      meetingLink: bookingRow.meeting_link,
+      meetingLinkStatus: bookingRow.meeting_link_status,
+      hostFacing: false,
+    })
+  );
   lines.push("", "Thanks,", "Meetscheduling");
 
   // Send to invitee
@@ -155,9 +211,14 @@ async function sendReminderMail(bookingRow, type) {
       intro,
       `Event: ${bookingRow.event_title} with ${bookingRow.invitee_name}`,
     ];
-    if (bookingRow.meeting_link) {
-      hostLines.push(`Meeting link: ${bookingRow.meeting_link}`);
-    }
+    hostLines.push(
+      ...getMeetingLinkLines({
+        locationType: bookingRow.location_type,
+        meetingLink: bookingRow.meeting_link,
+        meetingLinkStatus: bookingRow.meeting_link_status,
+        hostFacing: true,
+      })
+    );
     hostLines.push("", "Thanks,", "Meetscheduling");
 
     await mailer.sendMail({
@@ -173,4 +234,3 @@ module.exports = {
   sendBookingConfirmation,
   sendReminderMail,
 };
-

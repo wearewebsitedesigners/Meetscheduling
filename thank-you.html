@@ -116,6 +116,16 @@
             font-size: 0.95rem;
         }
 
+        .value a {
+            color: var(--brand-color);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .value a:hover {
+            text-decoration: underline;
+        }
+
         .btn-primary {
             display: block;
             width: 100%;
@@ -174,8 +184,8 @@
                     </path>
                 </svg>
                 <div class="details-text">
-                    <div class="label">Web conferencing details to follow</div>
-                    <div class="value">Provider info in email details</div>
+                    <div class="label" id="meeting-link-title">Web conferencing details</div>
+                    <div class="value" id="meeting-link-value">Meeting details are in your email.</div>
                 </div>
             </div>
         </div>

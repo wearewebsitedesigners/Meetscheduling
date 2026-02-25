@@ -1,8 +1,13 @@
+const crypto = require("crypto");
 const { DateTime } = require("luxon");
 const { query, withTransaction } = require("../db/pool");
 const { sendBookingConfirmation } = require("./email.service");
 const { generateMeetingLink, isJoinableMeetingLink } = require("./meeting-link.service");
 const { generatePublicSlots } = require("./slots.service");
+const {
+  getAuthenticatedGoogleClient,
+  getGoogleCalendarConnectionStatusForUser,
+} = require("./integrations.service");
 const { verifySlotToken } = require("../utils/booking-token");
 const { conflict, notFound } = require("../utils/http-error");
 const { assertEmail, assertOptionalString, assertString } = require("../utils/validation");
@@ -41,6 +46,9 @@ function mapBookingRow(row, timezone = "UTC") {
     bufferAfterMin: row.buffer_after_min,
     locationType: row.location_type,
     meetingLink: row.meeting_link,
+    meetingLinkStatus: row.meeting_link_status || "pending_generation",
+    calendarProvider: row.calendar_provider || null,
+    calendarEventId: row.calendar_event_id || null,
     status: row.status,
     cancelReason: row.cancel_reason,
     canceledAt: row.canceled_at,
@@ -117,6 +125,169 @@ async function assertBookingStillAvailable(client, { event, slot }) {
   }
 }
 
+function randomRequestId(prefix = "id") {
+  if (typeof crypto.randomUUID === "function") {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+  return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function parseGoogleErrorStatus(error) {
+  const status = Number(
+    error?.code ||
+    error?.status ||
+    error?.response?.status ||
+    error?.response?.data?.error?.code ||
+    0
+  );
+  return Number.isFinite(status) ? status : 0;
+}
+
+function isRetryableGoogleError(error) {
+  const status = parseGoogleErrorStatus(error);
+  if ([408, 409, 425, 429, 500, 502, 503, 504].includes(status)) return true;
+  const message = String(error?.message || "").toLowerCase();
+  return /timeout|temporar|rate|quota|backend|unavailable/.test(message);
+}
+
+function extractGoogleMeetLinkFromEvent(eventData = {}) {
+  const hangoutLink = String(eventData?.hangoutLink || "").trim();
+  if (isJoinableMeetingLink(hangoutLink, "google_meet")) return hangoutLink;
+
+  const entryPoints = eventData?.conferenceData?.entryPoints;
+  if (Array.isArray(entryPoints)) {
+    const videoEntry = entryPoints.find((entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      const uri = String(entry.uri || "").trim();
+      return isJoinableMeetingLink(uri, "google_meet");
+    });
+    if (videoEntry) return String(videoEntry.uri).trim();
+  }
+
+  return null;
+}
+
+function initialMeetingState({ locationType, generatedLink, hasGoogleCalendarConnection }) {
+  if (locationType === "google_meet") {
+    return {
+      meetingLink: null,
+      meetingLinkStatus: hasGoogleCalendarConnection
+        ? "pending_generation"
+        : "pending_calendar_connection",
+      calendarProvider: hasGoogleCalendarConnection ? "google-calendar" : null,
+      calendarEventId: null,
+    };
+  }
+
+  if (locationType === "in_person") {
+    return {
+      meetingLink: null,
+      meetingLinkStatus: "unavailable",
+      calendarProvider: null,
+      calendarEventId: null,
+    };
+  }
+
+  if (locationType === "custom") {
+    return {
+      meetingLink: generatedLink || null,
+      meetingLinkStatus: generatedLink ? "ready" : "unavailable",
+      calendarProvider: null,
+      calendarEventId: null,
+    };
+  }
+
+  if (locationType === "zoom") {
+    const canJoin = isJoinableMeetingLink(generatedLink, "zoom");
+    return {
+      meetingLink: canJoin ? generatedLink : null,
+      meetingLinkStatus: canJoin ? "ready" : "unavailable",
+      calendarProvider: null,
+      calendarEventId: null,
+    };
+  }
+
+  return {
+    meetingLink: generatedLink || null,
+    meetingLinkStatus: generatedLink ? "ready" : "unavailable",
+    calendarProvider: null,
+    calendarEventId: null,
+  };
+}
+
+async function createGoogleCalendarEventWithMeet({
+  calendarClient,
+  booking,
+  event,
+  slot,
+  inviteeName,
+  inviteeEmail,
+  notes,
+}) {
+  const startUtcIso = new Date(slot.startAtUtc).toISOString();
+  const endUtcIso = new Date(slot.endAtUtc).toISOString();
+  const timezone = String(event.hostTimezone || "UTC");
+  const requestId = randomRequestId("meet");
+
+  const response = await calendarClient.events.insert({
+    calendarId: "primary",
+    conferenceDataVersion: 1,
+    sendUpdates: "all",
+    requestBody: {
+      summary: `${event.title} with ${inviteeName}`,
+      description: notes || `Booked via Meetscheduling (booking ${booking.id})`,
+      start: {
+        dateTime: startUtcIso,
+        timeZone: timezone,
+      },
+      end: {
+        dateTime: endUtcIso,
+        timeZone: timezone,
+      },
+      attendees: [{ email: inviteeEmail }],
+      conferenceData: {
+        createRequest: {
+          requestId,
+          conferenceSolutionKey: { type: "hangoutsMeet" },
+        },
+      },
+    },
+  });
+
+  const calendarEventId = String(response?.data?.id || "").trim() || null;
+  let meetingLink = extractGoogleMeetLinkFromEvent(response?.data || {});
+
+  // Google can return conference data asynchronously even after a successful insert.
+  if (!meetingLink && calendarEventId) {
+    const backoffMs = [300, 700, 1200];
+    for (const waitMs of backoffMs) {
+      await sleep(waitMs);
+      try {
+        const lookup = await calendarClient.events.get({
+          calendarId: "primary",
+          eventId: calendarEventId,
+          conferenceDataVersion: 1,
+        });
+        meetingLink = extractGoogleMeetLinkFromEvent(lookup?.data || {});
+        if (meetingLink) break;
+      } catch {
+        // Keep booking successful; fallback status handling happens upstream.
+      }
+    }
+  }
+
+  return {
+    calendarEventId,
+    meetingLink,
+  };
+}
+
 async function createPublicBooking({
   username,
   slug,
@@ -147,48 +318,37 @@ async function createPublicBooking({
   verifySlotToken(slotPayload.event.id, safeStartAtUtc, slotToken);
 
   const event = slotPayload.event;
-  const { getAuthenticatedGoogleClient } = require("./integrations.service");
+  const generatedMeetingLink = generateMeetingLink({
+    location_type: event.locationType,
+    custom_location: event.customLocation,
+  });
 
-  let meetingLink = null;
+  let googleConnection = {
+    connected: false,
+    hasRefreshToken: false,
+    integrationId: null,
+    accountEmail: "",
+  };
   if (event.locationType === "google_meet") {
     try {
-      const gcal = await getAuthenticatedGoogleClient(event.userId);
-      const calendarRes = await gcal.events.insert({
-        calendarId: "primary",
-        conferenceDataVersion: 1,
-        requestBody: {
-          summary: `${event.title} with ${cleanName}`,
-          description: cleanNotes,
-          start: { dateTime: new Date(slot.startAtUtc).toISOString() },
-          end: { dateTime: new Date(slot.endAtUtc).toISOString() },
-          attendees: [{ email: cleanEmail }],
-          conferenceData: {
-            createRequest: {
-              requestId: `meet-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-              conferenceSolutionKey: { type: "hangoutsMeet" },
-            },
-          },
-        },
-      });
-      const hangoutLink = String(calendarRes.data?.hangoutLink || "").trim();
-      meetingLink = isJoinableMeetingLink(hangoutLink, "google_meet")
-        ? hangoutLink
-        : null;
-    } catch (err) {
-      console.error(
-        "Failed to create Google Calendar event/Meet link:",
-        err?.message || err
-      );
-      meetingLink = null;
+      googleConnection = await getGoogleCalendarConnectionStatusForUser(event.userId);
+    } catch (error) {
+      googleConnection = {
+        connected: false,
+        hasRefreshToken: false,
+        integrationId: null,
+        accountEmail: "",
+      };
     }
-  } else {
-    meetingLink = generateMeetingLink({
-      location_type: event.locationType,
-      custom_location: event.customLocation,
-    });
   }
 
-  const booking = await withTransaction(async (client) => {
+  const baseMeetingState = initialMeetingState({
+    locationType: event.locationType,
+    generatedLink: generatedMeetingLink,
+    hasGoogleCalendarConnection: !!googleConnection.connected,
+  });
+
+  let booking = await withTransaction(async (client) => {
     await assertBookingStillAvailable(client, { event, slot });
 
     try {
@@ -208,10 +368,13 @@ async function createPublicBooking({
             buffer_after_min,
             location_type,
             meeting_link,
+            meeting_link_status,
+            calendar_provider,
+            calendar_event_id,
             status
           )
           VALUES (
-            $1,$2,$3,$4,$5,$6,$7::timestamptz,$8::timestamptz,$9,$10,$11,$12,$13,'confirmed'
+            $1,$2,$3,$4,$5,$6,$7::timestamptz,$8::timestamptz,$9,$10,$11,$12,$13,$14,$15,$16,'confirmed'
           )
           RETURNING *
         `,
@@ -228,7 +391,10 @@ async function createPublicBooking({
           event.bufferBeforeMin,
           event.bufferAfterMin,
           event.locationType,
-          meetingLink,
+          baseMeetingState.meetingLink,
+          baseMeetingState.meetingLinkStatus,
+          baseMeetingState.calendarProvider,
+          baseMeetingState.calendarEventId,
         ],
         client
       );
@@ -241,6 +407,82 @@ async function createPublicBooking({
       throw error;
     }
   });
+
+  if (event.locationType === "google_meet" && googleConnection.connected) {
+    let calendarResult = null;
+    let calendarError = null;
+
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        const gcal = await getAuthenticatedGoogleClient(event.userId);
+        calendarResult = await createGoogleCalendarEventWithMeet({
+          calendarClient: gcal,
+          booking,
+          event,
+          slot,
+          inviteeName: cleanName,
+          inviteeEmail: cleanEmail,
+          notes: cleanNotes,
+        });
+        break;
+      } catch (error) {
+        calendarError = error;
+        const shouldRetry = attempt < 2 && isRetryableGoogleError(error);
+        if (!shouldRetry) break;
+      }
+    }
+
+    if (calendarResult) {
+      const nextStatus = calendarResult.meetingLink ? "ready" : "pending_generation";
+      const updated = await query(
+        `
+          UPDATE bookings
+          SET
+            calendar_provider = 'google-calendar',
+            calendar_event_id = $1,
+            meeting_link = $2,
+            meeting_link_status = $3,
+            updated_at = NOW()
+          WHERE id = $4
+          RETURNING *
+        `,
+        [calendarResult.calendarEventId, calendarResult.meetingLink, nextStatus, booking.id]
+      );
+      if (updated.rows[0]) {
+        booking = updated.rows[0];
+      }
+    } else if (calendarError) {
+      const errorStatus = parseGoogleErrorStatus(calendarError);
+      const errorMsg = String(calendarError?.message || "").toLowerCase();
+      const authorizationIssue =
+        errorStatus === 401 ||
+        errorStatus === 403 ||
+        /not connected|authorized|authorization expired|reconnect/.test(errorMsg);
+      const nextStatus = authorizationIssue
+        ? "pending_calendar_connection"
+        : "generation_failed";
+      const nextProvider = authorizationIssue ? null : "google-calendar";
+      const updated = await query(
+        `
+          UPDATE bookings
+          SET
+            calendar_provider = $1,
+            meeting_link_status = $2,
+            updated_at = NOW()
+          WHERE id = $3
+          RETURNING *
+        `,
+        [nextProvider, nextStatus, booking.id]
+      );
+      if (updated.rows[0]) {
+        booking = updated.rows[0];
+      }
+      console.error(
+        "Failed to create Google Calendar event/Meet link:",
+        calendarError?.message || calendarError
+      );
+    }
+  }
 
   const userRes = await query("SELECT email FROM users WHERE id = $1", [event.userId]);
   const hostEmail = userRes.rows[0]?.email || "";
@@ -258,7 +500,9 @@ async function createPublicBooking({
       timezone: slotPayload.visitorTimezone,
       startUtc: slot.startAtUtc,
       endUtc: slot.endAtUtc,
-      meetingLink,
+      locationType: booking.location_type,
+      meetingLink: booking.meeting_link,
+      meetingLinkStatus: booking.meeting_link_status,
     });
   } catch (error) {
     emailStatus = { sent: false, reason: "Email failed" };

@@ -678,6 +678,7 @@ let toastTimer = null;
 let state = loadState();
 let isSidebarCollapsed = loadSidebarCollapsePreference();
 let openEventTypeMenuId = null;
+let openMeetingDetailsId = null;
 let availabilitySyncTimer = null;
 let calendarSettingsSyncTimer = null;
 let integrationsSearchTimer = null;
@@ -2384,16 +2385,85 @@ function buildEventTypePayloadFromUi(item) {
 
 function mapApiBookingToMeeting(booking) {
   const title = booking.eventTitle || "Meeting";
-  const local = booking.startLocal || {};
+  const localStart = booking.startLocal || {};
+  const localEnd = booking.endLocal || {};
   return {
     id: booking.id,
     title,
     inviteeName: booking.inviteeName || "Unknown",
+    inviteeEmail: booking.inviteeEmail || "",
     meetingLink: booking.meetingLink || "",
     locationType: booking.locationType || "",
-    time: `${local.date || ""} ${local.time || ""}`.trim(),
+    startDate: localStart.date || "",
+    startTime: localStart.time || "",
+    startIso: localStart.iso || "",
+    endTime: localEnd.time || "",
+    endIso: localEnd.iso || "",
+    startAtUtc: booking.startAtUtc || "",
+    endAtUtc: booking.endAtUtc || "",
+    visitorTimezone: booking.visitorTimezone || "",
+    notes: booking.notes || "",
+    createdAt: booking.createdAt || "",
+    time: `${localStart.date || ""} ${localStart.time || ""}`.trim(),
     status: booking.status === "canceled" ? "Canceled" : "Confirmed",
   };
+}
+
+function normalizeMeetingClockLabel(rawValue) {
+  const value = String(rawValue || "").trim();
+  const match = value.match(/^(\d{1,2}):([0-5]\d)\s*([AP]M)$/i);
+  if (!match) return value;
+  const hour = String(Math.max(1, Math.min(12, Number(match[1]) || 0)));
+  const minutes = match[2];
+  const suffix = match[3].toLowerCase();
+  return minutes === "00" ? `${hour} ${suffix}` : `${hour}:${minutes} ${suffix}`;
+}
+
+function getMeetingTimeRangeLabel(item) {
+  const start = normalizeMeetingClockLabel(item.startTime);
+  const end = normalizeMeetingClockLabel(item.endTime);
+  if (start && end) return `${start} - ${end}`;
+  return item.time || "Time unavailable";
+}
+
+function getMeetingDateKey(item) {
+  const localDate = String(item.startDate || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(localDate)) return localDate;
+  const fallbackUtc = String(item.startAtUtc || "").trim();
+  if (!fallbackUtc) return "unknown";
+  const parsed = new Date(fallbackUtc);
+  if (Number.isNaN(parsed.getTime())) return "unknown";
+  return parsed.toISOString().slice(0, 10);
+}
+
+function formatMeetingDateHeading(dateKey) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey || ""))) return "Date unavailable";
+  const [year, month, day] = dateKey.split("-").map((part) => Number(part));
+  const parsed = new Date(year, month - 1, day);
+  if (Number.isNaN(parsed.getTime())) return "Date unavailable";
+  return parsed.toLocaleDateString("en-US", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatMeetingCreatedDate(value) {
+  const parsed = new Date(value || "");
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function describeMeetingLocation(locationType) {
+  if (locationType === "google_meet") return "This is a Google Meet web conference.";
+  if (locationType === "zoom") return "This is a Zoom web conference.";
+  if (locationType === "in_person") return "This is an in-person meeting.";
+  return "Meeting location details were shared in confirmation.";
 }
 
 function mapApiIntegrationToUi(item, index = 0) {
@@ -3332,8 +3402,59 @@ function onViewClick(event) {
       const tab = button.dataset.tab;
       if (MEETING_TABS.includes(tab)) {
         state.meetings.activeTab = tab;
+        openMeetingDetailsId = null;
         saveState();
         render();
+      }
+      break;
+    }
+    case "toggle-meeting-details": {
+      const id = String(button.dataset.id || "").trim();
+      if (!id) break;
+      openMeetingDetailsId = openMeetingDetailsId === id ? null : id;
+      render();
+      break;
+    }
+    case "meeting-mark-no-show": {
+      const id = String(button.dataset.id || "").trim();
+      if (!id) break;
+      MEETING_TABS.forEach((tab) => {
+        state.meetings.events[tab] = (state.meetings.events[tab] || []).map((item) =>
+          String(item.id) === id ? { ...item, status: "No-show" } : item
+        );
+      });
+      saveState();
+      render();
+      showToast("Marked as no-show");
+      break;
+    }
+    case "meeting-edit-event-type": {
+      state.activeSection = "scheduling";
+      state.scheduling.activeTab = "Event types";
+      openMeetingDetailsId = null;
+      saveState();
+      render();
+      showToast("Open Event types to edit");
+      break;
+    }
+    case "meeting-schedule-again": {
+      state.activeSection = "scheduling";
+      state.scheduling.activeTab = "Event types";
+      openMeetingDetailsId = null;
+      saveState();
+      render();
+      showToast("Open Event types to share a new booking link");
+      break;
+    }
+    case "meeting-view-contact": {
+      const email = String(button.dataset.email || "").trim();
+      state.activeSection = "contacts";
+      if (email) state.contacts.search = email;
+      openMeetingDetailsId = null;
+      saveState();
+      render();
+      if (email) {
+        showToast("Contact opened");
       }
       break;
     }
@@ -3346,6 +3467,7 @@ function onViewClick(event) {
       })
         .then(() => loadBookingsFromApi())
         .then(() => {
+          openMeetingDetailsId = null;
           saveState();
           render();
           showToast("Meeting canceled");
@@ -3355,6 +3477,9 @@ function onViewClick(event) {
           state.meetings.events[tab] = state.meetings.events[tab].filter(
             (item) => item.id !== id
           );
+          if (String(openMeetingDetailsId || "") === String(id)) {
+            openMeetingDetailsId = null;
+          }
           saveState();
           render();
           showToast("Meeting removed");
@@ -7086,26 +7211,38 @@ function renderAccountCookiePage() {
 function renderMeetingsView() {
   const activeTab = state.meetings.activeTab;
   const events = state.meetings.events[activeTab] || [];
+  const shouldSortDesc = activeTab === "Past" || activeTab === "Date Range";
+  const sortedEvents = events
+    .slice()
+    .sort((left, right) => {
+      const leftTs = Date.parse(left.startAtUtc || left.startIso || "");
+      const rightTs = Date.parse(right.startAtUtc || right.startIso || "");
+      if (!Number.isFinite(leftTs) && !Number.isFinite(rightTs)) return 0;
+      if (!Number.isFinite(leftTs)) return 1;
+      if (!Number.isFinite(rightTs)) return -1;
+      return shouldSortDesc ? rightTs - leftTs : leftTs - rightTs;
+    });
+  const ids = new Set(sortedEvents.map((item) => String(item.id || "")));
+  if (openMeetingDetailsId && !ids.has(openMeetingDetailsId)) {
+    openMeetingDetailsId = null;
+  }
+  const groupedEvents = sortedEvents.reduce((acc, item) => {
+    const key = getMeetingDateKey(item);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {});
+  const orderedDates = Object.keys(groupedEvents).sort((a, b) => {
+    if (a === "unknown") return 1;
+    if (b === "unknown") return -1;
+    return shouldSortDesc ? b.localeCompare(a) : a.localeCompare(b);
+  });
+  const hostName = String(state.account?.profile?.name || "").trim() || "Meeting host";
+  const hostInitials = getInitials(hostName, "MH");
 
   return `
-    <section class="meetings-controls">
-      <div class="left">
-        <button class="ghost-btn" type="button">
-          My Meetscheduling
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 9.3 12 13.9l4.6-4.6 1.4 1.4-5.3 5.3a1 1 0 0 1-1.4 0L6 10.7l1.4-1.4Z"/></svg>
-        </button>
-        <label class="toggle-field">
-          <span>Show buffers</span>
-          <input type="checkbox" data-action="set-show-buffers" ${state.meetings.showBuffers ? "checked" : ""
-    } />
-          <span class="switch"></span>
-        </label>
-      </div>
-      <p class="meetings-count">Displaying 0 - ${events.length} of ${events.length} Events</p>
-    </section>
-
-    <section class="events-shell">
-      <div class="events-head">
+    <section class="events-shell meetings-shell">
+      <div class="events-head meetings-head">
         <div class="events-tab-row">
           ${MEETING_TABS.map(
       (tab) => `
@@ -7127,43 +7264,139 @@ function renderMeetingsView() {
           </button>
         </div>
       </div>
-      <div class="events-body">
+      <div class="events-body meetings-body${events.length ? "" : " is-empty"}">
         ${events.length
-      ? `<div class="event-list">
-                ${events
-        .map(
-          (event) => {
-            const canJoin = isJoinableMeetingUrl(event.meetingLink, event.locationType);
-            const pendingLinkCopy =
-              event.locationType === "google_meet"
-                ? "Meeting link pending. Connect Google Calendar in Integrations."
-                : event.locationType === "zoom"
-                  ? "Meeting link pending. Add a valid Zoom link in your event settings."
-                  : "";
+      ? `<div class="meetings-group-list">
+              ${orderedDates
+          .map((dateKey) => {
+            const dateItems = groupedEvents[dateKey] || [];
             return `
-                    <article class="event-item">
-                      <div>
-                        <strong>${escapeHtml(event.title)}</strong>
-                        <p>with ${escapeHtml(event.inviteeName)}</p>
-                        <p>${escapeHtml(event.time)}</p>
-                        ${canJoin
-                ? `<a href="${escapeHtml(event.meetingLink)}" target="_blank" rel="noopener" class="link-btn" style="margin-top:4px;display:inline-block;">Join Meeting</a>`
-                : pendingLinkCopy
-                  ? `<p class="small text-muted" style="margin-top:4px;">${escapeHtml(pendingLinkCopy)}</p>`
-                  : ""
-              }
-                      </div>
-                      <div class="actions">
-                        <span class="state">${escapeHtml(event.status || "Confirmed")}</span>
-                        ${event.status !== "Canceled" ? `<button class="mini-btn" type="button" data-action="cancel-meeting" data-id="${event.id}">Cancel</button>` : ''}
-                        <button class="mini-btn" type="button" data-action="remove-meeting" data-id="${event.id}">Delete</button>
-                      </div>
-                    </article>
+                    <section class="meeting-date-group">
+                      <header class="meeting-date-header">${escapeHtml(formatMeetingDateHeading(dateKey))}</header>
+                      ${dateItems
+                .map((event) => {
+                  const id = String(event.id || "");
+                  const expanded = openMeetingDetailsId === id;
+                  const canJoin = isJoinableMeetingUrl(event.meetingLink, event.locationType);
+                  const pendingLinkCopy =
+                    event.locationType === "google_meet"
+                      ? "Meeting link pending. Connect Google Calendar in Integrations."
+                      : event.locationType === "zoom"
+                        ? "Meeting link pending. Add a valid Zoom link in your event settings."
+                        : "";
+                  const notesCopy = String(event.notes || "").trim() || "No notes were shared for this meeting.";
+                  const createdLabel = formatMeetingCreatedDate(event.createdAt);
+                  const inviteeInitials = getInitials(event.inviteeName, "IN");
+                  return `
+                        <article class="meeting-row-card ${expanded ? "expanded" : ""}">
+                          <div class="meeting-row-summary">
+                            <div class="meeting-row-time">
+                              <span class="meeting-status-dot" aria-hidden="true"></span>
+                              <span class="meeting-time-range">${escapeHtml(getMeetingTimeRangeLabel(event))}</span>
+                            </div>
+                            <div class="meeting-row-main">
+                              <strong>${escapeHtml(event.inviteeName)}</strong>
+                              <p>Event type <span>${escapeHtml(event.title)}</span></p>
+                            </div>
+                            <div class="meeting-row-hosts">1 host | 0 non-hosts</div>
+                            <button class="meeting-detail-toggle" type="button" data-action="toggle-meeting-details" data-id="${escapeHtml(
+                    id
+                  )}" aria-expanded="${expanded ? "true" : "false"}">
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6l8 6-8 6z"/></svg>
+                              Details
+                            </button>
+                          </div>
+                          ${expanded
+                      ? `
+                                <div class="meeting-row-details">
+                                  <aside class="meeting-detail-sidebar">
+                                    <button class="meeting-mark-btn" type="button" data-action="meeting-mark-no-show" data-id="${escapeHtml(
+                        id
+                      )}">Mark as no-show</button>
+                                    <button class="meeting-inline-link" type="button" data-action="meeting-edit-event-type">Edit Event Type</button>
+                                    <button class="meeting-inline-link" type="button" data-action="meetings-filter">Filter by Event Type</button>
+                                    <button class="meeting-inline-link" type="button" data-action="meeting-schedule-again" data-id="${escapeHtml(
+                        id
+                      )}">Schedule Invitee Again</button>
+                                  </aside>
+                                  <div class="meeting-detail-content">
+                                    <section class="meeting-detail-block">
+                                      <h4>INVITEE</h4>
+                                      <div class="meeting-invitee-row">
+                                        <span class="meeting-avatar">${escapeHtml(inviteeInitials)}</span>
+                                        <div>
+                                          <p class="meeting-invitee-name">${escapeHtml(event.inviteeName)}</p>
+                                          <p class="meeting-invitee-email">${escapeHtml(
+                        event.inviteeEmail || "No email available"
+                      )}</p>
+                                        </div>
+                                      </div>
+                                      <button class="meeting-inline-link" type="button" data-action="meeting-view-contact" data-email="${escapeHtml(
+                        event.inviteeEmail || ""
+                      )}">View contact</button>
+                                    </section>
+                                    <section class="meeting-detail-block">
+                                      <h4>LOCATION</h4>
+                                      <p class="meeting-detail-copy">
+                                        ${escapeHtml(describeMeetingLocation(event.locationType))}
+                                        ${canJoin
+                          ? `<a href="${escapeHtml(event.meetingLink)}" target="_blank" rel="noopener" class="meeting-join-link">Join now</a>`
+                          : pendingLinkCopy
+                            ? `<span class="meeting-link-pending">${escapeHtml(pendingLinkCopy)}</span>`
+                            : ""
+                        }
+                                      </p>
+                                    </section>
+                                    <section class="meeting-detail-block">
+                                      <h4>INVITEE TIME ZONE</h4>
+                                      <p class="meeting-detail-copy">${escapeHtml(
+                        event.visitorTimezone || "Timezone not provided"
+                      )}</p>
+                                    </section>
+                                    <section class="meeting-detail-block">
+                                      <h4>QUESTIONS</h4>
+                                      <p class="meeting-notes">${escapeHtml(notesCopy)}</p>
+                                    </section>
+                                    <section class="meeting-detail-block">
+                                      <h4>MEETING HOST</h4>
+                                      <p class="meeting-detail-copy">Host will attend this meeting</p>
+                                      <div class="meeting-host-row">
+                                        <span class="meeting-avatar">${escapeHtml(hostInitials)}</span>
+                                        <span class="meeting-host-name">${escapeHtml(hostName)}</span>
+                                      </div>
+                                    </section>
+                                    <section class="meeting-detail-block">
+                                      <button class="meeting-inline-link" type="button">Add meeting notes</button>
+                                      ${createdLabel
+                        ? `<p class="meeting-created-at">Created ${escapeHtml(createdLabel)}</p>`
+                        : ""
+                      }
+                                      <div class="meeting-detail-footer-actions">
+                                        ${event.status !== "Canceled"
+                          ? `<button class="mini-btn" type="button" data-action="cancel-meeting" data-id="${escapeHtml(
+                              id
+                            )}">Cancel</button>`
+                          : ""
+                        }
+                                        <button class="mini-btn" type="button" data-action="remove-meeting" data-id="${escapeHtml(
+                        id
+                      )}">Delete</button>
+                                      </div>
+                                    </section>
+                                  </div>
+                                </div>
+                              `
+                      : ""
+                    }
+                        </article>
+                      `;
+                })
+                .join("")}
+                    </section>
                   `;
-          }
-        )
-        .join("")}
-              </div>`
+          })
+          .join("")}
+            </div>`
       : `<div class="empty-illustration">
                 <div class="empty-calendar">
                   <svg viewBox="0 0 96 96">

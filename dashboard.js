@@ -77,6 +77,17 @@ const TIMEZONES = [
   "Greenwich Mean Time",
   "India Standard Time",
 ];
+const TIME_PICKER_OPTIONS = Array.from({ length: 96 }, (_, index) => {
+  const hour24 = Math.floor(index / 4);
+  const minutes = (index % 4) * 15;
+  const value = `${String(hour24).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  const suffix = hour24 >= 12 ? "pm" : "am";
+  const displayHour = hour24 % 12 || 12;
+  return {
+    value,
+    label: `${displayHour}:${String(minutes).padStart(2, "0")}${suffix}`,
+  };
+});
 const TIMEZONE_LABEL_TO_IANA = {
   "Central Time - US & Canada": "America/Chicago",
   "Eastern Time - US & Canada": "America/New_York",
@@ -1913,6 +1924,23 @@ function sanitizeTime(raw) {
   if (typeof raw !== "string") return "00:00";
   const ok = /^([01]\d|2[0-3]):([0-5]\d)$/.test(raw);
   return ok ? raw : "00:00";
+}
+
+function formatTimeOptionLabel(rawTime) {
+  const [hourRaw, minuteRaw] = sanitizeTime(rawTime).split(":");
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
+  const suffix = hour >= 12 ? "pm" : "am";
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${String(minute).padStart(2, "0")}${suffix}`;
+}
+
+function getTimePickerOptionsHtml(selectedTime) {
+  const safeValue = sanitizeTime(selectedTime);
+  return TIME_PICKER_OPTIONS.map((option) => {
+    const selected = option.value === safeValue ? " selected" : "";
+    return `<option value="${option.value}"${selected}>${option.label}</option>`;
+  }).join("");
 }
 
 function isJoinableMeetingUrl(rawLink, locationType = "") {
@@ -8703,14 +8731,7 @@ function generateAvailabilityCalendarHTML() {
 
 function renderSchedulesTab() {
   const draft = availabilityDateSpecificDraft;
-  const formatUiTime = (time) => {
-    const [hourRaw, minuteRaw] = sanitizeTime(time).split(":");
-    const hour = Number(hourRaw);
-    const minute = Number(minuteRaw);
-    const suffix = hour >= 12 ? "pm" : "am";
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:${String(minute).padStart(2, "0")}${suffix}`;
-  };
+  const formatUiTime = (time) => formatTimeOptionLabel(time);
   const formatUiDate = (iso) => {
     const parsed = new Date(`${iso}T00:00:00`);
     if (Number.isNaN(parsed.getTime())) return iso;
@@ -8742,13 +8763,13 @@ function renderSchedulesTab() {
           .map(
             (slot, slotIndex) => `
                     <div class="interval-row">
-                      <input class="time-input" type="time" value="${escapeHtml(
-              slot.start
-            )}" data-action="interval-change" data-field="start" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" />
+                      <select class="time-input time-select" data-action="interval-change" data-field="start" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" aria-label="Start time">
+                        ${getTimePickerOptionsHtml(slot.start)}
+                      </select>
                       <span class="sep">-</span>
-                      <input class="time-input" type="time" value="${escapeHtml(
-              slot.end
-            )}" data-action="interval-change" data-field="end" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" />
+                      <select class="time-input time-select" data-action="interval-change" data-field="end" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" aria-label="End time">
+                        ${getTimePickerOptionsHtml(slot.end)}
+                      </select>
                       <div class="slot-actions">
                         <button class="action-btn icon-only" type="button" data-action="remove-interval" data-day-index="${dayIndex}" data-slot-index="${slotIndex}" title="Remove interval">
                           <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
@@ -8831,15 +8852,15 @@ function renderSchedulesTab() {
                   </label>
                   <label>
                     Start
-                    <input type="time" value="${escapeHtml(
-        draft.start
-      )}" data-action="date-specific-draft" data-field="start" />
+                    <select class="time-input time-select" data-action="date-specific-draft" data-field="start" aria-label="Date-specific start time">
+                      ${getTimePickerOptionsHtml(draft.start)}
+                    </select>
                   </label>
                   <label>
                     End
-                    <input type="time" value="${escapeHtml(
-        draft.end
-      )}" data-action="date-specific-draft" data-field="end" />
+                    <select class="time-input time-select" data-action="date-specific-draft" data-field="end" aria-label="Date-specific end time">
+                      ${getTimePickerOptionsHtml(draft.end)}
+                    </select>
                   </label>
                   <div class="date-specific-editor-actions">
                     <button class="mini-btn" type="button" data-action="cancel-date-specific">Cancel</button>

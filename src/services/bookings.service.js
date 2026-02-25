@@ -1,7 +1,7 @@
 const { DateTime } = require("luxon");
 const { query, withTransaction } = require("../db/pool");
 const { sendBookingConfirmation } = require("./email.service");
-const { generateMeetingLink } = require("./meeting-link.service");
+const { generateMeetingLink, isJoinableMeetingLink } = require("./meeting-link.service");
 const { generatePublicSlots } = require("./slots.service");
 const { verifySlotToken } = require("../utils/booking-token");
 const { conflict, notFound } = require("../utils/http-error");
@@ -149,7 +149,7 @@ async function createPublicBooking({
   const event = slotPayload.event;
   const { getAuthenticatedGoogleClient } = require("./integrations.service");
 
-  let meetingLink = "";
+  let meetingLink = null;
   if (event.locationType === "google_meet") {
     try {
       const gcal = await getAuthenticatedGoogleClient(event.userId);
@@ -170,13 +170,16 @@ async function createPublicBooking({
           },
         },
       });
-      meetingLink = calendarRes.data.hangoutLink || "No Meet link generated";
+      const hangoutLink = String(calendarRes.data?.hangoutLink || "").trim();
+      meetingLink = isJoinableMeetingLink(hangoutLink, "google_meet")
+        ? hangoutLink
+        : null;
     } catch (err) {
-      console.error("Failed to create Google Calendar event/Meet link:", err);
-      meetingLink = generateMeetingLink({
-        location_type: event.locationType,
-        custom_location: event.customLocation,
-      });
+      console.error(
+        "Failed to create Google Calendar event/Meet link:",
+        err?.message || err
+      );
+      meetingLink = null;
     }
   } else {
     meetingLink = generateMeetingLink({

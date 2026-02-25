@@ -1914,6 +1914,37 @@ function sanitizeTime(raw) {
   return ok ? raw : "00:00";
 }
 
+function isJoinableMeetingUrl(rawLink, locationType = "") {
+  const value = String(rawLink || "").trim();
+  if (!value) return false;
+
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+
+  if (!(url.protocol === "https:" || url.protocol === "http:")) return false;
+
+  const host = url.hostname.toLowerCase();
+  const path = url.pathname;
+
+  if (locationType === "google_meet" || host === "meet.google.com") {
+    if (host !== "meet.google.com") return false;
+    if (/^\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/i.test(path)) return true;
+    if (/^\/lookup\//i.test(path)) return true;
+    return false;
+  }
+
+  if (locationType === "zoom" || host === "zoom.us" || host.endsWith(".zoom.us")) {
+    if (!(host === "zoom.us" || host.endsWith(".zoom.us"))) return false;
+    return /^\/(j|my|wc|s)\//i.test(path);
+  }
+
+  return true;
+}
+
 function normalizeCalendarProviderInput(raw) {
   const normalized = String(raw || "")
     .trim()
@@ -7101,13 +7132,26 @@ function renderMeetingsView() {
       ? `<div class="event-list">
                 ${events
         .map(
-          (event) => `
+          (event) => {
+            const canJoin = isJoinableMeetingUrl(event.meetingLink, event.locationType);
+            const pendingLinkCopy =
+              event.locationType === "google_meet"
+                ? "Meeting link pending. Connect Google Calendar in Integrations."
+                : event.locationType === "zoom"
+                  ? "Meeting link pending. Add a valid Zoom link in your event settings."
+                  : "";
+            return `
                     <article class="event-item">
                       <div>
                         <strong>${escapeHtml(event.title)}</strong>
                         <p>with ${escapeHtml(event.inviteeName)}</p>
                         <p>${escapeHtml(event.time)}</p>
-                        ${event.meetingLink ? `<a href="${escapeHtml(event.meetingLink)}" target="_blank" class="link-btn" style="margin-top:4px;display:inline-block;">Join Meeting</a>` : ''}
+                        ${canJoin
+                ? `<a href="${escapeHtml(event.meetingLink)}" target="_blank" rel="noopener" class="link-btn" style="margin-top:4px;display:inline-block;">Join Meeting</a>`
+                : pendingLinkCopy
+                  ? `<p class="small text-muted" style="margin-top:4px;">${escapeHtml(pendingLinkCopy)}</p>`
+                  : ""
+              }
                       </div>
                       <div class="actions">
                         <span class="state">${escapeHtml(event.status || "Confirmed")}</span>
@@ -7115,7 +7159,8 @@ function renderMeetingsView() {
                         <button class="mini-btn" type="button" data-action="remove-meeting" data-id="${event.id}">Delete</button>
                       </div>
                     </article>
-                  `
+                  `;
+          }
         )
         .join("")}
               </div>`

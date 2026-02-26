@@ -11,6 +11,7 @@
     previewBtn: document.getElementById("lpe-preview-btn"),
     copyLinkBtn: document.getElementById("lpe-copy-link-btn"),
     publishBtn: document.getElementById("lpe-publish-btn"),
+    saveTopBtn: document.getElementById("lpe-save-top-btn"),
     saveBtn: document.getElementById("lpe-save-btn"),
     sectionsList: document.getElementById("lpe-sections-list"),
     previewFrame: document.getElementById("lpe-preview-frame"),
@@ -403,7 +404,17 @@
           primary: "#7f5933",
           secondary: "#e5cc83",
           background: "#f7f3ee",
+          surface: "#ffffff",
           text: "#1f1a16",
+          muted: "#67594d",
+          border: "#d8cbbb",
+          font: "DM Sans",
+          radius: 10,
+          sectionPadding: 48,
+          buttonStyle: "solid",
+          shadowStyle: "minimal",
+          animationsEnabled: true,
+          animationStyle: "subtle",
         },
       },
       {
@@ -414,7 +425,17 @@
           primary: "#7c3aed",
           secondary: "#d946ef",
           background: "#f6f5fb",
+          surface: "#ffffff",
           text: "#171a2b",
+          muted: "#5f6377",
+          border: "#e4ddf8",
+          font: "DM Sans",
+          radius: 14,
+          sectionPadding: 52,
+          buttonStyle: "gradient",
+          shadowStyle: "soft",
+          animationsEnabled: true,
+          animationStyle: "subtle",
         },
       },
       {
@@ -425,7 +446,17 @@
           primary: "#1a73e8",
           secondary: "#0f766e",
           background: "#f4f7fb",
+          surface: "#ffffff",
           text: "#111827",
+          muted: "#5b6475",
+          border: "#d8e1ef",
+          font: "Inter",
+          radius: 12,
+          sectionPadding: 48,
+          buttonStyle: "solid",
+          shadowStyle: "minimal",
+          animationsEnabled: true,
+          animationStyle: "subtle",
         },
       },
       {
@@ -436,7 +467,17 @@
           primary: "#ef4444",
           secondary: "#f59e0b",
           background: "#f8fafc",
+          surface: "#ffffff",
           text: "#0f172a",
+          muted: "#55607a",
+          border: "#d7dfed",
+          font: "Sora",
+          radius: 16,
+          sectionPadding: 56,
+          buttonStyle: "outline",
+          shadowStyle: "medium",
+          animationsEnabled: true,
+          animationStyle: "medium",
         },
       },
     ];
@@ -449,77 +490,187 @@
     return defaultPresetThemes();
   }
 
-  function isPresetThemeActive(presetTheme) {
-    if (!presetTheme || typeof presetTheme !== "object") return false;
-    const current = state.draftConfig?.theme || {};
-    const keys = [
-      "primary",
-      "secondary",
-      "background",
-      "surface",
-      "text",
-      "muted",
-      "border",
-      "font",
-      "buttonStyle",
-      "shadowStyle",
-      "animationStyle",
-      "animationsEnabled",
+  function templateDefinitions() {
+    return [
+      {
+        id: "hair-salon-complete",
+        name: "Hair Salon Complete",
+        description: "Full salon funnel with all major sections, ideal for premium services.",
+        presetId: "hairluxury",
+        sections: [
+          { type: "marquee", settings: { items: ["PREMIUM HAIR SERVICES", "BOOK INSTANTLY ONLINE", "NEW CLIENT OFFERS LIVE"], speed: 24 } },
+          { type: "header", settings: { brandName: "{{businessName}}", showSearch: true, searchPlaceholder: "Search services..." } },
+          { type: "imageBanner", settings: { pretitle: "Luxury Hair Experience", title: "{{businessName}} Beauty Studio", subtitle: "Install, color, and treatment services with expert stylists.", buttonLabel: "Book now", buttonHref: "#services" } },
+          { type: "servicesMenu", settings: { title: "Service Menu", subtitle: "Choose your treatment and reserve your best slot.", showSearch: true, showPhotos: true, showDuration: true, showPrice: true, columnsDesktop: 2 } },
+          { type: "spotlightGrid" },
+          { type: "productGrid" },
+          { type: "stylists" },
+          { type: "reviewsMarquee", settings: { title: "Trusted by clients", style: "cards", speed: 32, showStars: true } },
+          { type: "customerReviewBlock" },
+          { type: "instagramGrid" },
+          { type: "contactMap" },
+          { type: "faq" },
+          { type: "newsletterSignup" },
+          { type: "footer", settings: { copyright: "© {{businessName}}" } },
+        ],
+      },
+      {
+        id: "booking-focused",
+        name: "Booking Focused",
+        description: "Clean conversion-first template for quick scheduling and service checkout.",
+        presetId: "minimal",
+        sections: [
+          { type: "header", settings: { brandName: "{{businessName}}", showSearch: false } },
+          { type: "hero", settings: { badge: "Fast Booking", title: "Book your next appointment in minutes", subtitle: "Pick service, choose slot, and confirm instantly." } },
+          { type: "servicesMenu", settings: { viewMode: "tabs", showSearch: true, showPhotos: true, columnsDesktop: 2 } },
+          { type: "reviewsMarquee", settings: { style: "cards", speed: 36 } },
+          { type: "contactMap" },
+          { type: "footer", settings: { copyright: "© {{businessName}}" } },
+        ],
+      },
+      {
+        id: "editorial-brand",
+        name: "Editorial Brand",
+        description: "Visual-first storytelling layout with gallery and social proof.",
+        presetId: "vivid",
+        sections: [
+          { type: "marquee", settings: { items: ["EDITORIAL LOOKS", "RUNWAY READY", "CUSTOM COLOR & INSTALL"], speed: 30, uppercase: false } },
+          { type: "header", settings: { brandName: "{{businessName}}" } },
+          { type: "slideShow" },
+          { type: "text", settings: { title: "Our style philosophy", body: "We design looks that fit your face, lifestyle, and long-term hair goals." } },
+          { type: "imageShowcase" },
+          { type: "servicesMenu", settings: { viewMode: "stacked", showSearch: false, columnsDesktop: 2 } },
+          { type: "customerReviewBlock" },
+          { type: "newsletterSignup" },
+          { type: "footer", settings: { copyright: "© {{businessName}}" } },
+        ],
+      },
     ];
-    return keys.every((key) => {
-      if (!Object.prototype.hasOwnProperty.call(presetTheme, key)) return true;
-      return String(current[key]) === String(presetTheme[key]);
+  }
+
+  function presetById(presetId) {
+    return presetListWithTheme().find((item) => String(item.id) === String(presetId));
+  }
+
+  function prebuiltTemplates() {
+    return templateDefinitions().map((template) => {
+      const preset = presetById(template.presetId);
+      return {
+        ...template,
+        theme: deepClone((preset && preset.theme) || {}),
+      };
     });
   }
 
-  function applyPresetThemeById(presetId) {
-    const preset = presetListWithTheme().find((item) => String(item.id) === String(presetId));
-    if (!preset || !preset.theme || !state.draftConfig) return;
-    state.draftConfig.theme = {
-      ...(state.draftConfig.theme || {}),
-      ...deepClone(preset.theme),
+  function withTemplateVariables(value, businessName) {
+    if (typeof value === "string") {
+      return value.replaceAll("{{businessName}}", businessName);
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => withTemplateVariables(item, businessName));
+    }
+    if (value && typeof value === "object") {
+      const next = {};
+      Object.keys(value).forEach((key) => {
+        next[key] = withTemplateVariables(value[key], businessName);
+      });
+      return next;
+    }
+    return value;
+  }
+
+  function buildTemplateSection(spec, businessName) {
+    const definition = spec && typeof spec === "object" ? spec : { type: String(spec || "") };
+    const type = String(definition.type || "");
+    if (!type || !SECTION_DEFAULTS[type]) return null;
+    const section = createSection(type);
+    const overrideSettings = withTemplateVariables(deepClone(definition.settings || {}), businessName);
+    section.settings = {
+      ...section.settings,
+      ...overrideSettings,
     };
-    renderThemeControls();
-    renderPresetThemes();
-    renderPreview();
+    if (type === "header" && !safeText(section.settings.brandName, "")) {
+      section.settings.brandName = businessName;
+    }
+    if (type === "footer" && !safeText(section.settings.copyright, "")) {
+      section.settings.copyright = `© ${businessName}`;
+    }
+    return section;
+  }
+
+  function templateTypeSignature(template) {
+    const sections = Array.isArray(template.sections) ? template.sections : [];
+    return sections
+      .map((item) => (item && typeof item === "object" ? String(item.type || "") : String(item || "")))
+      .filter(Boolean);
+  }
+
+  function isTemplateActive(template) {
+    const currentTypes = sectionList().map((item) => String(item.type || ""));
+    const templateTypes = templateTypeSignature(template);
+    if (currentTypes.length !== templateTypes.length) return false;
+    return templateTypes.every((type, index) => type === currentTypes[index]);
+  }
+
+  function applyPrebuiltTemplateById(templateId) {
+    const template = prebuiltTemplates().find((item) => String(item.id) === String(templateId));
+    if (!template || !state.draftConfig) return;
+
+    const businessName = safeText(state.page?.businessName || state.page?.title, "Your Studio");
+    const sections = (Array.isArray(template.sections) ? template.sections : [])
+      .map((spec) => buildTemplateSection(spec, businessName))
+      .filter(Boolean);
+    if (!sections.length) return;
+
+    state.draftConfig = {
+      ...(state.draftConfig || {}),
+      theme: {
+        ...(state.draftConfig.theme || {}),
+        ...(template.theme || {}),
+      },
+      sections,
+    };
+    state.selectedSectionId = sections[0] ? sections[0].id : "";
+    renderAll();
     queueAutosave();
-    setSaveStatus("saving", `Applying ${preset.name}...`);
+    setSaveStatus("saving", `Applying ${template.name}...`);
   }
 
   function renderPresetThemes() {
     if (!els.presetThemes) return;
-    const presets = presetListWithTheme();
-    if (!presets.length) {
+    const templates = prebuiltTemplates();
+    if (!templates.length) {
       els.presetThemes.innerHTML = '<p class="lp-empty">No prebuilt themes available.</p>';
       return;
     }
 
-    els.presetThemes.innerHTML = presets
-      .map((preset) => {
-        const theme = preset.theme || {};
-        const active = isPresetThemeActive(theme);
+    els.presetThemes.innerHTML = templates
+      .map((template) => {
+        const active = isTemplateActive(template);
+        const theme = template.theme || {};
         const swatches = [
           theme.primary || "#1a73e8",
           theme.secondary || "#0f766e",
           theme.background || "#f4f7fb",
           theme.text || "#111827",
         ];
-
+        const sectionCount = templateTypeSignature(template).length;
         return `
           <article class="lpe-preset-card ${active ? "is-active" : ""}">
             <div class="lpe-preset-card-head">
               <div>
-                <h3>${escapeHtml(preset.name || preset.id || "Theme")}</h3>
-                <p>${escapeHtml(preset.description || "Prebuilt theme")}</p>
+                <h3>${escapeHtml(template.name)}</h3>
+                <p>${escapeHtml(template.description)}</p>
               </div>
-              <span class="lpe-preset-badge">${active ? "Active" : "Preset"}</span>
+              <span class="lpe-preset-badge">${active ? "Active" : "Full design"}</span>
             </div>
+            <p class="lpe-preset-meta">${escapeHtml(String(sectionCount))} sections included</p>
             <div class="lpe-preset-swatches" aria-hidden="true">
               ${swatches.map((color) => `<span style="background:${escapeHtml(String(color))};"></span>`).join("")}
             </div>
-            <button type="button" class="lpe-btn lpe-btn-secondary" data-action="apply-preset-theme" data-preset-id="${escapeHtml(
-              preset.id || ""
-            )}">${active ? "Applied" : "Apply theme"}</button>
+            <button type="button" class="lpe-btn lpe-btn-secondary" data-action="apply-prebuilt-template" data-template-id="${escapeHtml(
+              template.id
+            )}">${active ? "Applied" : "Apply full design"}</button>
           </article>
         `;
       })
@@ -608,8 +759,54 @@
     }
   }
 
+  function sectionIcon(name) {
+    const icons = {
+      grip:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3h0M11 3h0M5 8h0M11 8h0M5 13h0M11 13h0"/></svg>',
+      eye:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8s2.4-4.5 7-4.5S15 8 15 8s-2.4 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2.3"/></svg>',
+      eyeOff:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8s2.4-4.5 7-4.5 7 4.5 7 4.5-2.4 4.5-7 4.5S1 8 1 8z"/><path d="M2 2l12 12"/></svg>',
+      copy:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="3" width="8" height="10" rx="1.5"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1H8"/></svg>',
+      x:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>',
+    };
+    return icons[name] || "";
+  }
+
+  function captureSectionRowPositions() {
+    const positions = new Map();
+    if (!els.sectionsList) return positions;
+    els.sectionsList.querySelectorAll(".lpe-section-row[data-section-id]").forEach((row) => {
+      const sectionId = row.getAttribute("data-section-id");
+      if (!sectionId) return;
+      positions.set(sectionId, row.getBoundingClientRect().top);
+    });
+    return positions;
+  }
+
+  function animateSectionRowPositions(previousPositions) {
+    if (!els.sectionsList || !previousPositions || !previousPositions.size) return;
+    const rows = Array.from(els.sectionsList.querySelectorAll(".lpe-section-row[data-section-id]"));
+    rows.forEach((row) => {
+      const sectionId = row.getAttribute("data-section-id");
+      if (!sectionId || !previousPositions.has(sectionId)) return;
+      const oldTop = previousPositions.get(sectionId);
+      const newTop = row.getBoundingClientRect().top;
+      const delta = oldTop - newTop;
+      if (!Number.isFinite(delta) || Math.abs(delta) < 1) return;
+      row.style.transition = "none";
+      row.style.transform = `translateY(${delta}px)`;
+      row.getBoundingClientRect();
+      row.style.transition = "";
+      row.style.transform = "";
+    });
+  }
+
   function renderSectionsList() {
     if (!els.sectionsList) return;
+    const previousPositions = captureSectionRowPositions();
     const sections = sectionList();
     const labelByType = new Map(
       (Array.isArray(state.sectionLibrary) ? state.sectionLibrary : []).map((item) => [
@@ -617,31 +814,51 @@
         String(item.label || item.type || ""),
       ])
     );
-    els.sectionsList.innerHTML = sections
-      .map(
-        (section, index) => `
-          <li class="lpe-section-row ${section.id === state.selectedSectionId ? "is-active" : ""}" draggable="true" data-index="${index}" data-section-id="${escapeHtml(section.id)}">
+    const headerTypes = new Set(["marquee", "header"]);
+    let hasHeaderGroup = false;
+    let hasTemplateGroup = false;
+    const rows = [];
+
+    sections.forEach((section, index) => {
+      const inHeaderGroup = headerTypes.has(String(section.type || ""));
+      if (inHeaderGroup && !hasHeaderGroup) {
+        hasHeaderGroup = true;
+        rows.push('<li class="lpe-section-group">Header Group</li>');
+      }
+      if (!inHeaderGroup && !hasTemplateGroup) {
+        hasTemplateGroup = true;
+        rows.push('<li class="lpe-section-group">Template</li>');
+      }
+
+      rows.push(`
+          <li class="lpe-section-row ${section.id === state.selectedSectionId ? "is-active" : ""} ${
+            section.enabled === false ? "is-hidden" : ""
+          }" draggable="true" data-index="${index}" data-section-id="${escapeHtml(section.id)}">
             <div class="lpe-section-main">
-              <span class="lpe-section-grip">&#8942;</span>
+              <span class="lpe-section-grip" aria-hidden="true">${sectionIcon("grip")}</span>
               <button type="button" class="lpe-section-name" data-action="select-section" data-section-id="${escapeHtml(
                 section.id
               )}">${escapeHtml(labelByType.get(String(section.type)) || section.type)}</button>
             </div>
             <div class="lpe-section-actions">
-              <button type="button" class="lpe-icon-btn" data-action="toggle-section" data-section-id="${escapeHtml(
-                section.id
-              )}" aria-label="Toggle section">${section.enabled === false ? "&#128065;" : "&#128064;"}</button>
+              <button type="button" class="lpe-icon-btn ${
+                section.enabled === false ? "is-visibility-off" : "is-visibility-on"
+              }" data-action="toggle-section" data-section-id="${escapeHtml(section.id)}" aria-label="${
+                section.enabled === false ? "Show section" : "Hide section"
+              }">${section.enabled === false ? sectionIcon("eyeOff") : sectionIcon("eye")}</button>
               <button type="button" class="lpe-icon-btn" data-action="duplicate-section" data-section-id="${escapeHtml(
                 section.id
-              )}" aria-label="Duplicate section">&#10697;</button>
+              )}" aria-label="Duplicate section">${sectionIcon("copy")}</button>
               <button type="button" class="lpe-icon-btn" data-action="delete-section" data-section-id="${escapeHtml(
                 section.id
-              )}" aria-label="Delete section">&#10005;</button>
+              )}" aria-label="Delete section">${sectionIcon("x")}</button>
             </div>
           </li>
-        `
-      )
-      .join("");
+        `);
+    });
+
+    els.sectionsList.innerHTML = rows.join("");
+    animateSectionRowPositions(previousPositions);
   }
 
   function themeField(label, path, value, type, extraAttrs) {
@@ -1632,6 +1849,12 @@
     if (els.previewBtn) els.previewBtn.addEventListener("click", openPreview);
     if (els.copyLinkBtn) els.copyLinkBtn.addEventListener("click", copyLink);
     if (els.publishBtn) els.publishBtn.addEventListener("click", publishPage);
+    if (els.saveTopBtn) {
+      els.saveTopBtn.addEventListener("click", () => {
+        if (state.saveTimer) clearTimeout(state.saveTimer);
+        saveDraft(true);
+      });
+    }
     if (els.saveBtn) {
       els.saveBtn.addEventListener("click", () => {
         if (state.saveTimer) clearTimeout(state.saveTimer);
@@ -1643,6 +1866,15 @@
   function bindSectionsEvents() {
     if (!els.sectionsList) return;
     let dragFrom = -1;
+    let dragRow = null;
+    let dropRow = null;
+
+    const clearDragClasses = () => {
+      if (dragRow) dragRow.classList.remove("is-dragging");
+      if (dropRow) dropRow.classList.remove("is-drop-target");
+      dragRow = null;
+      dropRow = null;
+    };
 
     els.sectionsList.addEventListener("click", (event) => {
       const target = event.target;
@@ -1698,22 +1930,49 @@
       if (!row) return;
       dragFrom = Number(row.getAttribute("data-index"));
       if (Number.isFinite(dragFrom)) {
+        dragRow = row;
+        dragRow.classList.add("is-dragging");
         event.dataTransfer.effectAllowed = "move";
+        const sectionId = String(row.getAttribute("data-section-id") || "");
+        event.dataTransfer.setData("text/plain", sectionId);
       }
     });
 
     els.sectionsList.addEventListener("dragover", (event) => {
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
+      const row = event.target.closest("[data-index]");
+      if (!row || row === dragRow) return;
+      if (dropRow && dropRow !== row) {
+        dropRow.classList.remove("is-drop-target");
+      }
+      dropRow = row;
+      dropRow.classList.add("is-drop-target");
     });
 
     els.sectionsList.addEventListener("drop", (event) => {
       event.preventDefault();
       const row = event.target.closest("[data-index]");
-      if (!row) return;
+      if (!row) {
+        clearDragClasses();
+        return;
+      }
       const toIndex = Number(row.getAttribute("data-index"));
-      if (!Number.isFinite(toIndex) || !Number.isFinite(dragFrom)) return;
+      if (!Number.isFinite(toIndex) || !Number.isFinite(dragFrom)) {
+        clearDragClasses();
+        return;
+      }
+      clearDragClasses();
+      if (toIndex === dragFrom) {
+        dragFrom = -1;
+        return;
+      }
       reorderSections(dragFrom, toIndex);
+      dragFrom = -1;
+    });
+
+    els.sectionsList.addEventListener("dragend", () => {
+      clearDragClasses();
       dragFrom = -1;
     });
   }
@@ -1751,11 +2010,11 @@
       els.presetThemes.addEventListener("click", (event) => {
         const target = event.target;
         if (!(target instanceof HTMLElement)) return;
-        const button = target.closest("[data-action='apply-preset-theme']");
+        const button = target.closest("[data-action='apply-prebuilt-template']");
         if (!(button instanceof HTMLElement)) return;
-        const presetId = button.getAttribute("data-preset-id");
-        if (!presetId) return;
-        applyPresetThemeById(presetId);
+        const templateId = button.getAttribute("data-template-id");
+        if (!templateId) return;
+        applyPrebuiltTemplateById(templateId);
       });
     }
 

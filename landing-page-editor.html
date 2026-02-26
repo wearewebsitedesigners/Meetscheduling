@@ -19,15 +19,16 @@
   <body class="lpe-body">
     <div class="lpe-shell">
       <header class="lpe-topbar">
-        <div class="lpe-topbar-left">
-          <a href="/dashboard" class="lpe-back-link">&larr; Dashboard</a>
-          <div>
-            <div class="lpe-title-row">
-              <h1 id="lpe-page-title">Landing Page Editor</h1>
-              <span class="lpe-editing-badge">Editing</span>
-            </div>
-            <p id="lpe-page-meta">Loading page...</p>
-          </div>
+        <div class="lpe-topbar-brand">
+          <a href="/dashboard" class="lpe-back-link" aria-label="Back to dashboard">&larr;</a>
+          <span class="lpe-brand-name">MeetScheduling</span>
+          <span class="lpe-brand-live">Live</span>
+        </div>
+        <div class="lpe-topbar-center">
+          <span class="lpe-home-glyph" aria-hidden="true">&#8962;</span>
+          <h1 id="lpe-page-title">Home page</h1>
+          <span class="lpe-editing-badge">Editing</span>
+          <p id="lpe-page-meta">Loading page...</p>
         </div>
         <div class="lpe-topbar-actions">
           <div class="lpe-device-toggle" role="tablist" aria-label="Preview device">
@@ -37,19 +38,34 @@
           <button type="button" id="lpe-preview-btn" class="lpe-btn lpe-btn-secondary">Preview</button>
           <button type="button" id="lpe-copy-link-btn" class="lpe-btn lpe-btn-secondary">Copy link</button>
           <button type="button" id="lpe-publish-btn" class="lpe-btn lpe-btn-primary">Publish</button>
+          <button type="button" id="lpe-save-top-btn" class="lpe-btn lpe-btn-muted">Save</button>
         </div>
       </header>
 
       <main class="lpe-layout">
+        <aside class="lpe-utility-rail" aria-label="Editor tools">
+          <button type="button" class="lpe-rail-btn is-active" aria-label="Sections">S</button>
+          <button type="button" class="lpe-rail-btn" aria-label="Styles">T</button>
+          <button type="button" class="lpe-rail-btn" aria-label="Apps">A</button>
+        </aside>
+
         <aside class="lpe-left-panel">
-          <section class="lpe-panel-card">
+          <section class="lpe-panel-card lpe-sections-card">
             <div class="lpe-panel-head">
-              <h2>Page Sections</h2>
+              <h2>Home page</h2>
             </div>
+            <p class="lpe-card-subtitle">Page sections</p>
             <ul id="lpe-sections-list" class="lpe-sections-list"></ul>
           </section>
 
           <button id="lpe-add-section-btn" type="button" class="lpe-btn lpe-btn-add">+ Add Section</button>
+
+          <section class="lpe-panel-card">
+            <div class="lpe-panel-head">
+              <h2>Prebuilt Themes</h2>
+            </div>
+            <div id="lpe-preset-themes" class="lpe-preset-themes"></div>
+          </section>
         </aside>
 
         <section class="lpe-center-panel">
@@ -63,13 +79,6 @@
         </section>
 
         <aside class="lpe-right-panel">
-          <section class="lpe-panel-card">
-            <div class="lpe-panel-head">
-              <h2>Prebuilt Themes</h2>
-            </div>
-            <div id="lpe-preset-themes" class="lpe-preset-themes"></div>
-          </section>
-
           <section class="lpe-panel-card">
             <div class="lpe-panel-head">
               <h2>Theme</h2>

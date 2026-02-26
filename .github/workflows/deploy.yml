@@ -34,7 +34,6 @@ jobs:
           overwrite: true
           rm: false
           strip_components: 0
-          exclude: ".git,node_modules,.env,.deploy,.npm-cache,tmp,.DS_Store"
 
       - name: Run install and restart
         uses: appleboy/ssh-action@v1.0.3

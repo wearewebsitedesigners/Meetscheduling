@@ -435,6 +435,7 @@ const INTEGRATION_CATALOG = [
   },
 ];
 
+const ENABLED_INTEGRATION_KEYS = new Set(["google-calendar", "google-meet"]);
 const CATALOG_BY_KEY = new Map(INTEGRATION_CATALOG.map((item) => [item.key, item]));
 const FILTERS = new Set(["all", "connected", "available"]);
 const TABS = new Set(["Discover", "Manage", "discover", "manage"]);
@@ -748,8 +749,11 @@ function mapCalendarRecord(item) {
 function buildMergedItems(rows) {
   const rowsByProvider = new Map(rows.map((row) => [row.provider, row]));
   const items = [];
+  const enabledCatalog = INTEGRATION_CATALOG.filter((item) =>
+    ENABLED_INTEGRATION_KEYS.has(item.key)
+  );
 
-  for (const catalogItem of INTEGRATION_CATALOG) {
+  for (const catalogItem of enabledCatalog) {
     const row = rowsByProvider.get(catalogItem.key);
     if (row) {
       items.push(mapRowToItem(row, catalogItem.popularRank));
@@ -776,8 +780,11 @@ function buildMergedItems(rows) {
   }
 
   if (rowsByProvider.size) {
-    let offset = INTEGRATION_CATALOG.length + 1;
+    let offset = enabledCatalog.length + 1;
     rowsByProvider.forEach((row) => {
+      if (!ENABLED_INTEGRATION_KEYS.has(row.provider)) {
+        return;
+      }
       items.push(mapRowToItem(row, offset));
       offset += 1;
     });
@@ -814,6 +821,9 @@ function applySort(items, sort) {
 
 function normalizeConnectPayload(payload) {
   const provider = normalizeProviderKey(payload.provider || payload.key || payload.name);
+  if (!ENABLED_INTEGRATION_KEYS.has(provider)) {
+    throw badRequest("Only Google Calendar and Google Meet are available in Integrations");
+  }
   const known = CATALOG_BY_KEY.get(provider);
   const displayName = assertOptionalString(payload.displayName, "displayName", {
     max: 120,
@@ -959,6 +969,9 @@ async function connectAllIntegrations(userId, accountEmail = "") {
   const result = await withTransaction(async (client) => {
     const rows = [];
     for (const item of INTEGRATION_CATALOG) {
+      if (!ENABLED_INTEGRATION_KEYS.has(item.key)) {
+        continue;
+      }
       if (item.key === "google-calendar") {
         continue;
       }
@@ -1040,6 +1053,9 @@ async function configureIntegration(userId, provider, payload = {}) {
 
 async function setIntegrationConnection(userId, provider, connected) {
   const safeProvider = normalizeProviderKey(provider);
+  if (!ENABLED_INTEGRATION_KEYS.has(safeProvider)) {
+    throw badRequest("Only Google Calendar and Google Meet are available in Integrations");
+  }
   if (safeProvider === "google-calendar" && !!connected) {
     throw badRequest("Use Google OAuth to connect Google Calendar");
   }

@@ -56,6 +56,7 @@ const WORKFLOW_FILTERS = ["all", "active", "paused", "draft"];
 const INTEGRATION_FILTERS = ["all", "connected", "available"];
 const INTEGRATION_TABS = ["Discover", "Manage"];
 const INTEGRATION_SORT_OPTIONS = ["Most popular", "A-Z", "Category"];
+const INTEGRATION_VISIBLE_KEYS = new Set(["google-calendar", "google-meet"]);
 const ROUTING_FILTERS = ["all", "active", "paused"];
 const LANGUAGE_OPTIONS = ["English", "Hindi", "French", "Spanish"];
 const DATE_FORMAT_OPTIONS = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"];
@@ -989,9 +990,9 @@ function normalizeState(raw, fallback) {
       merged.integrations.showBanner = raw.integrations.showBanner;
     }
     if (Array.isArray(raw.integrations.items)) {
-      merged.integrations.items = raw.integrations.items.map((item, index) =>
-        normalizeIntegrationRecord(item, index)
-      );
+      merged.integrations.items = raw.integrations.items
+        .map((item, index) => normalizeIntegrationRecord(item, index))
+        .filter((item) => INTEGRATION_VISIBLE_KEYS.has(item.key));
     }
   }
 
@@ -2158,7 +2159,9 @@ function normalizeIntegrationRecord(item, index = 0) {
 
 function buildDefaultIntegrationItems() {
   const defaultAccount = DEFAULT_INTEGRATION_ACCOUNT;
-  return INTEGRATION_LIBRARY.map((entry, index) =>
+  return INTEGRATION_LIBRARY.filter((entry) =>
+    INTEGRATION_VISIBLE_KEYS.has(entry.key)
+  ).map((entry, index) =>
     normalizeIntegrationRecord(
       {
         ...entry,
@@ -3064,9 +3067,9 @@ async function refreshIntegrationsFromApi(nextTab = null) {
   state.integrations.filter = payload.filter || "all";
   state.integrations.sort = apiSortToUi(payload.sort);
   state.integrations.search = payload.search || search;
-  state.integrations.items = (Array.isArray(payload.items) ? payload.items : []).map(
-    (item, index) => mapApiIntegrationToUi(item, index)
-  );
+  state.integrations.items = (Array.isArray(payload.items) ? payload.items : [])
+    .map((item, index) => mapApiIntegrationToUi(item, index))
+    .filter((item) => INTEGRATION_VISIBLE_KEYS.has(item.key));
   syncCalendarConnectionsFromIntegrations();
 }
 
@@ -8124,7 +8127,7 @@ function renderIntegrationsView() {
 
   const emptyMessage =
     activeTab === "Manage"
-      ? "No connected integrations yet. Connect an app from Discover."
+      ? "No connected integrations yet. Connect Google Calendar or Google Meet from Discover."
       : "No integrations match your search or filter.";
 
   return `
@@ -8137,15 +8140,13 @@ function renderIntegrationsView() {
               <span class="integration-preview-chip">Select your calendar</span>
               <ul>
                 <li>Google Calendar</li>
-                <li>Office 365</li>
-                <li>Exchange Calendar</li>
+                <li>Google Meet</li>
               </ul>
             </div>
             <div class="integration-banner-copy">
               <p class="eyebrow">Getting Started</p>
-              <h2>Meetscheduling works where you work</h2>
-              <p>Connect your favorite calendars, tools, and apps to automate scheduling, routing, reminders, and CRM handoff.</p>
-              <button class="link-btn" type="button" data-action="connect-integration">Connect your first app</button>
+              <h2>Connect your Google tools</h2>
+              <p>Use Google Calendar and Google Meet to create events and share meeting links automatically.</p>
             </div>
           </article>
         `
@@ -8159,7 +8160,7 @@ function renderIntegrationsView() {
             <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 1 0 5.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/></svg>
             <input data-action="integrations-search" value="${escapeHtml(
       state.integrations.search
-    )}" placeholder="Find integrations, apps, and more" />
+    )}" placeholder="Find Google integrations" />
           </label>
         </div>
         <div class="integrations-toolbar">
@@ -8175,16 +8176,6 @@ function renderIntegrationsView() {
         }>${escapeHtml(option)}</option>`
     ).join("")}
           </select>
-          ${activeTab === "Discover"
-      ? `
-                <button class="pill-btn" type="button" data-action="connect-integration">+ Add custom app</button>
-                <button class="pill-btn" type="button" data-action="connect-all-integrations">Connect all apps</button>
-              `
-      : `
-                <button class="pill-btn" type="button" data-action="disconnect-all-integrations" ${connectedCount === 0 ? "disabled" : ""
-      }>Disconnect all</button>
-              `
-    }
         </div>
       </section>
 

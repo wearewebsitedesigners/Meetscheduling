@@ -7,7 +7,8 @@ const availabilityRoutes = require("./routes/availability.routes");
 const publicRoutes = require("./routes/public.routes");
 const pagePublicRoutes = require("./routes/page-public.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
-const pageBuilderRoutes = require("./routes/page-builder.routes");
+const landingBuilderRoutes = require("./routes/landing-builder.routes");
+const landingPublicRoutes = require("./routes/landing-public.routes");
 const integrationsRoutes = require("./routes/integrations.routes");
 const contactsRoutes = require("./routes/contacts.routes");
 const workflowsRoutes = require("./routes/workflows.routes");
@@ -46,8 +47,9 @@ function buildApp() {
 
   app.use("/api/event-types", eventTypesRoutes);
   app.use("/api", pagePublicRoutes);
-  app.use("/api/dashboard/pages", pageBuilderRoutes);
+  app.use("/api/dashboard/pages", landingBuilderRoutes);
   app.use("/api/availability", availabilityRoutes);
+  app.use("/api/public/page", landingPublicRoutes);
   app.use("/api/public", publicRoutes);
   app.use("/api/dashboard", dashboardRoutes);
   app.use("/api/integrations", integrationsRoutes);
@@ -71,11 +73,19 @@ function buildApp() {
   });
 
   app.get("/dashboard/page-builder", (req, res) => {
-    res.sendFile(path.join(staticRoot, "page-builder.html"));
+    res.redirect(302, "/dashboard/landing-page");
   });
 
   app.get("/dashboard/page-builder/:pageId", (req, res) => {
-    res.sendFile(path.join(staticRoot, "page-builder.html"));
+    res.redirect(302, `/dashboard/landing-page/${encodeURIComponent(req.params.pageId)}/editor`);
+  });
+
+  app.get("/dashboard/landing-page", (req, res) => {
+    res.sendFile(path.join(staticRoot, "landing-page-list.html"));
+  });
+
+  app.get("/dashboard/landing-page/:pageId/editor", (req, res) => {
+    res.sendFile(path.join(staticRoot, "landing-page-editor.html"));
   });
 
   app.get("/dashboard", (req, res) => {
@@ -201,7 +211,7 @@ function buildApp() {
       return next();
     }
 
-    return res.sendFile(path.join(staticRoot, "public-landing.html"));
+    return res.sendFile(path.join(staticRoot, "landing-page-public.html"));
   });
 
   app.get("/:username/:slug", (req, res) => {

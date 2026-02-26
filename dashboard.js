@@ -8423,6 +8423,29 @@ function renderIntegrationsView() {
 }
 
 function renderLandingPageView() {
+  return `
+    <section class="landing-builder-shell" style="--landing-accent:#1a73e8;">
+      <article class="landing-builder-card landing-builder-overview">
+        <div class="landing-builder-head">
+          <div>
+            <h2>Landing page builder moved</h2>
+            <p class="text-muted">
+              The new Shopify-style landing page editor is now available in a dedicated workspace.
+            </p>
+          </div>
+          <div class="landing-builder-actions">
+            <a class="pill-btn" href="/dashboard/landing-page" target="_self">Open new builder</a>
+          </div>
+        </div>
+        <div class="landing-builder-url">
+          <span>New path</span>
+          <code>/dashboard/landing-page</code>
+          <span class="landing-pill is-live">Active</span>
+        </div>
+      </article>
+    </section>
+  `;
+
   const landingState = state["landing-page"];
   const page = landingState.page || {};
   const accentColor = /^#[0-9a-f]{6}$/i.test(String(page.primaryColor || ""))

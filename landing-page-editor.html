@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Landing Page Editor | MeetScheduling</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="shortcut icon" href="/assets/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Sora:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/tokens.css" />
+    <link rel="stylesheet" href="/landing-page-renderer.css" />
+    <link rel="stylesheet" href="/landing-page-editor.css" />
+  </head>
+  <body class="lpe-body">
+    <div class="lpe-shell">
+      <header class="lpe-topbar">
+        <div class="lpe-topbar-left">
+          <a href="/dashboard/landing-page" class="lpe-back-link">&larr; Pages</a>
+          <div>
+            <div class="lpe-title-row">
+              <h1 id="lpe-page-title">Landing Page Editor</h1>
+              <span class="lpe-editing-badge">Editing</span>
+            </div>
+            <p id="lpe-page-meta">Loading page...</p>
+          </div>
+        </div>
+        <div class="lpe-topbar-actions">
+          <div class="lpe-device-toggle" role="tablist" aria-label="Preview device">
+            <button type="button" class="is-active" data-device="desktop">Desktop</button>
+            <button type="button" data-device="mobile">Mobile</button>
+          </div>
+          <button type="button" id="lpe-preview-btn" class="lpe-btn lpe-btn-secondary">Preview</button>
+          <button type="button" id="lpe-copy-link-btn" class="lpe-btn lpe-btn-secondary">Copy link</button>
+          <button type="button" id="lpe-publish-btn" class="lpe-btn lpe-btn-primary">Publish</button>
+        </div>
+      </header>
+
+      <main class="lpe-layout">
+        <aside class="lpe-left-panel">
+          <section class="lpe-panel-card">
+            <div class="lpe-panel-head">
+              <h2>Page Sections</h2>
+            </div>
+            <ul id="lpe-sections-list" class="lpe-sections-list"></ul>
+          </section>
+
+          <button id="lpe-add-section-btn" type="button" class="lpe-btn lpe-btn-add">+ Add Section</button>
+        </aside>
+
+        <section class="lpe-center-panel">
+          <header class="lpe-preview-head">
+            <span id="lpe-save-status" class="lpe-save-status">Saved</span>
+            <span class="lpe-preview-label">Live Preview</span>
+          </header>
+          <div id="lpe-preview-frame" class="lpe-preview-frame is-desktop">
+            <div id="lpe-preview-root"></div>
+          </div>
+        </section>
+
+        <aside class="lpe-right-panel">
+          <section class="lpe-panel-card">
+            <div class="lpe-panel-head">
+              <h2>Theme</h2>
+            </div>
+            <div id="lpe-theme-controls" class="lpe-controls"></div>
+          </section>
+
+          <section class="lpe-panel-card">
+            <div class="lpe-panel-head">
+              <h2>Section Settings</h2>
+            </div>
+            <div id="lpe-section-controls" class="lpe-controls"></div>
+          </section>
+
+          <section class="lpe-panel-card">
+            <div class="lpe-panel-head">
+              <h2>Version History</h2>
+            </div>
+            <div id="lpe-history-list" class="lpe-history-list"></div>
+          </section>
+
+          <button id="lpe-save-btn" type="button" class="lpe-btn lpe-btn-primary lpe-save-btn">Save Changes</button>
+        </aside>
+      </main>
+    </div>
+
+    <dialog id="lpe-add-dialog" class="lpe-dialog">
+      <form method="dialog" class="lpe-dialog-content">
+        <header>
+          <h2>Add New Section</h2>
+          <p>Select a section to add to your landing page.</p>
+        </header>
+        <div id="lpe-library-grid" class="lpe-library-grid"></div>
+        <footer class="lpe-dialog-actions">
+          <button type="button" id="lpe-dialog-cancel" class="lpe-btn lpe-btn-secondary">Cancel</button>
+          <button type="button" id="lpe-dialog-select" class="lpe-btn lpe-btn-primary">Select Section</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <script src="/landing-page-renderer.js"></script>
+    <script src="/landing-page-editor.js" defer></script>
+  </body>
+</html>

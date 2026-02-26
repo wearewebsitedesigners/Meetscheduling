@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Landing Pages | MeetScheduling</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="shortcut icon" href="/assets/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Sora:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/tokens.css" />
+    <link rel="stylesheet" href="/landing-page-list.css" />
+  </head>
+  <body class="lp-list-body">
+    <main class="lp-list-shell">
+      <header class="lp-list-topbar">
+        <div>
+          <a class="lp-back-link" href="/dashboard?section=landing-page">&larr; Dashboard</a>
+          <h1>Landing Page Builder</h1>
+          <p>Create, publish, and share custom landing pages with your own URL slug.</p>
+        </div>
+        <div class="lp-list-actions">
+          <button id="lp-refresh-btn" type="button" class="lp-btn lp-btn-secondary">Refresh</button>
+          <button id="lp-create-btn" type="button" class="lp-btn lp-btn-primary">+ Create page</button>
+        </div>
+      </header>
+
+      <section class="lp-list-card">
+        <div class="lp-list-header-row">
+          <h2>Your pages</h2>
+          <span id="lp-list-status" class="lp-list-status">Loading...</span>
+        </div>
+        <div id="lp-list-root" class="lp-page-grid" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <dialog id="lp-create-dialog" class="lp-dialog">
+      <form id="lp-create-form" method="dialog" class="lp-dialog-content">
+        <h2>Create landing page</h2>
+        <p>Choose a title, optional custom slug, and starter preset.</p>
+        <label>
+          <span>Title</span>
+          <input id="lp-create-title" name="title" type="text" minlength="2" maxlength="160" required />
+        </label>
+        <label>
+          <span>Custom slug (optional)</span>
+          <input id="lp-create-slug" name="slug" type="text" maxlength="80" placeholder="elite-salon" />
+        </label>
+        <label>
+          <span>Starter preset</span>
+          <select id="lp-create-preset" name="preset">
+            <option value="luxe">Luxe Glow</option>
+            <option value="minimal">Minimal Studio</option>
+            <option value="vivid">Vivid Editorial</option>
+          </select>
+        </label>
+        <div class="lp-dialog-actions">
+          <button type="button" id="lp-create-cancel" class="lp-btn lp-btn-secondary">Cancel</button>
+          <button type="submit" class="lp-btn lp-btn-primary">Create</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="/landing-page-list.js" defer></script>
+  </body>
+</html>

@@ -2763,6 +2763,86 @@ html[data-theme="dark"] .meeting-row-details {
   text-align: center;
 }
 
+.integration-detail-shell {
+  gap: 0.8rem;
+}
+
+.integration-back-btn {
+  width: fit-content;
+  font-size: 0.92rem;
+}
+
+.integration-detail-card {
+  padding: 1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.integration-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.integration-detail-head h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  color: #12355c;
+}
+
+.integration-detail-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #12355c;
+}
+
+.integration-detail-lead {
+  margin: 0;
+  color: #3c5f88;
+  line-height: 1.45;
+}
+
+.integration-detail-connected {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid #d8e5f7;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 0.7rem 0.75rem;
+}
+
+.integration-detail-account {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.integration-detail-account-label {
+  color: #5e7da2;
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+
+.integration-detail-account-email {
+  color: #143960;
+  font-weight: 700;
+}
+
+.integration-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.integration-detail-list {
+  margin: 0;
+  padding-left: 1.05rem;
+  color: #375a83;
+  display: grid;
+  gap: 0.35rem;
+}
+
 .routing-panel {
   margin-top: 0;
   border-radius: 14px;
@@ -3940,6 +4020,10 @@ html[data-theme="dark"] .meeting-row-details {
 
   .integration-banner {
     grid-template-columns: 1fr;
+  }
+
+  .integration-detail-actions {
+    justify-content: flex-start;
   }
 
   .admin-shell,

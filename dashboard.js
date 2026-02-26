@@ -57,6 +57,7 @@ const INTEGRATION_FILTERS = ["all", "connected", "available"];
 const INTEGRATION_TABS = ["Discover", "Manage"];
 const INTEGRATION_SORT_OPTIONS = ["Most popular", "A-Z", "Category"];
 const INTEGRATION_VISIBLE_KEYS = new Set(["google-calendar", "google-meet"]);
+const INTEGRATION_DETAIL_KEYS = new Set(["google-meet"]);
 const ROUTING_FILTERS = ["all", "active", "paused"];
 const LANGUAGE_OPTIONS = ["English", "Hindi", "French", "Spanish"];
 const DATE_FORMAT_OPTIONS = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"];
@@ -989,6 +990,14 @@ function normalizeState(raw, fallback) {
     if (typeof raw.integrations.showBanner === "boolean") {
       merged.integrations.showBanner = raw.integrations.showBanner;
     }
+    if (
+      typeof raw.integrations.detailKey === "string" &&
+      INTEGRATION_DETAIL_KEYS.has(raw.integrations.detailKey)
+    ) {
+      merged.integrations.detailKey = raw.integrations.detailKey;
+    } else {
+      merged.integrations.detailKey = "";
+    }
     if (Array.isArray(raw.integrations.items)) {
       merged.integrations.items = raw.integrations.items
         .map((item, index) => normalizeIntegrationRecord(item, index))
@@ -1522,6 +1531,7 @@ function createDefaultState() {
       filter: "all",
       sort: "Most popular",
       showBanner: true,
+      detailKey: "",
       items: buildDefaultIntegrationItems(),
     },
     routing: {
@@ -3070,6 +3080,12 @@ async function refreshIntegrationsFromApi(nextTab = null) {
   state.integrations.items = (Array.isArray(payload.items) ? payload.items : [])
     .map((item, index) => mapApiIntegrationToUi(item, index))
     .filter((item) => INTEGRATION_VISIBLE_KEYS.has(item.key));
+  if (
+    state.integrations.detailKey &&
+    !state.integrations.items.some((item) => item.key === state.integrations.detailKey)
+  ) {
+    state.integrations.detailKey = "";
+  }
   syncCalendarConnectionsFromIntegrations();
 }
 
@@ -3503,6 +3519,7 @@ function bindEvents() {
         state.activeSection === "integrations" &&
         INTEGRATION_TABS.includes(tab)
       ) {
+        state.integrations.detailKey = "";
         state.integrations.activeTab = tab;
         refreshIntegrationsFromApi(tab).catch((error) => {
           showToast(error?.message || "Could not load integrations");
@@ -3649,6 +3666,7 @@ function onViewClick(event) {
     case "open-integrations": {
       state.activeSection = "integrations";
       state.integrations.activeTab = "Manage";
+      state.integrations.detailKey = "";
       openMeetingDetailsId = null;
       refreshIntegrationsFromApi("Manage").catch(() => null);
       saveState();
@@ -4228,6 +4246,24 @@ function onViewClick(event) {
     }
     case "connect-integration":
       connectIntegration();
+      break;
+    case "open-integration-detail": {
+      const key = String(button.dataset.key || "").trim();
+      openIntegrationDetailByKey(key);
+      break;
+    }
+    case "back-integrations-list":
+      state.integrations.detailKey = "";
+      saveState();
+      render();
+      break;
+    case "manage-calendar-connection":
+      openAvailabilityCalendarSettings();
+      break;
+    case "connect-google-calendar-oauth":
+      startGoogleCalendarOAuth().catch((error) => {
+        showToast(error?.message || "Could not connect Google Calendar");
+      });
       break;
     case "connect-all-integrations":
       setAllIntegrationsConnection(true);
@@ -5936,9 +5972,37 @@ async function toggleIntegrationById(id) {
   }
 }
 
+function openAvailabilityCalendarSettings() {
+  state.integrations.detailKey = "";
+  state.activeSection = "availability";
+  state.availability.activeTab = "Calendar settings";
+  openMeetingDetailsId = null;
+  refreshCalendarSettingsFromApi().catch(() => null);
+  saveState();
+  render();
+}
+
+function openIntegrationDetailByKey(key) {
+  if (!INTEGRATION_DETAIL_KEYS.has(String(key || ""))) return;
+  state.activeSection = "integrations";
+  state.integrations.detailKey = key;
+  saveState();
+  render();
+}
+
 async function configureIntegrationById(id) {
   const item = state.integrations.items.find((entry) => entry.id === id);
   if (!item) return;
+
+  if (item.key === "google-meet") {
+    openIntegrationDetailByKey("google-meet");
+    return;
+  }
+
+  if (item.key === "google-calendar") {
+    openAvailabilityCalendarSettings();
+    return;
+  }
 
   const account = prompt(
     `${item.name} account email`,
@@ -6214,15 +6278,17 @@ function renderSectionTabs() {
     tabs = AVAILABILITY_TABS.map((item) => ({ value: item, label: item }));
     active = state.availability.activeTab;
   } else if (state.activeSection === "integrations") {
-    const connectedCount = state.integrations.items.filter((item) => item.connected).length;
-    tabs = INTEGRATION_TABS.map((item) => ({
-      value: item,
-      label:
-        item === "Discover"
-          ? `Discover (${state.integrations.items.length})`
-          : `Manage (${connectedCount})`,
-    }));
-    active = state.integrations.activeTab;
+    if (!state.integrations.detailKey) {
+      const connectedCount = state.integrations.items.filter((item) => item.connected).length;
+      tabs = INTEGRATION_TABS.map((item) => ({
+        value: item,
+        label:
+          item === "Discover"
+            ? `Discover (${state.integrations.items.length})`
+            : `Manage (${connectedCount})`,
+      }));
+      active = state.integrations.activeTab;
+    }
   }
 
   sectionTabsEl.classList.toggle("hidden", tabs.length === 0);
@@ -8088,6 +8154,64 @@ function renderWorkflowsView() {
 }
 
 function renderIntegrationsView() {
+  const detailKey = INTEGRATION_DETAIL_KEYS.has(state.integrations.detailKey)
+    ? state.integrations.detailKey
+    : "";
+
+  if (detailKey === "google-meet") {
+    const googleCalendarIntegration =
+      state.integrations.items.find((item) => item.key === "google-calendar") || null;
+    const calendarConnected = !!googleCalendarIntegration?.connected;
+    const connectedAccount = String(
+      googleCalendarIntegration?.account || DEFAULT_INTEGRATION_ACCOUNT
+    ).trim();
+
+    return `
+      <section class="integrations-shell integration-detail-shell">
+        <button class="link-btn integration-back-btn" type="button" data-action="back-integrations-list">
+          ← Integrations & apps
+        </button>
+
+        <article class="panel integration-detail-card">
+          <div class="integration-detail-head">
+            <span class="integration-icon" style="--icon-bg:#0f9d58;">GM</span>
+            <h2>Google Meet</h2>
+          </div>
+          <p class="integration-detail-lead">
+            ${calendarConnected
+        ? "Congratulations! You can schedule with Google Meet because your Google Calendar is connected."
+        : "Google Meet needs Google Calendar to generate meeting links automatically for bookings."
+      }
+          </p>
+          <div class="integration-detail-connected">
+            <span class="integration-icon" style="--icon-bg:#3b82f6;">31</span>
+            <div class="integration-detail-account">
+              <span class="integration-detail-account-label">${calendarConnected ? "Connected by" : "Calendar not connected"}</span>
+              <span class="integration-detail-account-email">${escapeHtml(
+        calendarConnected ? connectedAccount : "Connect Google Calendar to continue"
+      )}</span>
+            </div>
+          </div>
+          <div class="integration-detail-actions">
+            ${calendarConnected
+        ? '<button class="pill-btn" type="button" data-action="manage-calendar-connection">Manage Calendar Connection</button>'
+        : '<button class="pill-btn" type="button" data-action="connect-google-calendar-oauth">Connect Google Calendar</button>'
+      }
+          </div>
+        </article>
+
+        <article class="panel integration-detail-card">
+          <h3>With your connected Google Calendar, you can:</h3>
+          <ul class="integration-detail-list">
+            <li>Generate Google Meet links automatically when an invitee books.</li>
+            <li>Set Google Meet as a default location for event types.</li>
+            <li>Keep meeting details synced between dashboard and calendar events.</li>
+          </ul>
+        </article>
+      </section>
+    `;
+  }
+
   const activeTab = INTEGRATION_TABS.includes(state.integrations.activeTab)
     ? state.integrations.activeTab
     : "Discover";
@@ -8215,7 +8339,12 @@ function renderIntegrationsView() {
                     <div class="integration-actions">
                       ${item.connected
               ? `
-                            <button class="mini-btn" type="button" data-action="configure-integration" data-id="${item.id}">Configure</button>
+                            ${item.key === "google-meet"
+                  ? `<button class="mini-btn mini-btn-primary" type="button" data-action="open-integration-detail" data-key="google-meet">Open</button>`
+                  : item.key === "google-calendar"
+                    ? `<button class="mini-btn" type="button" data-action="manage-calendar-connection">Manage</button>`
+                    : `<button class="mini-btn" type="button" data-action="configure-integration" data-id="${item.id}">Configure</button>`
+                }
                             <button class="mini-btn" type="button" data-action="toggle-integration" data-id="${item.id}">Disconnect</button>
                           `
               : `

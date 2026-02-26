@@ -17,7 +17,7 @@ const AVAILABILITY_TABS = ["Schedules", "Calendar settings", "Advanced settings"
 const ANALYTICS_TABS = ["Events", "Routing"];
 const ADMIN_SECURITY_TABS = ["Data deletion", "Activity log", "Booking"];
 const ADMIN_LOGIN_TABS = ["Single sign-on", "User provisioning", "Domain control"];
-const ADMIN_PERMISSIONS_TABS = ["Event types", "Workflows", "Invitations"];
+const ADMIN_PERMISSIONS_TABS = ["Event types", "Email automation", "Invitations"];
 const ADMIN_BILLING_COMPARE_TABS = [
   "View All",
   "Core features",
@@ -5952,6 +5952,10 @@ async function toggleIntegrationById(id) {
     }
     return;
   }
+  if (item.key === "google-meet" && !item.connected) {
+    openIntegrationDetailByKey("google-meet");
+    return;
+  }
 
   try {
     await apiRequest(
@@ -6221,7 +6225,7 @@ function renderHeader() {
     scheduling: "Scheduling",
     availability: "Availability",
     contacts: "Contacts",
-    workflows: "Workflows",
+    workflows: "Email automation",
     integrations: "Integrations & apps",
     routing: "Routing",
     "landing-page": "Landing page",
@@ -6699,10 +6703,10 @@ function renderAdminPermissionsPage() {
               <button class="primary-btn" type="button" data-action="admin-save-permissions">Save</button>
             </div>
           `
-      : tab === "Workflows"
+      : tab === "Email automation"
         ? `
-            <h2>Workflow permissions</h2>
-            <p class="text-muted">Control who can create and publish organization workflows.</p>
+            <h2>Email automation permissions</h2>
+            <p class="text-muted">Control who can create and publish organization email automations.</p>
             <div class="radio-group">
               <label><input type="radio" checked />Admins only</label>
               <label><input type="radio" />Admins and Managers</label>
@@ -8104,7 +8108,7 @@ function renderWorkflowsView() {
           <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 1 0 5.3 14l4.4 4.4 1.4-1.4-4.4-4.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/></svg>
           <input data-action="workflows-search" value="${escapeHtml(
     state.workflows.search
-  )}" placeholder="Search workflows" />
+  )}" placeholder="Search email automations" />
         </label>
         <select class="filter-select" data-action="workflows-filter">
           <option value="all" ${filter === "all" ? "selected" : ""}>All statuses</option>
@@ -8113,7 +8117,7 @@ function renderWorkflowsView() {
           <option value="draft" ${filter === "draft" ? "selected" : ""}>Draft</option>
         </select>
       </div>
-      <button class="pill-btn" type="button" data-action="create-workflow">+ New workflow</button>
+      <button class="pill-btn" type="button" data-action="create-workflow">+ New email automation</button>
       </section>
     ${items.length
       ? `<section class="data-list resource-list">
@@ -8146,7 +8150,7 @@ function renderWorkflowsView() {
         )
         .join("")}
           </section>`
-      : '<section class="panel resource-empty"><p class="text-muted">No workflows match your search.</p></section>'
+      : '<section class="panel resource-empty"><p class="text-muted">No email automations match your search.</p></section>'
     }
     </section>
   `;

@@ -793,6 +793,85 @@ function buildMergedItems(rows) {
   return items;
 }
 
+function deriveGoogleCalendarStatusFromRow(calendarRow) {
+  if (!calendarRow) {
+    return {
+      connected: false,
+      hasWriteScope: false,
+      hasRefreshToken: false,
+      hasUsableToken: false,
+      accountEmail: "",
+    };
+  }
+
+  const tokens = readGoogleTokensFromMetadata(calendarRow.metadata || {});
+  const hasWriteScope = hasGoogleCalendarWriteScope(tokens);
+  const hasRefreshToken = Boolean(tokens.refresh_token);
+  const hasUsableToken = hasRefreshToken || hasUsableAccessToken(tokens);
+  const connected = Boolean(calendarRow.connected) && hasWriteScope && hasUsableToken;
+
+  return {
+    connected,
+    hasWriteScope,
+    hasRefreshToken,
+    hasUsableToken,
+    accountEmail: String(calendarRow.account_email || "").trim().toLowerCase(),
+  };
+}
+
+function applyGoogleConnectionState(items, rows) {
+  const byKey = new Map(items.map((item) => [item.key, item]));
+  const rowsByProvider = new Map(rows.map((row) => [row.provider, row]));
+
+  const googleCalendarRow = rowsByProvider.get(GOOGLE_PROVIDER_KEY) || null;
+  const googleCalendarStatus = deriveGoogleCalendarStatusFromRow(googleCalendarRow);
+  const googleCalendarItem = byKey.get(GOOGLE_PROVIDER_KEY) || null;
+
+  if (googleCalendarItem) {
+    googleCalendarItem.connected = googleCalendarStatus.connected;
+    googleCalendarItem.accountEmail = googleCalendarStatus.connected
+      ? googleCalendarStatus.accountEmail || googleCalendarItem.accountEmail || ""
+      : "";
+    googleCalendarItem.lastSync = googleCalendarStatus.connected
+      ? googleCalendarItem.lastSync || "Just now"
+      : googleCalendarRow
+        ? "Disconnected"
+        : "Never";
+    googleCalendarItem.metadata = {
+      ...(googleCalendarItem.metadata && typeof googleCalendarItem.metadata === "object"
+        ? googleCalendarItem.metadata
+        : {}),
+      syncStatus: googleCalendarStatus.connected ? "connected" : "disconnected",
+      hasWriteScope: googleCalendarStatus.hasWriteScope,
+      hasRefreshToken: googleCalendarStatus.hasRefreshToken,
+      hasUsableToken: googleCalendarStatus.hasUsableToken,
+    };
+  }
+
+  const googleMeetItem = byKey.get("google-meet") || null;
+  if (googleMeetItem) {
+    const connectedViaCalendar = googleCalendarStatus.connected;
+    googleMeetItem.connected = connectedViaCalendar;
+    googleMeetItem.accountEmail = connectedViaCalendar
+      ? googleCalendarStatus.accountEmail || googleMeetItem.accountEmail || ""
+      : "";
+    googleMeetItem.lastSync = connectedViaCalendar
+      ? googleCalendarItem?.lastSync || googleMeetItem.lastSync || "Just now"
+      : googleCalendarRow
+        ? "Disconnected"
+        : "Never";
+    googleMeetItem.metadata = {
+      ...(googleMeetItem.metadata && typeof googleMeetItem.metadata === "object"
+        ? googleMeetItem.metadata
+        : {}),
+      syncStatus: connectedViaCalendar ? "connected" : "pending_calendar_connection",
+      connectedVia: "google-calendar",
+    };
+  }
+
+  return items;
+}
+
 function applyFilters(items, { tab, filter, search }) {
   const searchTerm = String(search || "").trim().toLowerCase();
   return items.filter((item) => {
@@ -932,7 +1011,7 @@ async function listIntegrationsForUser(
   const safeSort = normalizeSort(sort);
 
   const rows = await listUserIntegrationRows(userId);
-  const merged = buildMergedItems(rows);
+  const merged = applyGoogleConnectionState(buildMergedItems(rows), rows);
   const filtered = applyFilters(merged, {
     tab: safeTab,
     filter: safeFilter,
@@ -956,6 +1035,13 @@ async function connectIntegration(userId, payload) {
   const normalized = normalizeConnectPayload(payload || {});
   if (normalized.provider === "google-calendar") {
     throw badRequest("Use Google OAuth to connect Google Calendar");
+  }
+  if (normalized.provider === "google-meet") {
+    const calendarStatus = await getGoogleCalendarConnectionStatusForUser(userId);
+    if (!calendarStatus.connected) {
+      throw badRequest("Connect Google Calendar first to enable Google Meet");
+    }
+    normalized.accountEmail = normalized.accountEmail || calendarStatus.accountEmail || "";
   }
   const row = await upsertIntegration(userId, normalized);
   return mapRowToItem(row, normalized.metadata.popularRank || 9999);
@@ -1059,6 +1145,29 @@ async function setIntegrationConnection(userId, provider, connected) {
   if (safeProvider === "google-calendar" && !!connected) {
     throw badRequest("Use Google OAuth to connect Google Calendar");
   }
+  if (safeProvider === "google-meet" && !!connected) {
+    const calendarStatus = await getGoogleCalendarConnectionStatusForUser(userId);
+    if (!calendarStatus.connected) {
+      throw badRequest("Connect Google Calendar first to enable Google Meet");
+    }
+    const details = CATALOG_BY_KEY.get("google-meet");
+    const row = await upsertIntegration(userId, {
+      provider: "google-meet",
+      displayName: details?.name || "Google Meet",
+      category: details?.category || "Video",
+      iconText: details?.iconText || "GM",
+      iconBg: details?.iconBg || "#0f9d58",
+      adminOnly: false,
+      accountEmail: calendarStatus.accountEmail || "",
+      metadata: {
+        description: details?.description || "Include Google Meet details in your Meetscheduling events.",
+        popularRank: Number(details?.popularRank || 3),
+        syncStatus: "connected",
+        syncSource: "calendar",
+      },
+    });
+    return mapRowToItem(row, Number(details?.popularRank || 3));
+  }
   const result = await query(
     `
       UPDATE user_integrations
@@ -1085,6 +1194,17 @@ async function setIntegrationConnection(userId, provider, connected) {
     `,
     [!!connected, userId, safeProvider]
   );
+
+  if (safeProvider === "google-calendar" && !connected) {
+    await query(
+      `
+        UPDATE user_integrations
+        SET connected = FALSE, updated_at = NOW()
+        WHERE user_id = $1 AND provider = 'google-meet'
+      `,
+      [userId]
+    );
+  }
 
   if (!result.rows[0] && connected) {
     return connectIntegration(userId, { provider: safeProvider });
@@ -1156,7 +1276,25 @@ async function listCalendarConnectionsForUser(userId) {
   const existingByProvider = new Map(rows.map((row) => [row.provider, mapRowToItem(row, 9999)]));
   const calendars = Object.values(CALENDAR_PROVIDER_DETAILS).map((details) => {
     const existing = existingByProvider.get(details.provider);
-    if (existing) return mapCalendarRecord(existing);
+    if (existing) {
+      const mapped = { ...existing };
+      if (details.provider === GOOGLE_PROVIDER_KEY) {
+        const row = rows.find((item) => item.provider === GOOGLE_PROVIDER_KEY) || null;
+        const status = deriveGoogleCalendarStatusFromRow(row);
+        mapped.connected = status.connected;
+        mapped.accountEmail = status.connected ? mapped.accountEmail : "";
+        mapped.lastSync = status.connected
+          ? mapped.lastSync || "Just now"
+          : row
+            ? "Disconnected"
+            : "Never";
+        mapped.metadata = {
+          ...(mapped.metadata && typeof mapped.metadata === "object" ? mapped.metadata : {}),
+          syncStatus: status.connected ? "connected" : "disconnected",
+        };
+      }
+      return mapCalendarRecord(mapped);
+    }
     return {
       id: details.provider,
       providerKey: details.provider,
@@ -1582,6 +1720,25 @@ async function handleGoogleCalendarCallback(stateToken, code, redirectUriCandida
       syncSource: "oauth",
     },
   });
+
+  const meetDetails = CATALOG_BY_KEY.get("google-meet");
+  if (meetDetails) {
+    await upsertIntegration(userIdStr, {
+      provider: "google-meet",
+      displayName: meetDetails.name,
+      category: meetDetails.category,
+      iconText: meetDetails.iconText,
+      iconBg: meetDetails.iconBg,
+      adminOnly: false,
+      accountEmail: accountEmail || existingGoogle?.account_email || "",
+      metadata: {
+        description: meetDetails.description,
+        popularRank: meetDetails.popularRank,
+        syncStatus: "connected",
+        syncSource: "google-calendar-oauth",
+      },
+    });
+  }
 
   const settings = await upsertCalendarSettings(userIdStr, {});
   if (!settings.selected_provider) {

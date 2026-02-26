@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Book | MeetScheduling</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="shortcut icon" href="/assets/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Sora:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/tokens.css" />
+    <link rel="stylesheet" href="/page-renderer.css" />
+    <link rel="stylesheet" href="/book.css" />
+  </head>
+  <body class="book-page-body">
+    <div class="book-page-shell">
+      <header class="book-page-topbar">
+        <a class="book-page-logo" href="/">
+          <img src="/assets/scheduling-logo.svg" alt="MeetScheduling" />
+        </a>
+        <a id="book-host-link" class="book-page-host-link" href="/">
+          View host page
+        </a>
+      </header>
+
+      <div id="book-global-error" class="book-global-error" hidden role="alert"></div>
+
+      <main class="book-layout">
+        <aside class="book-summary-card" aria-live="polite">
+          <p class="book-summary-label">Booking</p>
+          <h1 id="book-summary-title" class="book-summary-title">Select a service</h1>
+          <p id="book-summary-host" class="book-summary-host">MeetScheduling</p>
+          <dl class="book-summary-list">
+            <div>
+              <dt>Service</dt>
+              <dd id="book-summary-service">-</dd>
+            </div>
+            <div>
+              <dt>Date</dt>
+              <dd id="book-summary-date">-</dd>
+            </div>
+            <div>
+              <dt>Time</dt>
+              <dd id="book-summary-time">-</dd>
+            </div>
+            <div>
+              <dt>Timezone</dt>
+              <dd id="book-summary-timezone">-</dd>
+            </div>
+          </dl>
+          <p class="book-summary-note">
+            Secure booking powered by MeetScheduling.
+          </p>
+        </aside>
+
+        <section class="book-render-area">
+          <div id="book-loading" class="book-loading" hidden>
+            <div class="book-loading-spinner" aria-hidden="true"></div>
+            <span id="book-loading-label">Loading booking page...</span>
+          </div>
+          <div id="book-render-root"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/page-renderer.js"></script>
+    <script src="/book.js" defer></script>
+  </body>
+</html>

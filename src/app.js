@@ -5,7 +5,9 @@ const auth2FaRoutes = require("./routes/2fa.routes");
 const eventTypesRoutes = require("./routes/event-types.routes");
 const availabilityRoutes = require("./routes/availability.routes");
 const publicRoutes = require("./routes/public.routes");
+const pagePublicRoutes = require("./routes/page-public.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
+const pageBuilderRoutes = require("./routes/page-builder.routes");
 const integrationsRoutes = require("./routes/integrations.routes");
 const contactsRoutes = require("./routes/contacts.routes");
 const workflowsRoutes = require("./routes/workflows.routes");
@@ -43,6 +45,8 @@ function buildApp() {
   app.use(passport.initialize());
 
   app.use("/api/event-types", eventTypesRoutes);
+  app.use("/api", pagePublicRoutes);
+  app.use("/api/dashboard/pages", pageBuilderRoutes);
   app.use("/api/availability", availabilityRoutes);
   app.use("/api/public", publicRoutes);
   app.use("/api/dashboard", dashboardRoutes);
@@ -57,6 +61,22 @@ function buildApp() {
   });
 
   app.use(express.static(staticRoot));
+
+  app.get("/book/:slug", (req, res) => {
+    res.sendFile(path.join(staticRoot, "book.html"));
+  });
+
+  app.get("/schedule/:slug", (req, res) => {
+    res.sendFile(path.join(staticRoot, "book.html"));
+  });
+
+  app.get("/dashboard/page-builder", (req, res) => {
+    res.sendFile(path.join(staticRoot, "page-builder.html"));
+  });
+
+  app.get("/dashboard/page-builder/:pageId", (req, res) => {
+    res.sendFile(path.join(staticRoot, "page-builder.html"));
+  });
 
   app.get("/dashboard", (req, res) => {
     res.sendFile(path.join(staticRoot, "dashboard.html"));
@@ -143,6 +163,8 @@ function buildApp() {
       "signup",
       "forgot-password",
       "booking",
+      "book",
+      "schedule",
       "styles.css",
       "dashboard.css",
       "dashboard.js",

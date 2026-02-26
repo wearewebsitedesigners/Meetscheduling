@@ -15,6 +15,7 @@
     sectionsList: document.getElementById("lpe-sections-list"),
     previewFrame: document.getElementById("lpe-preview-frame"),
     previewRoot: document.getElementById("lpe-preview-root"),
+    presetThemes: document.getElementById("lpe-preset-themes"),
     themeControls: document.getElementById("lpe-theme-controls"),
     sectionControls: document.getElementById("lpe-section-controls"),
     historyList: document.getElementById("lpe-history-list"),
@@ -224,6 +225,7 @@
     eventTypes: [],
     history: [],
     sectionLibrary: [],
+    presets: [],
     selectedSectionId: "",
     selectedLibraryType: "",
     device: "desktop",
@@ -387,7 +389,141 @@
     state.eventTypes = Array.isArray(payload.eventTypes) ? payload.eventTypes : state.eventTypes;
     state.history = Array.isArray(payload.history) ? payload.history : state.history;
     state.sectionLibrary = Array.isArray(payload.sectionLibrary) ? payload.sectionLibrary : state.sectionLibrary;
+    state.presets = Array.isArray(payload.presets) ? payload.presets : state.presets;
     ensureSelection();
+  }
+
+  function defaultPresetThemes() {
+    return [
+      {
+        id: "hairluxury",
+        name: "Hairluxury Signature",
+        description: "Shopify-inspired luxury storefront styling.",
+        theme: {
+          primary: "#7f5933",
+          secondary: "#e5cc83",
+          background: "#f7f3ee",
+          text: "#1f1a16",
+        },
+      },
+      {
+        id: "luxe",
+        name: "Luxe Glow",
+        description: "Elegant gradients with premium spacing.",
+        theme: {
+          primary: "#7c3aed",
+          secondary: "#d946ef",
+          background: "#f6f5fb",
+          text: "#171a2b",
+        },
+      },
+      {
+        id: "minimal",
+        name: "Minimal Studio",
+        description: "Clean style with subtle blue accents.",
+        theme: {
+          primary: "#1a73e8",
+          secondary: "#0f766e",
+          background: "#f4f7fb",
+          text: "#111827",
+        },
+      },
+      {
+        id: "vivid",
+        name: "Vivid Editorial",
+        description: "Bold contrast and energetic highlights.",
+        theme: {
+          primary: "#ef4444",
+          secondary: "#f59e0b",
+          background: "#f8fafc",
+          text: "#0f172a",
+        },
+      },
+    ];
+  }
+
+  function presetListWithTheme() {
+    const incoming = Array.isArray(state.presets) ? state.presets : [];
+    const withTheme = incoming.filter((item) => item && item.theme);
+    if (withTheme.length) return withTheme;
+    return defaultPresetThemes();
+  }
+
+  function isPresetThemeActive(presetTheme) {
+    if (!presetTheme || typeof presetTheme !== "object") return false;
+    const current = state.draftConfig?.theme || {};
+    const keys = [
+      "primary",
+      "secondary",
+      "background",
+      "surface",
+      "text",
+      "muted",
+      "border",
+      "font",
+      "buttonStyle",
+      "shadowStyle",
+      "animationStyle",
+      "animationsEnabled",
+    ];
+    return keys.every((key) => {
+      if (!Object.prototype.hasOwnProperty.call(presetTheme, key)) return true;
+      return String(current[key]) === String(presetTheme[key]);
+    });
+  }
+
+  function applyPresetThemeById(presetId) {
+    const preset = presetListWithTheme().find((item) => String(item.id) === String(presetId));
+    if (!preset || !preset.theme || !state.draftConfig) return;
+    state.draftConfig.theme = {
+      ...(state.draftConfig.theme || {}),
+      ...deepClone(preset.theme),
+    };
+    renderThemeControls();
+    renderPresetThemes();
+    renderPreview();
+    queueAutosave();
+    setSaveStatus("saving", `Applying ${preset.name}...`);
+  }
+
+  function renderPresetThemes() {
+    if (!els.presetThemes) return;
+    const presets = presetListWithTheme();
+    if (!presets.length) {
+      els.presetThemes.innerHTML = '<p class="lp-empty">No prebuilt themes available.</p>';
+      return;
+    }
+
+    els.presetThemes.innerHTML = presets
+      .map((preset) => {
+        const theme = preset.theme || {};
+        const active = isPresetThemeActive(theme);
+        const swatches = [
+          theme.primary || "#1a73e8",
+          theme.secondary || "#0f766e",
+          theme.background || "#f4f7fb",
+          theme.text || "#111827",
+        ];
+
+        return `
+          <article class="lpe-preset-card ${active ? "is-active" : ""}">
+            <div class="lpe-preset-card-head">
+              <div>
+                <h3>${escapeHtml(preset.name || preset.id || "Theme")}</h3>
+                <p>${escapeHtml(preset.description || "Prebuilt theme")}</p>
+              </div>
+              <span class="lpe-preset-badge">${active ? "Active" : "Preset"}</span>
+            </div>
+            <div class="lpe-preset-swatches" aria-hidden="true">
+              ${swatches.map((color) => `<span style="background:${escapeHtml(String(color))};"></span>`).join("")}
+            </div>
+            <button type="button" class="lpe-btn lpe-btn-secondary" data-action="apply-preset-theme" data-preset-id="${escapeHtml(
+              preset.id || ""
+            )}">${active ? "Applied" : "Apply theme"}</button>
+          </article>
+        `;
+      })
+      .join("");
   }
 
   function setPathValue(path, rawValue, kind) {
@@ -1132,6 +1268,7 @@
   function renderStaticSections() {
     renderPageMeta();
     renderSectionsList();
+    renderPresetThemes();
     renderThemeControls();
     renderSectionControls();
     renderHistory();
@@ -1597,6 +1734,9 @@
               ? target.value
               : "";
         setPathValue(path, value, kind);
+        if (path.startsWith("theme.")) {
+          renderPresetThemes();
+        }
         renderPreview();
         queueAutosave();
       };
@@ -1606,6 +1746,18 @@
 
     attachValueBinding(els.themeControls);
     attachValueBinding(els.sectionControls);
+
+    if (els.presetThemes) {
+      els.presetThemes.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const button = target.closest("[data-action='apply-preset-theme']");
+        if (!(button instanceof HTMLElement)) return;
+        const presetId = button.getAttribute("data-preset-id");
+        if (!presetId) return;
+        applyPresetThemeById(presetId);
+      });
+    }
 
     if (els.sectionControls) {
       els.sectionControls.addEventListener("click", (event) => {

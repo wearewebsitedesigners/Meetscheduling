@@ -482,6 +482,7 @@ function mapPresetList() {
     id: preset.id,
     name: preset.name,
     description: preset.description,
+    theme: JSON.parse(JSON.stringify(preset.theme)),
   }));
 }
 

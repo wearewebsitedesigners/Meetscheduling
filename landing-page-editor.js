@@ -26,6 +26,11 @@
   };
 
   const SECTION_DEFAULTS = Object.freeze({
+    marquee: {
+      items: ["FREE SHIPPING ON ORDERS OVER $100", "BOOK NOW, PAY LATER", "PREMIUM HUMAN HAIR"],
+      speed: 28,
+      uppercase: true,
+    },
     header: {
       brandName: "MeetScheduling",
       logoUrl: "/assets/scheduling-logo.svg",
@@ -40,6 +45,33 @@
       ctaLabel: "Book Now",
       ctaHref: "#services",
       sticky: false,
+    },
+    imageBanner: {
+      pretitle: "Luxury Collection",
+      title: "Raw hair that feels naturally yours",
+      subtitle: "Crafted for premium installs, everyday confidence, and long-term wear.",
+      backgroundImageUrl: "",
+      mobileImageUrl: "",
+      align: "left",
+      buttonLabel: "Shop Collection",
+      buttonHref: "#services",
+      overlayOpacity: 22,
+      height: "lg",
+    },
+    slideShow: {
+      title: "Featured looks",
+      subtitle: "Swipe through this season's signature installs.",
+      autoplay: true,
+      intervalSeconds: 6,
+      slides: [
+        {
+          imageUrl: "",
+          title: "Natural Hair Install",
+          subtitle: "Breathable lace with realistic finish.",
+          buttonLabel: "Book now",
+          buttonHref: "#services",
+        },
+      ],
     },
     hero: {
       badge: "Premium salon experience",
@@ -81,6 +113,37 @@
       bookButtonLabel: "Book",
       bookButtonStyle: "solid",
     },
+    spotlightGrid: {
+      title: "Shop by style",
+      subtitle: "Browse our best-selling looks and signature textures.",
+      columnsDesktop: 3,
+      cards: [
+        {
+          title: "Glueless units",
+          description: "Install-ready wigs for everyday wear.",
+          imageUrl: "",
+          buttonLabel: "Explore",
+          buttonHref: "#services",
+        },
+        {
+          title: "Lace front wigs",
+          description: "Natural hairline with premium volume.",
+          imageUrl: "",
+          buttonLabel: "Explore",
+          buttonHref: "#services",
+        },
+      ],
+    },
+    productGrid: {
+      title: "Featured services",
+      subtitle: "Most booked appointments from your catalog.",
+      columnsDesktop: 4,
+      limit: 8,
+      showDescription: true,
+      showDuration: true,
+      showPrice: true,
+      buttonLabel: "Book",
+    },
     stylists: {
       title: "Meet the Stylists",
       subtitle: "Experts who bring your vision to life",
@@ -94,6 +157,25 @@
       pauseOnHover: true,
       showStars: true,
       rows: 1,
+    },
+    customerReviewBlock: {
+      title: "What our clients say",
+      subtitle: "Trusted by customers across the world.",
+      columnsDesktop: 3,
+      showStars: true,
+    },
+    instagramGrid: {
+      title: "@hairluxury",
+      subtitle: "Follow us for installs, transformations, and care tips.",
+      handle: "@hairluxury",
+      columnsDesktop: 5,
+      images: [
+        { url: "", link: "" },
+        { url: "", link: "" },
+        { url: "", link: "" },
+        { url: "", link: "" },
+        { url: "", link: "" },
+      ],
     },
     contactMap: {
       title: "Visit us",
@@ -112,6 +194,14 @@
           answer: "We recommend booking at least 2-3 days in advance for peak times.",
         },
       ],
+    },
+    newsletterSignup: {
+      title: "Newsletter sign up",
+      subtitle: "Get new arrivals, wig care tips, and exclusive offers first.",
+      placeholder: "Enter your email",
+      buttonLabel: "Submit",
+      note: "By subscribing, you agree to receive marketing emails.",
+      backgroundImageUrl: "",
     },
     footer: {
       copyright: "© MeetScheduling",
@@ -536,7 +626,28 @@
     } /> Section visible</label>
     `;
 
-    if (section.type === "header") {
+    if (section.type === "marquee") {
+      html += `
+        <label class="lpe-field">
+          <span>Speed (${Number(settings.speed || 28)}s)</span>
+          <input type="range" min="10" max="80" data-bind-path="${settingsPath}.speed" data-bind-type="number" value="${Number(
+            settings.speed || 28
+          )}" />
+        </label>
+        <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.uppercase" data-bind-type="boolean" ${
+          settings.uppercase ? "checked" : ""
+        } /> Uppercase text</label>
+        <div class="lpe-list-stack">
+          ${(Array.isArray(settings.items) ? settings.items : []).map((item, itemIndex) => `
+            <article class="lpe-list-item">
+              ${baseTextField("Text", `${settingsPath}.items.${itemIndex}`, item, 120)}
+              <button type="button" class="lpe-btn lpe-btn-secondary" data-action="remove-array-item" data-path="${settingsPath}.items" data-index="${itemIndex}">Remove item</button>
+            </article>
+          `).join("")}
+          <button type="button" class="lpe-btn lpe-btn-secondary" data-action="add-array-item" data-path="${settingsPath}.items" data-template="marqueeItem">+ Add marquee text</button>
+        </div>
+      `;
+    } else if (section.type === "header") {
       html += `
         ${baseTextField("Brand name", `${settingsPath}.brandName`, settings.brandName, 120)}
         ${baseTextField("Logo URL", `${settingsPath}.logoUrl`, settings.logoUrl, 2000)}
@@ -547,6 +658,73 @@
         <div class="lpe-row-grid">
           ${baseTextField("CTA label", `${settingsPath}.ctaLabel`, settings.ctaLabel, 60)}
           ${baseTextField("CTA href", `${settingsPath}.ctaHref`, settings.ctaHref, 200)}
+        </div>
+      `;
+    } else if (section.type === "imageBanner") {
+      html += `
+        ${baseTextField("Pretitle", `${settingsPath}.pretitle`, settings.pretitle, 80)}
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 220)}
+        ${baseTextareaField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 700)}
+        ${baseTextField("Desktop image URL", `${settingsPath}.backgroundImageUrl`, settings.backgroundImageUrl, 2000)}
+        ${baseTextField("Mobile image URL", `${settingsPath}.mobileImageUrl`, settings.mobileImageUrl, 2000)}
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Alignment</span>
+            <select data-bind-path="${settingsPath}.align">
+              <option value="left" ${settings.align === "left" ? "selected" : ""}>Left</option>
+              <option value="center" ${settings.align === "center" ? "selected" : ""}>Center</option>
+              <option value="right" ${settings.align === "right" ? "selected" : ""}>Right</option>
+            </select>
+          </label>
+          <label class="lpe-field">
+            <span>Height</span>
+            <select data-bind-path="${settingsPath}.height">
+              <option value="md" ${settings.height === "md" ? "selected" : ""}>Medium</option>
+              <option value="lg" ${settings.height === "lg" ? "selected" : ""}>Large</option>
+              <option value="xl" ${settings.height === "xl" ? "selected" : ""}>Extra large</option>
+            </select>
+          </label>
+        </div>
+        <div class="lpe-row-grid">
+          ${baseTextField("Button label", `${settingsPath}.buttonLabel`, settings.buttonLabel, 60)}
+          ${baseTextField("Button href", `${settingsPath}.buttonHref`, settings.buttonHref, 240)}
+        </div>
+        <label class="lpe-field">
+          <span>Overlay opacity (${Number(settings.overlayOpacity || 22)}%)</span>
+          <input type="range" min="0" max="80" data-bind-path="${settingsPath}.overlayOpacity" data-bind-type="number" value="${Number(
+            settings.overlayOpacity || 22
+          )}" />
+        </label>
+      `;
+    } else if (section.type === "slideShow") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <div class="lpe-row-grid">
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.autoplay" data-bind-type="boolean" ${
+            settings.autoplay ? "checked" : ""
+          } /> Autoplay</label>
+          <label class="lpe-field">
+            <span>Interval (${Number(settings.intervalSeconds || 6)}s)</span>
+            <input type="range" min="3" max="12" data-bind-path="${settingsPath}.intervalSeconds" data-bind-type="number" value="${Number(
+              settings.intervalSeconds || 6
+            )}" />
+          </label>
+        </div>
+        <div class="lpe-list-stack">
+          ${(Array.isArray(settings.slides) ? settings.slides : []).map((slide, slideIndex) => `
+            <article class="lpe-list-item">
+              ${baseTextField("Slide image URL", `${settingsPath}.slides.${slideIndex}.imageUrl`, slide.imageUrl, 2000)}
+              ${baseTextField("Slide title", `${settingsPath}.slides.${slideIndex}.title`, slide.title, 140)}
+              ${baseTextField("Slide subtitle", `${settingsPath}.slides.${slideIndex}.subtitle`, slide.subtitle, 400)}
+              <div class="lpe-row-grid">
+                ${baseTextField("Button label", `${settingsPath}.slides.${slideIndex}.buttonLabel`, slide.buttonLabel, 60)}
+                ${baseTextField("Button href", `${settingsPath}.slides.${slideIndex}.buttonHref`, slide.buttonHref, 240)}
+              </div>
+              <button type="button" class="lpe-btn lpe-btn-secondary" data-action="remove-array-item" data-path="${settingsPath}.slides" data-index="${slideIndex}">Remove slide</button>
+            </article>
+          `).join("")}
+          <button type="button" class="lpe-btn lpe-btn-secondary" data-action="add-array-item" data-path="${settingsPath}.slides" data-template="slide">+ Add slide</button>
         </div>
       `;
     } else if (section.type === "hero") {
@@ -693,6 +871,63 @@
           </div>
         </div>
       `;
+    } else if (section.type === "spotlightGrid") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <label class="lpe-field">
+          <span>Desktop columns</span>
+          <input type="number" min="1" max="4" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
+            settings.columnsDesktop || 3
+          )}" />
+        </label>
+        <div class="lpe-list-stack">
+          ${(Array.isArray(settings.cards) ? settings.cards : []).map((card, cardIndex) => `
+            <article class="lpe-list-item">
+              ${baseTextField("Card title", `${settingsPath}.cards.${cardIndex}.title`, card.title, 120)}
+              ${baseTextField("Card description", `${settingsPath}.cards.${cardIndex}.description`, card.description, 300)}
+              ${baseTextField("Card image URL", `${settingsPath}.cards.${cardIndex}.imageUrl`, card.imageUrl, 2000)}
+              <div class="lpe-row-grid">
+                ${baseTextField("Button label", `${settingsPath}.cards.${cardIndex}.buttonLabel`, card.buttonLabel, 60)}
+                ${baseTextField("Button href", `${settingsPath}.cards.${cardIndex}.buttonHref`, card.buttonHref, 240)}
+              </div>
+              <button type="button" class="lpe-btn lpe-btn-secondary" data-action="remove-array-item" data-path="${settingsPath}.cards" data-index="${cardIndex}">Remove card</button>
+            </article>
+          `).join("")}
+          <button type="button" class="lpe-btn lpe-btn-secondary" data-action="add-array-item" data-path="${settingsPath}.cards" data-template="spotlightCard">+ Add spotlight card</button>
+        </div>
+      `;
+    } else if (section.type === "productGrid") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Desktop columns</span>
+            <input type="number" min="1" max="4" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
+              settings.columnsDesktop || 4
+            )}" />
+          </label>
+          <label class="lpe-field">
+            <span>Card limit</span>
+            <input type="number" min="1" max="24" data-bind-path="${settingsPath}.limit" data-bind-type="number" value="${Number(
+              settings.limit || 8
+            )}" />
+          </label>
+        </div>
+        <div class="lpe-row-grid">
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showDescription" data-bind-type="boolean" ${
+            settings.showDescription ? "checked" : ""
+          } /> Description</label>
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showDuration" data-bind-type="boolean" ${
+            settings.showDuration ? "checked" : ""
+          } /> Duration</label>
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showPrice" data-bind-type="boolean" ${
+            settings.showPrice ? "checked" : ""
+          } /> Price</label>
+        </div>
+        ${baseTextField("Button label", `${settingsPath}.buttonLabel`, settings.buttonLabel, 60)}
+      `;
     } else if (section.type === "reviewsMarquee") {
       html += `
         ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
@@ -744,6 +979,46 @@
           </div>
         </div>
       `;
+    } else if (section.type === "customerReviewBlock") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Desktop columns</span>
+            <input type="number" min="1" max="3" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
+              settings.columnsDesktop || 3
+            )}" />
+          </label>
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showStars" data-bind-type="boolean" ${
+            settings.showStars ? "checked" : ""
+          } /> Show stars</label>
+        </div>
+      `;
+    } else if (section.type === "instagramGrid") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 300)}
+        <div class="lpe-row-grid">
+          ${baseTextField("Handle", `${settingsPath}.handle`, settings.handle, 80)}
+          <label class="lpe-field">
+            <span>Desktop columns</span>
+            <input type="number" min="2" max="6" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
+              settings.columnsDesktop || 5
+            )}" />
+          </label>
+        </div>
+        <div class="lpe-list-stack">
+          ${(Array.isArray(settings.images) ? settings.images : []).map((image, imageIndex) => `
+            <article class="lpe-list-item">
+              ${baseTextField("Image URL", `${settingsPath}.images.${imageIndex}.url`, image.url, 2000)}
+              ${baseTextField("Image link", `${settingsPath}.images.${imageIndex}.link`, image.link, 240)}
+              <button type="button" class="lpe-btn lpe-btn-secondary" data-action="remove-array-item" data-path="${settingsPath}.images" data-index="${imageIndex}">Remove image</button>
+            </article>
+          `).join("")}
+          <button type="button" class="lpe-btn lpe-btn-secondary" data-action="add-array-item" data-path="${settingsPath}.images" data-template="instagramItem">+ Add instagram image</button>
+        </div>
+      `;
     } else if (section.type === "stylists") {
       html += `
         ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
@@ -776,6 +1051,17 @@
           `).join("")}
           <button type="button" class="lpe-btn lpe-btn-secondary" data-action="add-faq-item" data-path="${settingsPath}.items">+ Add FAQ item</button>
         </div>
+      `;
+    } else if (section.type === "newsletterSignup") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <div class="lpe-row-grid">
+          ${baseTextField("Placeholder", `${settingsPath}.placeholder`, settings.placeholder, 120)}
+          ${baseTextField("Button label", `${settingsPath}.buttonLabel`, settings.buttonLabel, 60)}
+        </div>
+        ${baseTextareaField("Note", `${settingsPath}.note`, settings.note, 400)}
+        ${baseTextField("Background image URL", `${settingsPath}.backgroundImageUrl`, settings.backgroundImageUrl, 2000)}
       `;
     } else if (section.type === "footer") {
       html += `
@@ -1328,6 +1614,33 @@
         const action = target.getAttribute("data-action");
         if (!action) return;
 
+        if (action === "add-array-item") {
+          const path = target.getAttribute("data-path");
+          const template = target.getAttribute("data-template");
+          const defaults = {
+            marqueeItem: "",
+            slide: {
+              imageUrl: "",
+              title: "",
+              subtitle: "",
+              buttonLabel: "",
+              buttonHref: "",
+            },
+            spotlightCard: {
+              title: "",
+              description: "",
+              imageUrl: "",
+              buttonLabel: "",
+              buttonHref: "",
+            },
+            instagramItem: {
+              url: "",
+              link: "",
+            },
+          };
+          addArrayItem(path, Object.prototype.hasOwnProperty.call(defaults, template) ? defaults[template] : "");
+          return;
+        }
         if (action === "add-image-item") {
           addArrayItem(target.getAttribute("data-path"), { url: "", alt: "" });
           return;

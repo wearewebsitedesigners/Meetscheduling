@@ -162,7 +162,7 @@
     if (createFormEl) createFormEl.reset();
     if (createTitleEl) createTitleEl.value = "Landing page";
     if (createSlugEl) createSlugEl.value = "";
-    if (createPresetEl) createPresetEl.value = "luxe";
+    if (createPresetEl) createPresetEl.value = "hairluxury";
     dialogEl.showModal();
   }
 
@@ -171,7 +171,7 @@
     const body = {
       title: String(createTitleEl.value || "").trim(),
       slug: String(createSlugEl.value || "").trim() || undefined,
-      preset: String(createPresetEl.value || "").trim() || "luxe",
+      preset: String(createPresetEl.value || "").trim() || "hairluxury",
     };
 
     if (!body.title) {

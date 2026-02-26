@@ -10,6 +10,18 @@ const {
 const HISTORY_LIMIT = 10;
 
 const SECTION_DEFINITIONS = Object.freeze({
+  marquee: {
+    category: "essentials",
+    label: "Marquee",
+    description: "Scrolling announcement strip similar to Shopify promo bars.",
+    icon: "minus",
+    singleton: false,
+    defaultSettings: {
+      items: ["FREE SHIPPING ON ORDERS OVER $100", "BOOK NOW, PAY LATER", "PREMIUM HUMAN HAIR"],
+      speed: 28,
+      uppercase: true,
+    },
+  },
   header: {
     category: "essentials",
     label: "Header",
@@ -30,6 +42,47 @@ const SECTION_DEFINITIONS = Object.freeze({
       ctaLabel: "Book Now",
       ctaHref: "#services",
       sticky: false,
+    },
+  },
+  imageBanner: {
+    category: "essentials",
+    label: "Image Banner",
+    description: "Large visual banner with text overlay and CTA.",
+    icon: "image",
+    singleton: false,
+    defaultSettings: {
+      pretitle: "Luxury Collection",
+      title: "Raw hair that feels naturally yours",
+      subtitle: "Crafted for premium installs, everyday confidence, and long-term wear.",
+      backgroundImageUrl: "",
+      mobileImageUrl: "",
+      align: "left",
+      buttonLabel: "Shop Collection",
+      buttonHref: "#services",
+      overlayOpacity: 22,
+      height: "lg",
+    },
+  },
+  slideShow: {
+    category: "essentials",
+    label: "Slideshow",
+    description: "Hero slides with image, copy, and optional CTA.",
+    icon: "images",
+    singleton: false,
+    defaultSettings: {
+      title: "Featured looks",
+      subtitle: "Swipe through this season's signature installs.",
+      autoplay: true,
+      intervalSeconds: 6,
+      slides: [
+        {
+          imageUrl: "",
+          title: "Natural Hair Install",
+          subtitle: "Breathable lace with realistic finish.",
+          buttonLabel: "Book now",
+          buttonHref: "#services",
+        },
+      ],
     },
   },
   hero: {
@@ -107,6 +160,51 @@ const SECTION_DEFINITIONS = Object.freeze({
       bookButtonStyle: "solid",
     },
   },
+  spotlightGrid: {
+    category: "salon",
+    label: "Spotlight Block",
+    description: "Collection-style promo cards used on Hairluxury home.",
+    icon: "grid",
+    singleton: false,
+    defaultSettings: {
+      title: "Shop by style",
+      subtitle: "Browse our best-selling looks and signature textures.",
+      columnsDesktop: 3,
+      cards: [
+        {
+          title: "Glueless units",
+          description: "Install-ready wigs for everyday wear.",
+          imageUrl: "",
+          buttonLabel: "Explore",
+          buttonHref: "#services",
+        },
+        {
+          title: "Lace front wigs",
+          description: "Natural hairline with premium volume.",
+          imageUrl: "",
+          buttonLabel: "Explore",
+          buttonHref: "#services",
+        },
+      ],
+    },
+  },
+  productGrid: {
+    category: "salon",
+    label: "Product Block",
+    description: "Shopify-style product cards powered by your services.",
+    icon: "shopping-bag",
+    singleton: false,
+    defaultSettings: {
+      title: "Featured services",
+      subtitle: "Most booked appointments from your catalog.",
+      columnsDesktop: 4,
+      limit: 8,
+      showDescription: true,
+      showDuration: true,
+      showPrice: true,
+      buttonLabel: "Book",
+    },
+  },
   stylists: {
     category: "salon",
     label: "Stylists",
@@ -140,6 +238,39 @@ const SECTION_DEFINITIONS = Object.freeze({
       pauseOnHover: true,
       showStars: true,
       rows: 1,
+    },
+  },
+  customerReviewBlock: {
+    category: "salon",
+    label: "Customer Review Block",
+    description: "Structured testimonial cards inspired by Hairluxury review layout.",
+    icon: "star",
+    singleton: false,
+    defaultSettings: {
+      title: "What our clients say",
+      subtitle: "Trusted by customers across the world.",
+      columnsDesktop: 3,
+      showStars: true,
+    },
+  },
+  instagramGrid: {
+    category: "salon",
+    label: "Instagram Grid",
+    description: "Social gallery section with images and handle label.",
+    icon: "instagram",
+    singleton: false,
+    defaultSettings: {
+      title: "@hairluxury",
+      subtitle: "Follow us for installs, transformations, and care tips.",
+      handle: "@hairluxury",
+      columnsDesktop: 5,
+      images: [
+        { url: "", link: "" },
+        { url: "", link: "" },
+        { url: "", link: "" },
+        { url: "", link: "" },
+        { url: "", link: "" },
+      ],
     },
   },
   contactMap: {
@@ -178,6 +309,21 @@ const SECTION_DEFINITIONS = Object.freeze({
       ],
     },
   },
+  newsletterSignup: {
+    category: "info",
+    label: "Newsletter",
+    description: "Email capture block with CTA and supporting copy.",
+    icon: "mail",
+    singleton: false,
+    defaultSettings: {
+      title: "Newsletter sign up",
+      subtitle: "Get new arrivals, wig care tips, and exclusive offers first.",
+      placeholder: "Enter your email",
+      buttonLabel: "Submit",
+      note: "By subscribing, you agree to receive marketing emails.",
+      backgroundImageUrl: "",
+    },
+  },
   footer: {
     category: "info",
     label: "Footer",
@@ -196,6 +342,27 @@ const SECTION_DEFINITIONS = Object.freeze({
 });
 
 const PRESET_DEFINITIONS = Object.freeze({
+  hairluxury: {
+    id: "hairluxury",
+    name: "Hairluxury Signature",
+    description: "Shopify-inspired luxury wig storefront style with bold visuals.",
+    theme: {
+      primary: "#7f5933",
+      secondary: "#e5cc83",
+      background: "#f7f3ee",
+      surface: "#ffffff",
+      text: "#1f1a16",
+      muted: "#67594d",
+      border: "#d8cbbb",
+      font: "DM Sans",
+      radius: 10,
+      sectionPadding: 48,
+      buttonStyle: "solid",
+      shadowStyle: "minimal",
+      animationsEnabled: true,
+      animationStyle: "subtle",
+    },
+  },
   luxe: {
     id: "luxe",
     name: "Luxe Glow",
@@ -329,7 +496,86 @@ function sectionLibraryList() {
   }));
 }
 
-function buildStarterSections({ businessName }) {
+function buildHairluxurySections({ businessName }) {
+  return [
+    {
+      id: "marquee-main",
+      type: "marquee",
+      enabled: true,
+      settings: sectionDefault("marquee"),
+    },
+    {
+      id: "header-main",
+      type: "header",
+      enabled: true,
+      settings: {
+        ...sectionDefault("header"),
+        brandName: businessName || "Hairluxury",
+        showSearch: false,
+      },
+    },
+    {
+      id: "banner-main",
+      type: "imageBanner",
+      enabled: true,
+      settings: {
+        ...sectionDefault("imageBanner"),
+        title: `Luxury hair by ${businessName || "Hairluxury"}`,
+      },
+    },
+    {
+      id: "slideshow-main",
+      type: "slideShow",
+      enabled: true,
+      settings: sectionDefault("slideShow"),
+    },
+    {
+      id: "spotlight-main",
+      type: "spotlightGrid",
+      enabled: true,
+      settings: sectionDefault("spotlightGrid"),
+    },
+    {
+      id: "products-main",
+      type: "productGrid",
+      enabled: true,
+      settings: sectionDefault("productGrid"),
+    },
+    {
+      id: "reviews-main",
+      type: "customerReviewBlock",
+      enabled: true,
+      settings: sectionDefault("customerReviewBlock"),
+    },
+    {
+      id: "newsletter-main",
+      type: "newsletterSignup",
+      enabled: true,
+      settings: sectionDefault("newsletterSignup"),
+    },
+    {
+      id: "instagram-main",
+      type: "instagramGrid",
+      enabled: true,
+      settings: sectionDefault("instagramGrid"),
+    },
+    {
+      id: "footer-main",
+      type: "footer",
+      enabled: true,
+      settings: {
+        ...sectionDefault("footer"),
+        copyright: `© ${new Date().getFullYear()} ${businessName || "Hairluxury"}`,
+      },
+    },
+  ];
+}
+
+function buildStarterSections({ businessName, presetId }) {
+  if (presetId === "hairluxury") {
+    return buildHairluxurySections({ businessName });
+  }
+
   return [
     {
       id: "header-main",
@@ -383,7 +629,7 @@ function buildStarterConfig({ presetId, businessName }) {
   const preset = PRESET_DEFINITIONS[presetId] || PRESET_DEFINITIONS.minimal;
   return {
     theme: JSON.parse(JSON.stringify(preset.theme)),
-    sections: buildStarterSections({ businessName }),
+    sections: buildStarterSections({ businessName, presetId: preset.id }),
   };
 }
 
@@ -453,9 +699,85 @@ function normalizeStylists(rawMembers, fallbackMembers) {
     .slice(0, 20);
 }
 
+function normalizeMarqueeItems(rawItems, fallbackItems) {
+  const source = Array.isArray(rawItems) ? rawItems : Array.isArray(fallbackItems) ? fallbackItems : [];
+  return source
+    .map((item) => safeText(item, "", 120))
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function normalizeSlides(rawSlides, fallbackSlides) {
+  const source = Array.isArray(rawSlides) ? rawSlides : Array.isArray(fallbackSlides) ? fallbackSlides : [];
+  return source
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const imageUrl = safeText(item.imageUrl, "", 2000);
+      const title = safeText(item.title, "", 140);
+      const subtitle = safeText(item.subtitle, "", 400);
+      const buttonLabel = safeText(item.buttonLabel, "", 60);
+      const buttonHref = safeText(item.buttonHref, "", 240);
+      if (!imageUrl && !title && !subtitle) return null;
+      return {
+        imageUrl,
+        title,
+        subtitle,
+        buttonLabel,
+        buttonHref,
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function normalizeSpotlightCards(rawCards, fallbackCards) {
+  const source = Array.isArray(rawCards) ? rawCards : Array.isArray(fallbackCards) ? fallbackCards : [];
+  return source
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const title = safeText(item.title, "", 120);
+      const description = safeText(item.description, "", 300);
+      const imageUrl = safeText(item.imageUrl, "", 2000);
+      const buttonLabel = safeText(item.buttonLabel, "", 60);
+      const buttonHref = safeText(item.buttonHref, "", 240);
+      if (!title && !imageUrl) return null;
+      return {
+        title,
+        description,
+        imageUrl,
+        buttonLabel,
+        buttonHref,
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 18);
+}
+
+function normalizeInstagramItems(rawItems, fallbackItems) {
+  const source = Array.isArray(rawItems) ? rawItems : Array.isArray(fallbackItems) ? fallbackItems : [];
+  return source
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const url = safeText(item.url, "", 2000);
+      const link = safeText(item.link, "", 240);
+      if (!url) return null;
+      return { url, link };
+    })
+    .filter(Boolean)
+    .slice(0, 24);
+}
+
 function normalizeSectionSettings(type, settings, fallbackSettings) {
   const source = settings && typeof settings === "object" ? settings : {};
   const fallback = fallbackSettings && typeof fallbackSettings === "object" ? fallbackSettings : sectionDefault(type);
+
+  if (type === "marquee") {
+    return {
+      items: normalizeMarqueeItems(source.items, fallback.items),
+      speed: clamp(source.speed, 10, 80, clamp(fallback.speed, 10, 80, 28)),
+      uppercase: safeBoolean(source.uppercase, safeBoolean(fallback.uppercase, true)),
+    };
+  }
 
   if (type === "header") {
     return {
@@ -471,6 +793,44 @@ function normalizeSectionSettings(type, settings, fallbackSettings) {
       ctaLabel: safeText(source.ctaLabel, safeText(fallback.ctaLabel, "Book now", 50), 50),
       ctaHref: safeText(source.ctaHref, safeText(fallback.ctaHref, "#services", 200), 200),
       sticky: safeBoolean(source.sticky, safeBoolean(fallback.sticky, false)),
+    };
+  }
+
+  if (type === "imageBanner") {
+    return {
+      pretitle: safeText(source.pretitle, safeText(fallback.pretitle, "", 80), 80),
+      title: safeText(source.title, safeText(fallback.title, "", 220), 220),
+      subtitle: safeText(source.subtitle, safeText(fallback.subtitle, "", 700), 700),
+      backgroundImageUrl: safeText(
+        source.backgroundImageUrl,
+        safeText(fallback.backgroundImageUrl, "", 2000),
+        2000
+      ),
+      mobileImageUrl: safeText(source.mobileImageUrl, safeText(fallback.mobileImageUrl, "", 2000), 2000),
+      align: ["left", "center", "right"].includes(safeText(source.align, "", 20))
+        ? safeText(source.align, "left", 20)
+        : safeText(fallback.align, "left", 20),
+      buttonLabel: safeText(source.buttonLabel, safeText(fallback.buttonLabel, "Book now", 60), 60),
+      buttonHref: safeText(source.buttonHref, safeText(fallback.buttonHref, "#services", 240), 240),
+      overlayOpacity: clamp(source.overlayOpacity, 0, 80, clamp(fallback.overlayOpacity, 0, 80, 22)),
+      height: ["md", "lg", "xl"].includes(safeText(source.height, "", 10))
+        ? safeText(source.height, "lg", 10)
+        : safeText(fallback.height, "lg", 10),
+    };
+  }
+
+  if (type === "slideShow") {
+    return {
+      title: safeText(source.title, safeText(fallback.title, "Featured looks", 140), 140),
+      subtitle: safeText(source.subtitle, safeText(fallback.subtitle, "", 400), 400),
+      autoplay: safeBoolean(source.autoplay, safeBoolean(fallback.autoplay, true)),
+      intervalSeconds: clamp(
+        source.intervalSeconds,
+        3,
+        12,
+        clamp(fallback.intervalSeconds, 3, 12, 6)
+      ),
+      slides: normalizeSlides(source.slides, fallback.slides),
     };
   }
 
@@ -546,6 +906,28 @@ function normalizeSectionSettings(type, settings, fallbackSettings) {
     };
   }
 
+  if (type === "spotlightGrid") {
+    return {
+      title: safeText(source.title, safeText(fallback.title, "Spotlight", 140), 140),
+      subtitle: safeText(source.subtitle, safeText(fallback.subtitle, "", 400), 400),
+      columnsDesktop: clamp(source.columnsDesktop, 1, 4, clamp(fallback.columnsDesktop, 1, 4, 3)),
+      cards: normalizeSpotlightCards(source.cards, fallback.cards),
+    };
+  }
+
+  if (type === "productGrid") {
+    return {
+      title: safeText(source.title, safeText(fallback.title, "Featured services", 140), 140),
+      subtitle: safeText(source.subtitle, safeText(fallback.subtitle, "", 400), 400),
+      columnsDesktop: clamp(source.columnsDesktop, 1, 4, clamp(fallback.columnsDesktop, 1, 4, 4)),
+      limit: clamp(source.limit, 1, 24, clamp(fallback.limit, 1, 24, 8)),
+      showDescription: safeBoolean(source.showDescription, safeBoolean(fallback.showDescription, true)),
+      showDuration: safeBoolean(source.showDuration, safeBoolean(fallback.showDuration, true)),
+      showPrice: safeBoolean(source.showPrice, safeBoolean(fallback.showPrice, true)),
+      buttonLabel: safeText(source.buttonLabel, safeText(fallback.buttonLabel, "Book", 60), 60),
+    };
+  }
+
   if (type === "stylists") {
     return {
       title: safeText(source.title, safeText(fallback.title, "Stylists", 140), 140),
@@ -568,6 +950,25 @@ function normalizeSectionSettings(type, settings, fallbackSettings) {
     };
   }
 
+  if (type === "customerReviewBlock") {
+    return {
+      title: safeText(source.title, safeText(fallback.title, "Customer reviews", 140), 140),
+      subtitle: safeText(source.subtitle, safeText(fallback.subtitle, "", 400), 400),
+      columnsDesktop: clamp(source.columnsDesktop, 1, 3, clamp(fallback.columnsDesktop, 1, 3, 3)),
+      showStars: safeBoolean(source.showStars, safeBoolean(fallback.showStars, true)),
+    };
+  }
+
+  if (type === "instagramGrid") {
+    return {
+      title: safeText(source.title, safeText(fallback.title, "Instagram", 140), 140),
+      subtitle: safeText(source.subtitle, safeText(fallback.subtitle, "", 300), 300),
+      handle: safeText(source.handle, safeText(fallback.handle, "@meetscheduling", 80), 80),
+      columnsDesktop: clamp(source.columnsDesktop, 2, 6, clamp(fallback.columnsDesktop, 2, 6, 5)),
+      images: normalizeInstagramItems(source.images, fallback.images),
+    };
+  }
+
   if (type === "contactMap") {
     return {
       title: safeText(source.title, safeText(fallback.title, "Contact", 140), 140),
@@ -584,6 +985,21 @@ function normalizeSectionSettings(type, settings, fallbackSettings) {
     return {
       title: safeText(source.title, safeText(fallback.title, "FAQ", 140), 140),
       items: normalizeFaqItems(source.items, fallback.items),
+    };
+  }
+
+  if (type === "newsletterSignup") {
+    return {
+      title: safeText(source.title, safeText(fallback.title, "Newsletter sign up", 140), 140),
+      subtitle: safeText(source.subtitle, safeText(fallback.subtitle, "", 400), 400),
+      placeholder: safeText(source.placeholder, safeText(fallback.placeholder, "Enter your email", 120), 120),
+      buttonLabel: safeText(source.buttonLabel, safeText(fallback.buttonLabel, "Submit", 60), 60),
+      note: safeText(source.note, safeText(fallback.note, "", 400), 400),
+      backgroundImageUrl: safeText(
+        source.backgroundImageUrl,
+        safeText(fallback.backgroundImageUrl, "", 2000),
+        2000
+      ),
     };
   }
 
@@ -633,7 +1049,7 @@ function normalizeTheme(theme, fallbackTheme) {
 function normalizeConfig(inputConfig, fallbackConfig) {
   const fallback = fallbackConfig && typeof fallbackConfig === "object"
     ? fallbackConfig
-    : buildStarterConfig({ presetId: "minimal", businessName: "MeetScheduling" });
+    : buildStarterConfig({ presetId: "hairluxury", businessName: "MeetScheduling" });
   const input = inputConfig && typeof inputConfig === "object" ? inputConfig : {};
 
   const theme = normalizeTheme(input.theme, fallback.theme);
@@ -1043,7 +1459,7 @@ async function ensureDefaultPageForUser(userId, client = null) {
   await createStarterCatalogIfNeeded(userId, client);
 
   const starter = buildStarterConfig({
-    presetId: "luxe",
+    presetId: "hairluxury",
     businessName: user.display_name,
   });
   await ensurePageVersions(page.id, starter, client);
@@ -1299,8 +1715,8 @@ async function createPageForUser(userId, payload = {}) {
     }
 
     const page = await ensureDefaultPageForUser(userId, client);
-    const requestedPreset = safeText(payload.preset, "luxe", 40);
-    if (PRESET_DEFINITIONS[requestedPreset] && requestedPreset !== "luxe") {
+    const requestedPreset = safeText(payload.preset, "hairluxury", 40);
+    if (PRESET_DEFINITIONS[requestedPreset]) {
       const config = buildStarterConfig({
         presetId: requestedPreset,
         businessName: user.display_name,
@@ -1353,7 +1769,7 @@ async function getPageDraftByIdForUser(userId, pageId) {
     const eventTypes = await listEventTypesForUser(userId, client);
 
     const fallback = buildStarterConfig({
-      presetId: "luxe",
+      presetId: "hairluxury",
       businessName: user.display_name,
     });
 
@@ -1393,7 +1809,7 @@ async function updatePageDraftByIdForUser(userId, pageId, payload = {}) {
 
     const versions = await loadVersionRows(page.id, client);
     const fallback = buildStarterConfig({
-      presetId: "luxe",
+      presetId: "hairluxury",
       businessName: user.display_name,
     });
 
@@ -1510,7 +1926,7 @@ async function publishPageByIdForUser(userId, pageId) {
 
     const versions = await loadVersionRows(page.id, client);
     const fallback = buildStarterConfig({
-      presetId: "luxe",
+      presetId: "hairluxury",
       businessName: user.display_name,
     });
 
@@ -1601,7 +2017,7 @@ async function restorePageVersionByHistoryIdForUser(userId, pageId, historyId) {
 
     const versions = await loadVersionRows(page.id, client);
     const fallback = buildStarterConfig({
-      presetId: "luxe",
+      presetId: "hairluxury",
       businessName: user.display_name,
     });
 
@@ -1738,7 +2154,7 @@ async function getPublishedPageBySlug(slugValue) {
     const reviews = await fetchReviewsForUser(page.user_id, client);
 
     const fallback = buildStarterConfig({
-      presetId: "luxe",
+      presetId: "hairluxury",
       businessName: page.display_name,
     });
 

@@ -17,13 +17,21 @@
   };
 
   const SECTION_ORDER_FALLBACK = [
+    "marquee",
     "header",
+    "imageBanner",
+    "slideShow",
     "hero",
     "text",
     "imageShowcase",
+    "spotlightGrid",
+    "productGrid",
     "servicesMenu",
     "stylists",
+    "customerReviewBlock",
     "reviewsMarquee",
+    "newsletterSignup",
+    "instagramGrid",
     "contactMap",
     "faq",
     "footer",
@@ -239,6 +247,451 @@
       ),
       categoryIds,
     };
+  }
+
+  function renderMarquee(section, mode, index) {
+    const settings = section.settings || {};
+    const items = Array.isArray(settings.items) ? settings.items.filter(Boolean).slice(0, 16) : [];
+    const speed = clamp(settings.speed, 10, 80, 28);
+    const trackItems = items.length ? items : ["Premium quality hair", "Book your appointment today"];
+    const textClass = settings.uppercase ? "is-uppercase" : "";
+    return `
+      <div class="lp-marquee-shell" style="--lp-marquee-speed:${speed}s;">
+        <div class="lp-marquee-track">
+          ${trackItems
+            .map(
+              (item, itemIndex) => `
+                <span class="lp-marquee-item ${textClass}">${
+                  mode === "preview"
+                    ? editableTag(
+                        mode,
+                        `sections.${index}.settings.items.${itemIndex}`,
+                        safeText(item, ""),
+                        "lp-marquee-text",
+                        "span"
+                      )
+                    : `<span class="lp-marquee-text">${escapeHtml(safeText(item, ""))}</span>`
+                }</span>
+              `
+            )
+            .join("")}
+          ${trackItems
+            .map(
+              (item) =>
+                `<span class="lp-marquee-item ${textClass}" aria-hidden="true"><span class="lp-marquee-text">${escapeHtml(
+                  safeText(item, "")
+                )}</span></span>`
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderImageBanner(section, mode, index) {
+    const settings = section.settings || {};
+    const align = safeText(settings.align, "left");
+    const height = safeText(settings.height, "lg");
+    const overlayOpacity = clamp(settings.overlayOpacity, 0, 80, 22);
+    const background = safeUrl(settings.backgroundImageUrl);
+    const mobileBackground = safeUrl(settings.mobileImageUrl);
+    const buttonHref = safeUrl(settings.buttonHref) || "#services";
+    return `
+      <div class="lp-shell lp-image-banner-shell lp-banner-${escapeHtml(align)} lp-banner-height-${escapeHtml(
+      height
+    )}" style="${
+      background ? `--lp-banner-bg:url('${escapeHtml(background)}');` : ""
+    }${mobileBackground ? `--lp-banner-bg-mobile:url('${escapeHtml(mobileBackground)}');` : ""}--lp-banner-overlay:${overlayOpacity /
+      100};">
+        <div class="lp-image-banner-overlay"></div>
+        <div class="lp-image-banner-content">
+          ${
+            settings.pretitle
+              ? editableTag(
+                  mode,
+                  `sections.${index}.settings.pretitle`,
+                  settings.pretitle,
+                  "lp-image-banner-pretitle",
+                  "span"
+                )
+              : ""
+          }
+          ${editableTag(
+            mode,
+            `sections.${index}.settings.title`,
+            safeText(settings.title, "Image banner"),
+            "lp-image-banner-title",
+            "h2"
+          )}
+          ${
+            settings.subtitle
+              ? editableTag(
+                  mode,
+                  `sections.${index}.settings.subtitle`,
+                  settings.subtitle,
+                  "lp-image-banner-subtitle",
+                  "p"
+                )
+              : ""
+          }
+          ${
+            settings.buttonLabel
+              ? `<a class="lp-btn lp-btn-primary" href="${escapeHtml(buttonHref)}">${escapeHtml(
+                  safeText(settings.buttonLabel, "Book now")
+                )}</a>`
+              : ""
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSlideShow(section, mode, index) {
+    const settings = section.settings || {};
+    const slides = Array.isArray(settings.slides) ? settings.slides.filter(Boolean).slice(0, 12) : [];
+    const autoplay = settings.autoplay ? "is-autoplay" : "";
+    const interval = clamp(settings.intervalSeconds, 3, 12, 6);
+    return `
+      <div class="lp-shell lp-slideshow-shell ${autoplay}" style="--lp-slideshow-interval:${interval}s;">
+        ${
+          settings.title
+            ? editableTag(mode, `sections.${index}.settings.title`, settings.title, "lp-section-title", "h2")
+            : ""
+        }
+        ${
+          settings.subtitle
+            ? editableTag(mode, `sections.${index}.settings.subtitle`, settings.subtitle, "lp-section-copy", "p")
+            : ""
+        }
+        <div class="lp-slideshow-track">
+          ${slides
+            .map(
+              (slide, slideIndex) => `
+                <article class="lp-slide-card">
+                  <div class="lp-slide-media">
+                    ${
+                      slide.imageUrl
+                        ? `<img src="${escapeHtml(safeUrl(slide.imageUrl))}" alt="${escapeHtml(
+                            safeText(slide.title, `Slide ${slideIndex + 1}`)
+                          )}" loading="lazy" />`
+                        : `<div class="lp-slide-fallback">Slide ${slideIndex + 1}</div>`
+                    }
+                  </div>
+                  <div class="lp-slide-copy">
+                    ${
+                      slide.title
+                        ? `<h3>${escapeHtml(safeText(slide.title, ""))}</h3>`
+                        : ""
+                    }
+                    ${
+                      slide.subtitle
+                        ? `<p>${escapeHtml(safeText(slide.subtitle, ""))}</p>`
+                        : ""
+                    }
+                    ${
+                      slide.buttonLabel
+                        ? `<a class="lp-btn lp-btn-secondary" href="${escapeHtml(
+                            safeUrl(slide.buttonHref) || "#services"
+                          )}">${escapeHtml(safeText(slide.buttonLabel, "View"))}</a>`
+                        : ""
+                    }
+                  </div>
+                </article>
+              `
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSpotlightGrid(section, mode, index) {
+    const settings = section.settings || {};
+    const cards = Array.isArray(settings.cards) ? settings.cards.filter(Boolean).slice(0, 18) : [];
+    const columns = clamp(settings.columnsDesktop, 1, 4, 3);
+    return `
+      <div class="lp-shell lp-spotlight-shell">
+        ${editableTag(
+          mode,
+          `sections.${index}.settings.title`,
+          safeText(settings.title, "Spotlight"),
+          "lp-section-title",
+          "h2"
+        )}
+        ${
+          settings.subtitle
+            ? editableTag(
+                mode,
+                `sections.${index}.settings.subtitle`,
+                settings.subtitle,
+                "lp-section-copy",
+                "p"
+              )
+            : ""
+        }
+        <div class="lp-spotlight-grid" style="--lp-spotlight-columns:${columns};">
+          ${cards
+            .map(
+              (card) => `
+                <article class="lp-spotlight-card">
+                  ${
+                    card.imageUrl
+                      ? `<img src="${escapeHtml(safeUrl(card.imageUrl))}" alt="${escapeHtml(
+                          safeText(card.title, "Spotlight")
+                        )}" loading="lazy" />`
+                      : '<div class="lp-spotlight-fallback"></div>'
+                  }
+                  <div class="lp-spotlight-content">
+                    <h3>${escapeHtml(safeText(card.title, "Spotlight"))}</h3>
+                    ${
+                      card.description
+                        ? `<p>${escapeHtml(safeText(card.description, ""))}</p>`
+                        : ""
+                    }
+                    ${
+                      card.buttonLabel
+                        ? `<a class="lp-btn lp-btn-secondary lp-btn-small" href="${escapeHtml(
+                            safeUrl(card.buttonHref) || "#services"
+                          )}">${escapeHtml(safeText(card.buttonLabel, "Explore"))}</a>`
+                        : ""
+                    }
+                  </div>
+                </article>
+              `
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderProductGrid(section, mode, index, data) {
+    const settings = section.settings || {};
+    const list = Array.isArray(data.services) ? data.services.filter((item) => item && item.isActive !== false) : [];
+    const limit = clamp(settings.limit, 1, 24, 8);
+    const columns = clamp(settings.columnsDesktop, 1, 4, 4);
+    const items = list.slice(0, limit);
+    return `
+      <div class="lp-shell lp-product-grid-shell">
+        ${editableTag(
+          mode,
+          `sections.${index}.settings.title`,
+          safeText(settings.title, "Featured services"),
+          "lp-section-title",
+          "h2"
+        )}
+        ${
+          settings.subtitle
+            ? editableTag(
+                mode,
+                `sections.${index}.settings.subtitle`,
+                settings.subtitle,
+                "lp-section-copy",
+                "p"
+              )
+            : ""
+        }
+        <div class="lp-product-grid" style="--lp-product-columns:${columns};">
+          ${items
+            .map((item) => {
+              const href = safeUrl(item.bookUrl || data.page?.bookUrl || "#");
+              return `
+                <article class="lp-product-card">
+                  <div class="lp-product-media">
+                    ${
+                      item.imageUrl
+                        ? `<img src="${escapeHtml(safeUrl(item.imageUrl))}" alt="${escapeHtml(
+                            safeText(item.name, "Service")
+                          )}" loading="lazy" />`
+                        : `<div class="lp-product-fallback">${escapeHtml(
+                            safeText(item.name || "S", "S").slice(0, 1).toUpperCase()
+                          )}</div>`
+                    }
+                  </div>
+                  <div class="lp-product-content">
+                    <h3>${escapeHtml(safeText(item.name, "Service"))}</h3>
+                    ${
+                      settings.showDescription && item.description
+                        ? `<p>${escapeHtml(safeText(item.description, "", 220))}</p>`
+                        : ""
+                    }
+                    <div class="lp-product-meta">
+                      ${
+                        settings.showDuration
+                          ? `<span>${escapeHtml(formatDuration(item.durationMinutes))}</span>`
+                          : ""
+                      }
+                      ${
+                        settings.showPrice
+                          ? `<strong>${escapeHtml(formatPrice(item.priceCents))}</strong>`
+                          : ""
+                      }
+                    </div>
+                    <a class="lp-btn lp-btn-primary lp-btn-small" href="${escapeHtml(href)}">${escapeHtml(
+                safeText(settings.buttonLabel, "Book")
+              )}</a>
+                  </div>
+                </article>
+              `;
+            })
+            .join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCustomerReviewBlock(section, mode, index, data) {
+    const settings = section.settings || {};
+    const reviews = Array.isArray(data.reviews) ? data.reviews.filter(Boolean) : [];
+    const columns = clamp(settings.columnsDesktop, 1, 3, 3);
+    return `
+      <div class="lp-shell lp-customer-reviews-shell">
+        ${editableTag(
+          mode,
+          `sections.${index}.settings.title`,
+          safeText(settings.title, "What our clients say"),
+          "lp-section-title",
+          "h2"
+        )}
+        ${
+          settings.subtitle
+            ? editableTag(
+                mode,
+                `sections.${index}.settings.subtitle`,
+                settings.subtitle,
+                "lp-section-copy",
+                "p"
+              )
+            : ""
+        }
+        <div class="lp-customer-reviews-grid" style="--lp-review-columns:${columns};">
+          ${reviews
+            .map(
+              (review) => `
+                <article class="lp-customer-review-card">
+                  <header>
+                    <h3>${escapeHtml(safeText(review.name, "Customer"))}</h3>
+                    ${
+                      settings.showStars
+                        ? `<p class="lp-stars">${starsMarkup(review.rating)}</p>`
+                        : ""
+                    }
+                  </header>
+                  <p>${escapeHtml(safeText(review.text, "", 520))}</p>
+                </article>
+              `
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderNewsletterSignup(section, mode, index) {
+    const settings = section.settings || {};
+    const background = safeUrl(settings.backgroundImageUrl);
+    return `
+      <div class="lp-shell lp-newsletter-shell" ${
+        background ? `style="--lp-newsletter-bg:url('${escapeHtml(background)}');"` : ""
+      }>
+        <div class="lp-newsletter-card">
+          ${editableTag(
+            mode,
+            `sections.${index}.settings.title`,
+            safeText(settings.title, "Newsletter sign up"),
+            "lp-section-title",
+            "h2"
+          )}
+          ${
+            settings.subtitle
+              ? editableTag(
+                  mode,
+                  `sections.${index}.settings.subtitle`,
+                  settings.subtitle,
+                  "lp-section-copy",
+                  "p"
+                )
+              : ""
+          }
+          <form class="lp-newsletter-form" action="javascript:void(0)" novalidate>
+            <input
+              type="email"
+              class="lp-search-input"
+              placeholder="${escapeHtml(safeText(settings.placeholder, "Enter your email"))}"
+              aria-label="Email address"
+            />
+            <button type="submit" class="lp-btn lp-btn-primary">${escapeHtml(
+              safeText(settings.buttonLabel, "Submit")
+            )}</button>
+          </form>
+          ${
+            settings.note
+              ? editableTag(
+                  mode,
+                  `sections.${index}.settings.note`,
+                  settings.note,
+                  "lp-newsletter-note",
+                  "p"
+                )
+              : ""
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  function renderInstagramGrid(section, mode, index) {
+    const settings = section.settings || {};
+    const images = Array.isArray(settings.images) ? settings.images.filter((item) => item && item.url) : [];
+    const columns = clamp(settings.columnsDesktop, 2, 6, 5);
+    return `
+      <div class="lp-shell lp-instagram-shell">
+        ${editableTag(
+          mode,
+          `sections.${index}.settings.title`,
+          safeText(settings.title, "Instagram"),
+          "lp-section-title",
+          "h2"
+        )}
+        ${
+          settings.subtitle
+            ? editableTag(
+                mode,
+                `sections.${index}.settings.subtitle`,
+                settings.subtitle,
+                "lp-section-copy",
+                "p"
+              )
+            : ""
+        }
+        <div class="lp-instagram-grid" style="--lp-instagram-columns:${columns};">
+          ${images
+            .map(
+              (item, itemIndex) => `
+                <a class="lp-instagram-card" href="${escapeHtml(
+                  safeUrl(item.link) || "#"
+                )}" ${safeUrl(item.link) ? 'target="_blank" rel="noopener"' : ""}>
+                  <img src="${escapeHtml(safeUrl(item.url))}" alt="${escapeHtml(
+                safeText(settings.handle, `Instagram ${itemIndex + 1}`)
+              )}" loading="lazy" />
+                </a>
+              `
+            )
+            .join("")}
+        </div>
+        ${
+          settings.handle
+            ? editableTag(
+                mode,
+                `sections.${index}.settings.handle`,
+                settings.handle,
+                "lp-instagram-handle",
+                "p"
+              )
+            : ""
+        }
+      </div>
+    `;
   }
 
   function renderHeader(section, mode, index) {
@@ -780,13 +1233,21 @@
   function renderSection(section, mode, selectedSectionId, index, data) {
     if (!section || !section.type) return "";
     let body = "";
+    if (section.type === "marquee") body = renderMarquee(section, mode, index);
     if (section.type === "header") body = renderHeader(section, mode, index);
+    if (section.type === "imageBanner") body = renderImageBanner(section, mode, index);
+    if (section.type === "slideShow") body = renderSlideShow(section, mode, index);
     if (section.type === "hero") body = renderHero(section, mode, index);
     if (section.type === "text") body = renderTextSection(section, mode, index);
     if (section.type === "imageShowcase") body = renderImageShowcase(section, mode, index);
+    if (section.type === "spotlightGrid") body = renderSpotlightGrid(section, mode, index);
+    if (section.type === "productGrid") body = renderProductGrid(section, mode, index, data);
     if (section.type === "servicesMenu") body = renderServicesMenu(section, mode, index, data);
     if (section.type === "stylists") body = renderStylists(section, mode, index);
+    if (section.type === "customerReviewBlock") body = renderCustomerReviewBlock(section, mode, index, data);
     if (section.type === "reviewsMarquee") body = renderReviews(section, mode, index, data);
+    if (section.type === "newsletterSignup") body = renderNewsletterSignup(section, mode, index);
+    if (section.type === "instagramGrid") body = renderInstagramGrid(section, mode, index);
     if (section.type === "contactMap") body = renderContact(section, mode, index);
     if (section.type === "faq") body = renderFaq(section, mode, index);
     if (section.type === "footer") body = renderFooter(section, mode, index);

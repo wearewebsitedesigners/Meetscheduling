@@ -247,6 +247,128 @@
   flex-wrap: wrap;
 }
 
+.lp-marquee-shell {
+  border-top: 1px solid var(--lp-border);
+  border-bottom: 1px solid var(--lp-border);
+  background: linear-gradient(90deg, var(--lp-primary-soft), rgba(255, 255, 255, 0.8), var(--lp-primary-soft));
+  overflow: hidden;
+}
+
+.lp-marquee-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  width: max-content;
+  min-height: 42px;
+  padding: 0 12px;
+  animation: lp-marquee var(--lp-marquee-speed, 28s) linear infinite;
+}
+
+.lp-marquee-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--lp-text);
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.02em;
+}
+
+.lp-marquee-item::after {
+  content: "•";
+  color: var(--lp-primary);
+  opacity: 0.8;
+}
+
+.lp-marquee-item.is-uppercase .lp-marquee-text {
+  text-transform: uppercase;
+}
+
+.lp-image-banner-shell {
+  position: relative;
+  border-radius: calc(var(--lp-radius) + 6px);
+  border: 1px solid var(--lp-border);
+  box-shadow: var(--lp-shadow);
+  overflow: hidden;
+  background: var(--lp-banner-bg), linear-gradient(120deg, var(--lp-primary-soft), rgba(255, 255, 255, 0.75));
+  background-size: cover;
+  background-position: center;
+}
+
+.lp-banner-height-md {
+  min-height: 320px;
+}
+
+.lp-banner-height-lg {
+  min-height: 440px;
+}
+
+.lp-banner-height-xl {
+  min-height: 560px;
+}
+
+.lp-image-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, var(--lp-banner-overlay, 0.2));
+}
+
+.lp-image-banner-content {
+  position: relative;
+  z-index: 2;
+  min-height: inherit;
+  display: grid;
+  gap: 12px;
+  align-content: center;
+  padding: clamp(28px, 6vw, 64px);
+  color: #fff;
+}
+
+.lp-banner-left .lp-image-banner-content {
+  justify-items: start;
+  text-align: left;
+}
+
+.lp-banner-center .lp-image-banner-content {
+  justify-items: center;
+  text-align: center;
+}
+
+.lp-banner-right .lp-image-banner-content {
+  justify-items: end;
+  text-align: right;
+}
+
+.lp-image-banner-pretitle {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  opacity: 0.9;
+}
+
+.lp-image-banner-title {
+  margin: 0;
+  font-size: clamp(1.8rem, 4.5vw, 3.4rem);
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  max-width: 18ch;
+}
+
+.lp-image-banner-subtitle {
+  margin: 0;
+  max-width: 58ch;
+  line-height: 1.58;
+  font-size: clamp(0.95rem, 2vw, 1.16rem);
+  opacity: 0.95;
+}
+
+.lp-slideshow-shell,
+.lp-spotlight-shell,
+.lp-product-grid-shell,
+.lp-customer-reviews-shell,
+.lp-newsletter-shell,
+.lp-instagram-shell,
 .lp-text-shell,
 .lp-gallery-shell,
 .lp-services-shell,
@@ -256,6 +378,237 @@
 .lp-faq-shell {
   display: grid;
   gap: 14px;
+}
+
+.lp-slideshow-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(280px, 1fr);
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x mandatory;
+}
+
+.lp-slide-card {
+  scroll-snap-align: start;
+  border: 1px solid var(--lp-border);
+  border-radius: calc(var(--lp-radius) + 2px);
+  background: var(--lp-surface);
+  box-shadow: var(--lp-shadow);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 220px auto;
+}
+
+.lp-slide-media img,
+.lp-slide-fallback {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: linear-gradient(120deg, var(--lp-primary-soft), rgba(255, 255, 255, 0.95));
+}
+
+.lp-slide-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--lp-primary);
+  font-weight: 700;
+}
+
+.lp-slide-copy {
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.lp-slide-copy h3,
+.lp-spotlight-content h3,
+.lp-product-content h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.lp-slide-copy p,
+.lp-spotlight-content p,
+.lp-product-content p {
+  margin: 0;
+  color: var(--lp-muted);
+  line-height: 1.5;
+}
+
+.lp-spotlight-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--lp-spotlight-columns, 3), minmax(0, 1fr));
+  gap: 16px;
+}
+
+.lp-spotlight-card {
+  border: 1px solid var(--lp-border);
+  border-radius: calc(var(--lp-radius) + 2px);
+  background: var(--lp-surface);
+  box-shadow: var(--lp-shadow);
+  overflow: hidden;
+  display: grid;
+}
+
+.lp-spotlight-card img,
+.lp-spotlight-fallback {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  background: linear-gradient(120deg, var(--lp-primary-soft), rgba(255, 255, 255, 0.94));
+}
+
+.lp-spotlight-content {
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.lp-product-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--lp-product-columns, 4), minmax(0, 1fr));
+  gap: 16px;
+}
+
+.lp-product-card {
+  border: 1px solid var(--lp-border);
+  border-radius: calc(var(--lp-radius) + 2px);
+  background: var(--lp-surface);
+  box-shadow: var(--lp-shadow);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 190px auto;
+}
+
+.lp-product-media img,
+.lp-product-fallback {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: linear-gradient(120deg, var(--lp-primary-soft), rgba(255, 255, 255, 0.94));
+}
+
+.lp-product-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--lp-primary);
+  font-size: 2.2rem;
+  font-weight: 700;
+}
+
+.lp-product-content {
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.lp-product-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--lp-muted);
+}
+
+.lp-product-meta strong {
+  color: var(--lp-text);
+  font-size: 1.05rem;
+}
+
+.lp-customer-reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--lp-review-columns, 3), minmax(0, 1fr));
+  gap: 14px;
+}
+
+.lp-customer-review-card {
+  border: 1px solid var(--lp-border);
+  border-radius: calc(var(--lp-radius) + 2px);
+  background: var(--lp-surface);
+  box-shadow: var(--lp-shadow);
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.lp-customer-review-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.lp-customer-review-card h3,
+.lp-customer-review-card p {
+  margin: 0;
+}
+
+.lp-customer-review-card p {
+  color: var(--lp-muted);
+  line-height: 1.56;
+}
+
+.lp-newsletter-card {
+  border: 1px solid var(--lp-border);
+  border-radius: calc(var(--lp-radius) + 4px);
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.8)), var(--lp-newsletter-bg);
+  background-size: cover;
+  background-position: center;
+  box-shadow: var(--lp-shadow);
+  padding: clamp(20px, 3.8vw, 34px);
+  display: grid;
+  gap: 12px;
+}
+
+.lp-newsletter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.lp-newsletter-form .lp-search-input {
+  flex: 1 1 240px;
+}
+
+.lp-newsletter-note {
+  margin: 0;
+  color: var(--lp-muted);
+  font-size: 0.9rem;
+}
+
+.lp-instagram-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--lp-instagram-columns, 5), minmax(0, 1fr));
+  gap: 8px;
+}
+
+.lp-instagram-card {
+  border-radius: calc(var(--lp-radius) + 1px);
+  overflow: hidden;
+  border: 1px solid var(--lp-border);
+  background: var(--lp-surface);
+  display: block;
+  box-shadow: var(--lp-shadow);
+}
+
+.lp-instagram-card img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+}
+
+.lp-instagram-handle {
+  margin: 2px 0 0;
+  color: var(--lp-primary);
+  font-weight: 700;
 }
 
 .lp-text-shell.is-center,
@@ -688,6 +1041,16 @@
     grid-template-columns: 1fr;
   }
 
+  .lp-spotlight-grid,
+  .lp-product-grid,
+  .lp-customer-reviews-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-instagram-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .lp-stylists-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -717,6 +1080,33 @@
 
   .lp-service-card {
     grid-template-columns: 1fr;
+  }
+
+  .lp-spotlight-grid,
+  .lp-product-grid,
+  .lp-customer-reviews-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-instagram-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-image-banner-shell {
+    background-image: var(--lp-banner-bg-mobile, var(--lp-banner-bg));
+  }
+
+  .lp-banner-height-lg,
+  .lp-banner-height-xl {
+    min-height: 340px;
+  }
+
+  .lp-marquee-track {
+    min-height: 36px;
+  }
+
+  .lp-marquee-item {
+    font-size: 0.8rem;
   }
 
   .lp-stylists-grid {

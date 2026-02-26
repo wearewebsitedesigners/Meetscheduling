@@ -58,6 +58,10 @@ const INTEGRATION_TABS = ["Discover", "Manage"];
 const INTEGRATION_SORT_OPTIONS = ["Most popular", "A-Z", "Category"];
 const INTEGRATION_VISIBLE_KEYS = new Set(["google-calendar", "google-meet"]);
 const INTEGRATION_DETAIL_KEYS = new Set(["google-meet"]);
+const INTEGRATION_LOGO_PATHS = Object.freeze({
+  "google-calendar": "/assets/logos/google-calendar-brand.svg",
+  "google-meet": "/assets/logos/google-meet-brand.svg",
+});
 const ROUTING_FILTERS = ["all", "active", "paused"];
 const LANGUAGE_OPTIONS = ["English", "Hindi", "French", "Spanish"];
 const DATE_FORMAT_OPTIONS = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"];
@@ -8153,12 +8157,44 @@ function renderWorkflowsView() {
   `;
 }
 
+function renderIntegrationIcon(item, { detail = false } = {}) {
+  const key = String(item?.key || "").trim().toLowerCase();
+  const logoPath = INTEGRATION_LOGO_PATHS[key] || "";
+  const classes = ["integration-icon"];
+  if (detail) classes.push("integration-icon-detail");
+
+  if (logoPath) {
+    classes.push("integration-icon-logo");
+    return `
+      <span class="${classes.join(" ")}">
+        <img class="integration-logo-img" src="${escapeHtml(logoPath)}" alt="${escapeHtml(
+      `${item?.name || "Integration"} logo`
+    )}" loading="lazy" />
+      </span>
+    `;
+  }
+
+  return `
+    <span class="${classes.join(" ")}" style="--icon-bg:${escapeHtml(
+    item?.iconBg || "#1f6feb"
+  )};">${escapeHtml(item?.iconText || "APP")}</span>
+  `;
+}
+
 function renderIntegrationsView() {
   const detailKey = INTEGRATION_DETAIL_KEYS.has(state.integrations.detailKey)
     ? state.integrations.detailKey
     : "";
 
   if (detailKey === "google-meet") {
+    const googleMeetIntegration =
+      state.integrations.items.find((item) => item.key === "google-meet") || {
+        key: "google-meet",
+        name: "Google Meet",
+        iconText: "GM",
+        iconBg: "#0f9d58",
+        connected: false,
+      };
     const googleCalendarIntegration =
       state.integrations.items.find((item) => item.key === "google-calendar") || null;
     const calendarConnected = !!googleCalendarIntegration?.connected;
@@ -8174,8 +8210,11 @@ function renderIntegrationsView() {
 
         <article class="panel integration-detail-card">
           <div class="integration-detail-head">
-            <span class="integration-icon" style="--icon-bg:#0f9d58;">GM</span>
-            <h2>Google Meet</h2>
+            ${renderIntegrationIcon(googleMeetIntegration, { detail: true })}
+            <h2>${escapeHtml(googleMeetIntegration.name || "Google Meet")}</h2>
+            <span class="status-pill ${calendarConnected ? "success" : "pending"} integration-status-top">
+              ${calendarConnected ? "Connected" : "Available"}
+            </span>
           </div>
           <p class="integration-detail-lead">
             ${calendarConnected
@@ -8184,7 +8223,15 @@ function renderIntegrationsView() {
       }
           </p>
           <div class="integration-detail-connected">
-            <span class="integration-icon" style="--icon-bg:#3b82f6;">31</span>
+            ${renderIntegrationIcon(
+        {
+          key: "google-calendar",
+          name: "Google Calendar",
+          iconText: "31",
+          iconBg: "#3b82f6",
+        },
+        { detail: true }
+      )}
             <div class="integration-detail-account">
               <span class="integration-detail-account-label">${calendarConnected ? "Connected by" : "Calendar not connected"}</span>
               <span class="integration-detail-account-email">${escapeHtml(
@@ -8310,20 +8357,23 @@ function renderIntegrationsView() {
           (item) => `
                   <article class="integration-card ${item.connected ? "is-connected" : ""}">
                     <div class="integration-card-head">
-                      <span class="integration-icon" style="--icon-bg:${escapeHtml(
-            item.iconBg
-          )};">${escapeHtml(item.iconText)}</span>
-                      ${item.adminOnly
+                      <div class="integration-card-pill-row">
+                        <span class="status-pill ${item.connected ? "success" : "pending"} integration-status-top">
+                          ${item.connected ? "Connected" : "Available"}
+                        </span>
+                        ${item.adminOnly
               ? '<span class="integration-admin-badge">Admin</span>'
               : ""
             }
+                      </div>
+                    </div>
+                    <div class="integration-card-brand">
+                      ${renderIntegrationIcon(item)}
                     </div>
                     <h3>${escapeHtml(item.name)}</h3>
                     <p>${escapeHtml(item.description)}</p>
                     <div class="integration-meta-row">
                       <span class="integration-category">${escapeHtml(item.category)}</span>
-                      <span class="status-pill ${item.connected ? "success" : "pending"
-            }">${item.connected ? "Connected" : "Available"}</span>
                     </div>
                     <div class="integration-meta-sub">
                       ${item.connected

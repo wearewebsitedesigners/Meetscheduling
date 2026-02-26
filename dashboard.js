@@ -6200,6 +6200,7 @@ function addMeetingLimit() {
 }
 
 function render() {
+  document.body.setAttribute("data-active-section", state.activeSection || "");
   renderSidebar();
   renderHeader();
   renderSectionTabs();
@@ -8390,12 +8391,12 @@ function renderIntegrationsView() {
                       ${item.connected
               ? `
                             ${item.key === "google-meet"
-                  ? `<button class="mini-btn mini-btn-primary" type="button" data-action="open-integration-detail" data-key="google-meet">Open</button>`
+                  ? `<button class="mini-btn mini-btn-secondary" type="button" data-action="open-integration-detail" data-key="google-meet">Open</button>`
                   : item.key === "google-calendar"
-                    ? `<button class="mini-btn" type="button" data-action="manage-calendar-connection">Manage</button>`
-                    : `<button class="mini-btn" type="button" data-action="configure-integration" data-id="${item.id}">Configure</button>`
+                    ? `<button class="mini-btn mini-btn-secondary" type="button" data-action="manage-calendar-connection">Manage</button>`
+                    : `<button class="mini-btn mini-btn-secondary" type="button" data-action="configure-integration" data-id="${item.id}">Configure</button>`
                 }
-                            <button class="mini-btn" type="button" data-action="toggle-integration" data-id="${item.id}">Disconnect</button>
+                            <button class="mini-btn mini-btn-danger" type="button" data-action="toggle-integration" data-id="${item.id}">Disconnect</button>
                           `
               : `
                             <button class="mini-btn mini-btn-primary" type="button" data-action="toggle-integration" data-id="${item.id}">Connect</button>

@@ -37,7 +37,7 @@ router.post(
   "/",
   asyncHandler(async (req, res) => {
     const payload = await createPageForUser(req.auth.userId, req.body || {});
-    res.status(201).json(payload);
+    res.status(payload?.created === false ? 200 : 201).json(payload);
   })
 );
 

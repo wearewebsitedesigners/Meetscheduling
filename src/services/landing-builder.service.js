@@ -1052,25 +1052,10 @@ async function ensureDefaultPageForUser(userId, client = null) {
 }
 
 async function resolvePageForUser(userId, pageId, client = null) {
+  const defaultPage = await ensureDefaultPageForUser(userId, client);
   const id = safeText(pageId, "", 80);
-  if (!id || id === "default") {
-    return ensureDefaultPageForUser(userId, client);
-  }
-
-  const result = await query(
-    `
-      SELECT id, user_id, slug, title, created_at, updated_at
-      FROM booking_pages
-      WHERE id = $1
-        AND user_id = $2
-      LIMIT 1
-    `,
-    [id, userId],
-    client
-  );
-  const row = result.rows[0];
-  if (!row) throw notFound("Landing page not found");
-  return row;
+  if (!id || id === "default" || id === defaultPage.id) return defaultPage;
+  return defaultPage;
 }
 
 async function loadVersionRows(pageId, client = null) {
@@ -1273,64 +1258,84 @@ function buildBundlePayload({ page, user, draftConfig, publishedConfig, history,
 async function listPagesForUser(userId) {
   return withTransaction(async (client) => {
     const user = await getUser(userId, client);
-    await ensureDefaultPageForUser(userId, client);
-    const result = await query(
-      `
-        SELECT id, user_id, slug, title, created_at, updated_at
-        FROM booking_pages
-        WHERE user_id = $1
-        ORDER BY created_at ASC
-      `,
-      [userId],
-      client
-    );
-
-    return result.rows.map((row) => ({
-      ...mapPageRow(row, user),
-      editorUrl: `/dashboard/landing-page/${row.id}/editor`,
-      shareUrl: `/${row.slug}`,
-      bookUrl: `/book/${row.slug}`,
-    }));
+    const page = await ensureDefaultPageForUser(userId, client);
+    return [
+      {
+        ...mapPageRow(page, user),
+        editorUrl: `/dashboard/landing-page/${page.id}/editor`,
+        shareUrl: `/${page.slug}`,
+        bookUrl: `/book/${page.slug}`,
+      },
+    ];
   });
 }
 
 async function createPageForUser(userId, payload = {}) {
   return withTransaction(async (client) => {
     const user = await getUser(userId, client);
-    const title = assertOptionalString(payload.title, "title", { max: 160 }) || "Landing page";
-    const preset = safeText(payload.preset, "luxe", 40);
-
-    const requestedSlug = assertOptionalString(payload.slug, "slug", { max: 80 });
-    const baseSlug = requestedSlug
-      ? assertSlug(requestedSlug, "slug")
-      : slugify(title) || slugify(`${user.username}-landing`) || "landing";
-    const slug = await createUniqueSlug(baseSlug, null, client);
-
-    const inserted = await query(
+    const existing = await query(
       `
-        INSERT INTO booking_pages (user_id, slug, title)
-        VALUES ($1, $2, $3)
-        RETURNING id, user_id, slug, title, created_at, updated_at
+        SELECT id, user_id, slug, title, created_at, updated_at
+        FROM booking_pages
+        WHERE user_id = $1
+        ORDER BY created_at ASC
+        LIMIT 1
       `,
-      [userId, slug, title],
+      [userId],
       client
     );
 
-    const page = inserted.rows[0];
-    await createStarterCatalogIfNeeded(userId, client);
+    if (existing.rows[0]) {
+      const page = existing.rows[0];
+      return {
+        created: false,
+        page: {
+          ...mapPageRow(page, user),
+          editorUrl: `/dashboard/landing-page/${page.id}/editor`,
+          shareUrl: `/${page.slug}`,
+          bookUrl: `/book/${page.slug}`,
+        },
+      };
+    }
 
-    const config = buildStarterConfig({
-      presetId: PRESET_DEFINITIONS[preset] ? preset : "luxe",
-      businessName: user.display_name,
-    });
-    await ensurePageVersions(page.id, config, client);
+    const page = await ensureDefaultPageForUser(userId, client);
+    const requestedPreset = safeText(payload.preset, "luxe", 40);
+    if (PRESET_DEFINITIONS[requestedPreset] && requestedPreset !== "luxe") {
+      const config = buildStarterConfig({
+        presetId: requestedPreset,
+        businessName: user.display_name,
+      });
+      const normalizedConfig = normalizeConfig(config, config);
+      await query(
+        `
+          UPDATE booking_page_versions
+          SET config_json = $2::jsonb, updated_at = NOW()
+          WHERE booking_page_id = $1
+            AND status IN ('draft', 'published')
+        `,
+        [page.id, JSON.stringify(normalizedConfig)],
+        client
+      );
+    }
+
+    const refreshed = await query(
+      `
+        SELECT id, user_id, slug, title, created_at, updated_at
+        FROM booking_pages
+        WHERE id = $1
+      `,
+      [page.id],
+      client
+    );
+    const stablePage = refreshed.rows[0] || page;
 
     return {
+      created: true,
       page: {
-        ...mapPageRow(page, user),
-        editorUrl: `/dashboard/landing-page/${page.id}/editor`,
-        shareUrl: `/${page.slug}`,
-        bookUrl: `/book/${page.slug}`,
+        ...mapPageRow(stablePage, user),
+        editorUrl: `/dashboard/landing-page/${stablePage.id}/editor`,
+        shareUrl: `/${stablePage.slug}`,
+        bookUrl: `/book/${stablePage.slug}`,
       },
     };
   });

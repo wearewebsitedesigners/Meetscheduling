@@ -81,6 +81,10 @@ function buildApp() {
   });
 
   app.get("/dashboard/landing-page", (req, res) => {
+    res.redirect(302, "/dashboard/landing-page/default/editor");
+  });
+
+  app.get("/dashboard/landing-page/list", (req, res) => {
     res.sendFile(path.join(staticRoot, "landing-page-list.html"));
   });
 

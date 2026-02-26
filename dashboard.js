@@ -801,6 +801,9 @@ function normalizeState(raw, fallback) {
   if (APP_SECTIONS.includes(raw.activeSection)) {
     merged.activeSection = raw.activeSection;
   }
+  if (merged.activeSection === "landing-page") {
+    merged.activeSection = "meetings";
+  }
 
   if (DASHBOARD_THEME_OPTIONS.includes(raw.theme)) {
     merged.theme = raw.theme;
@@ -3353,6 +3356,10 @@ function bindEvents() {
     if (sectionBtn) {
       const section = sectionBtn.dataset.section;
       if (section) {
+        if (section === "landing-page") {
+          window.location.assign("/dashboard/landing-page");
+          return;
+        }
         state.activeSection = section;
         openEventTypeMenuId = null;
         if (section === "integrations") {
@@ -3389,19 +3396,6 @@ function bindEvents() {
               render();
             })
             .catch(() => null);
-        }
-        if (section === "landing-page") {
-          state["landing-page"].loading = true;
-          loadLandingPageFromApi(state["landing-page"].leadsStatus)
-            .then(() => {
-              saveState();
-              render();
-            })
-            .catch((error) => {
-              state["landing-page"].loading = false;
-              showToast(error?.message || "Could not load landing page");
-              render();
-            });
         }
         closeSidebar();
         saveState();

@@ -36,6 +36,7 @@
             <button type="button" class="is-active" data-device="desktop">Desktop</button>
             <button type="button" data-device="mobile">Mobile</button>
           </div>
+          <button type="button" id="lpe-focus-btn" class="lpe-btn lpe-btn-secondary" aria-pressed="false">Focus</button>
           <button type="button" id="lpe-preview-btn" class="lpe-btn lpe-btn-secondary">Preview</button>
           <button type="button" id="lpe-copy-link-btn" class="lpe-btn lpe-btn-secondary">Copy link</button>
           <button type="button" id="lpe-save-top-btn" class="lpe-btn lpe-btn-muted" disabled>Save</button>
@@ -92,17 +93,22 @@
               </div>
             </div>
             <p class="lpe-card-subtitle">Page sections</p>
+            <label class="lpe-sections-filter-wrap" for="lpe-sections-filter">
+              <span class="lpe-sections-filter-label">Search sections</span>
+              <input id="lpe-sections-filter" type="search" placeholder="Find section..." autocomplete="off" />
+            </label>
             <ul id="lpe-sections-list" class="lpe-sections-list"></ul>
           </section>
 
           <button id="lpe-add-section-btn" type="button" class="lpe-btn lpe-btn-add">+ Add Section</button>
 
-          <section class="lpe-panel-card">
-            <div class="lpe-panel-head">
-              <h2>Prebuilt Themes</h2>
-            </div>
+          <details class="lpe-panel-card lpe-panel-disclosure" open>
+            <summary>
+              <span>Prebuilt Themes</span>
+              <span class="lpe-disclosure-hint">Apply full page designs</span>
+            </summary>
             <div id="lpe-preset-themes" class="lpe-preset-themes"></div>
-          </section>
+          </details>
         </aside>
 
         <button

@@ -13,10 +13,12 @@
   ]);
 
   const els = {
+    shell: document.querySelector(".lpe-shell"),
     pageTitle: document.getElementById("lpe-page-title"),
     pageMeta: document.getElementById("lpe-page-meta"),
     saveStatus: document.getElementById("lpe-save-status"),
     topSaveState: document.getElementById("lpe-top-save-state"),
+    focusBtn: document.getElementById("lpe-focus-btn"),
     previewBtn: document.getElementById("lpe-preview-btn"),
     copyLinkBtn: document.getElementById("lpe-copy-link-btn"),
     publishBtn: document.getElementById("lpe-publish-btn"),
@@ -31,6 +33,7 @@
     rightCollapseBtn: document.getElementById("lpe-right-collapse"),
     leftResizer: document.getElementById("lpe-resizer-left"),
     rightResizer: document.getElementById("lpe-resizer-right"),
+    sectionsFilter: document.getElementById("lpe-sections-filter"),
     sectionsList: document.getElementById("lpe-sections-list"),
     previewFrame: document.getElementById("lpe-preview-frame"),
     previewRoot: document.getElementById("lpe-preview-root"),
@@ -253,9 +256,12 @@
     selectedSectionId: "",
     openRowMenuSectionId: "",
     selectedLibraryType: "",
+    sectionsFilterText: "",
     rightTab: "element",
     device: "desktop",
     railExpanded: false,
+    focusMode: false,
+    focusMemory: null,
     leftPanelCollapsed: false,
     rightPanelCollapsed: false,
     leftPanelWidth: 292,
@@ -930,6 +936,7 @@
     if (!els.sectionsList) return;
     const previousPositions = captureSectionRowPositions();
     const sections = sectionList();
+    const query = safeText(state.sectionsFilterText, "").toLowerCase();
     const labelByType = new Map(
       (Array.isArray(state.sectionLibrary) ? state.sectionLibrary : []).map((item) => [
         String(item.type || ""),
@@ -943,6 +950,14 @@
 
     sections.forEach((section, index) => {
       const sectionTitle = safeText(section.customLabel, labelByType.get(String(section.type)) || section.type);
+      const matches =
+        !query ||
+        sectionTitle.toLowerCase().includes(query) ||
+        String(section.type || "")
+          .toLowerCase()
+          .includes(query);
+      if (!matches) return;
+
       const inHeaderGroup = headerTypes.has(String(section.type || ""));
       if (inHeaderGroup && !hasHeaderGroup) {
         hasHeaderGroup = true;
@@ -988,6 +1003,11 @@
         `);
     });
 
+    if (!rows.length) {
+      els.sectionsList.innerHTML = '<li class="lpe-empty-list">No sections match your search.</li>';
+      return;
+    }
+
     els.sectionsList.innerHTML = rows.join("");
     animateSectionRowPositions(previousPositions);
   }
@@ -1025,105 +1045,123 @@
     const metaDescriptionCount = String(metaDescription.length);
 
     els.themeControls.innerHTML = `
-      <p class="lpe-controls-group-title">General</p>
-      ${themeField("Page title", "page.title", state.page?.title || "", "text", 'maxlength="160"')}
-      ${themeField("Page slug", "page.slug", state.page?.slug || "", "text", 'maxlength="80"')}
-      <div class="lpe-row-grid">
-        ${themeField("Primary", "theme.primary", theme.primary || "#7c3aed", "color")}
-        ${themeField("Secondary", "theme.secondary", theme.secondary || "#d946ef", "color")}
-      </div>
-      <div class="lpe-row-grid">
-        ${themeField("Background", "theme.background", theme.background || "#f6f5fb", "color")}
-        ${themeField("Surface", "theme.surface", theme.surface || "#ffffff", "color")}
-      </div>
-      <div class="lpe-row-grid">
-        ${themeField("Text", "theme.text", theme.text || "#171a2b", "color")}
-        ${themeField("Muted", "theme.muted", theme.muted || "#5f6377", "color")}
-      </div>
-      <label class="lpe-field">
-        <span>Font</span>
-        <select data-bind-path="theme.font">
-          <option value="Inter" ${theme.font === "Inter" ? "selected" : ""}>Inter</option>
-          <option value="DM Sans" ${theme.font === "DM Sans" ? "selected" : ""}>DM Sans</option>
-          <option value="Sora" ${theme.font === "Sora" ? "selected" : ""}>Sora</option>
-          <option value="System" ${theme.font === "System" ? "selected" : ""}>System</option>
-        </select>
-      </label>
-      <div class="lpe-row-grid">
-        <label class="lpe-field">
-          <span>Radius (${Number(theme.radius || 14)})</span>
-          <input type="range" min="0" max="28" value="${Number(theme.radius || 14)}" data-bind-path="theme.radius" data-bind-type="number" />
-        </label>
-        <label class="lpe-field">
-          <span>Section Padding (${Number(theme.sectionPadding || 52)})</span>
-          <input type="range" min="20" max="120" value="${Number(theme.sectionPadding || 52)}" data-bind-path="theme.sectionPadding" data-bind-type="number" />
-        </label>
-      </div>
-      <div class="lpe-row-grid">
-        <label class="lpe-field">
-          <span>Button style</span>
-          <select data-bind-path="theme.buttonStyle">
-            <option value="solid" ${theme.buttonStyle === "solid" ? "selected" : ""}>Solid</option>
-            <option value="outline" ${theme.buttonStyle === "outline" ? "selected" : ""}>Outline</option>
-            <option value="gradient" ${theme.buttonStyle === "gradient" ? "selected" : ""}>Gradient</option>
-          </select>
-        </label>
-        <label class="lpe-field">
-          <span>Shadow</span>
-          <select data-bind-path="theme.shadowStyle">
-            <option value="none" ${theme.shadowStyle === "none" ? "selected" : ""}>None</option>
-            <option value="minimal" ${theme.shadowStyle === "minimal" ? "selected" : ""}>Minimal</option>
-            <option value="soft" ${theme.shadowStyle === "soft" ? "selected" : ""}>Soft</option>
-            <option value="medium" ${theme.shadowStyle === "medium" ? "selected" : ""}>Medium</option>
-          </select>
-        </label>
-      </div>
-      <label class="lpe-checkbox"><input type="checkbox" data-bind-path="theme.animationsEnabled" data-bind-type="boolean" ${
-        theme.animationsEnabled === false ? "" : "checked"
-      } /> Enable animations</label>
-      <label class="lpe-field">
-        <span>Animation style</span>
-        <select data-bind-path="theme.animationStyle">
-          <option value="subtle" ${theme.animationStyle === "subtle" ? "selected" : ""}>Subtle</option>
-          <option value="medium" ${theme.animationStyle === "medium" ? "selected" : ""}>Medium</option>
-          <option value="bold" ${theme.animationStyle === "bold" ? "selected" : ""}>Bold</option>
-        </select>
-      </label>
-      <hr class="lpe-divider" />
-      <p class="lpe-controls-group-title">SEO & Social</p>
-      <label class="lpe-field">
-        <span class="lpe-field-inline">
-          <span>Meta title</span>
-          <span class="lpe-counter ${metaTitle.length > 60 ? "is-over" : ""}" data-seo-counter="metaTitle">${escapeHtml(
-            metaTitleCount
-          )}/60</span>
-        </span>
-        <input type="text" data-bind-path="theme.seo.metaTitle" value="${escapeHtml(metaTitle)}" maxlength="120" />
-      </label>
-      <label class="lpe-field">
-        <span class="lpe-field-inline">
-          <span>Meta description</span>
-          <span class="lpe-counter ${metaDescription.length > 160 ? "is-over" : ""}" data-seo-counter="metaDescription">${escapeHtml(
-            metaDescriptionCount
-          )}/160</span>
-        </span>
-        <textarea data-bind-path="theme.seo.metaDescription" maxlength="300">${escapeHtml(metaDescription)}</textarea>
-      </label>
-      ${baseTextField("OG title", "theme.seo.ogTitle", ogTitle, 180)}
-      ${baseTextareaField("OG description", "theme.seo.ogDescription", ogDescription, 300)}
-      ${baseTextField("OG image URL", "theme.seo.ogImageUrl", ogImageUrl, 2400)}
-      <label class="lpe-field">
-        <span>Twitter card</span>
-        <select data-bind-path="theme.seo.twitterCard">
-          <option value="summary" ${twitterCard === "summary" ? "selected" : ""}>summary</option>
-          <option value="summary_large_image" ${
-            twitterCard === "summary_large_image" ? "selected" : ""
-          }>summary_large_image</option>
-        </select>
-      </label>
-      ${baseTextField("Twitter title", "theme.seo.twitterTitle", twitterTitle, 180)}
-      ${baseTextareaField("Twitter description", "theme.seo.twitterDescription", twitterDescription, 300)}
-      ${baseTextField("Twitter image URL", "theme.seo.twitterImageUrl", twitterImageUrl, 2400)}
+      <details class="lpe-control-group" open>
+        <summary>Brand & Identity</summary>
+        <div class="lpe-control-group-body">
+          ${themeField("Page title", "page.title", state.page?.title || "", "text", 'maxlength="160"')}
+          ${themeField("Page slug", "page.slug", state.page?.slug || "", "text", 'maxlength="80"')}
+          <div class="lpe-row-grid">
+            ${themeField("Primary", "theme.primary", theme.primary || "#7c3aed", "color")}
+            ${themeField("Secondary", "theme.secondary", theme.secondary || "#d946ef", "color")}
+          </div>
+          <div class="lpe-row-grid">
+            ${themeField("Background", "theme.background", theme.background || "#f6f5fb", "color")}
+            ${themeField("Surface", "theme.surface", theme.surface || "#ffffff", "color")}
+          </div>
+          <div class="lpe-row-grid">
+            ${themeField("Text", "theme.text", theme.text || "#171a2b", "color")}
+            ${themeField("Muted", "theme.muted", theme.muted || "#5f6377", "color")}
+          </div>
+          <label class="lpe-field">
+            <span>Font</span>
+            <select data-bind-path="theme.font">
+              <option value="Inter" ${theme.font === "Inter" ? "selected" : ""}>Inter</option>
+              <option value="DM Sans" ${theme.font === "DM Sans" ? "selected" : ""}>DM Sans</option>
+              <option value="Sora" ${theme.font === "Sora" ? "selected" : ""}>Sora</option>
+              <option value="System" ${theme.font === "System" ? "selected" : ""}>System</option>
+            </select>
+          </label>
+        </div>
+      </details>
+
+      <details class="lpe-control-group" open>
+        <summary>Layout & Motion</summary>
+        <div class="lpe-control-group-body">
+          <div class="lpe-row-grid">
+            <label class="lpe-field">
+              <span>Radius (${Number(theme.radius || 14)})</span>
+              <input type="range" min="0" max="28" value="${Number(
+                theme.radius || 14
+              )}" data-bind-path="theme.radius" data-bind-type="number" />
+            </label>
+            <label class="lpe-field">
+              <span>Section Padding (${Number(theme.sectionPadding || 52)})</span>
+              <input type="range" min="20" max="120" value="${Number(
+                theme.sectionPadding || 52
+              )}" data-bind-path="theme.sectionPadding" data-bind-type="number" />
+            </label>
+          </div>
+          <div class="lpe-row-grid">
+            <label class="lpe-field">
+              <span>Button style</span>
+              <select data-bind-path="theme.buttonStyle">
+                <option value="solid" ${theme.buttonStyle === "solid" ? "selected" : ""}>Solid</option>
+                <option value="outline" ${theme.buttonStyle === "outline" ? "selected" : ""}>Outline</option>
+                <option value="gradient" ${theme.buttonStyle === "gradient" ? "selected" : ""}>Gradient</option>
+              </select>
+            </label>
+            <label class="lpe-field">
+              <span>Shadow</span>
+              <select data-bind-path="theme.shadowStyle">
+                <option value="none" ${theme.shadowStyle === "none" ? "selected" : ""}>None</option>
+                <option value="minimal" ${theme.shadowStyle === "minimal" ? "selected" : ""}>Minimal</option>
+                <option value="soft" ${theme.shadowStyle === "soft" ? "selected" : ""}>Soft</option>
+                <option value="medium" ${theme.shadowStyle === "medium" ? "selected" : ""}>Medium</option>
+              </select>
+            </label>
+          </div>
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="theme.animationsEnabled" data-bind-type="boolean" ${
+            theme.animationsEnabled === false ? "" : "checked"
+          } /> Enable animations</label>
+          <label class="lpe-field">
+            <span>Animation style</span>
+            <select data-bind-path="theme.animationStyle">
+              <option value="subtle" ${theme.animationStyle === "subtle" ? "selected" : ""}>Subtle</option>
+              <option value="medium" ${theme.animationStyle === "medium" ? "selected" : ""}>Medium</option>
+              <option value="bold" ${theme.animationStyle === "bold" ? "selected" : ""}>Bold</option>
+            </select>
+          </label>
+        </div>
+      </details>
+
+      <details class="lpe-control-group" open>
+        <summary>SEO & Social</summary>
+        <div class="lpe-control-group-body">
+          <label class="lpe-field">
+            <span class="lpe-field-inline">
+              <span>Meta title</span>
+              <span class="lpe-counter ${metaTitle.length > 60 ? "is-over" : ""}" data-seo-counter="metaTitle">${escapeHtml(
+                metaTitleCount
+              )}/60</span>
+            </span>
+            <input type="text" data-bind-path="theme.seo.metaTitle" value="${escapeHtml(metaTitle)}" maxlength="120" />
+          </label>
+          <label class="lpe-field">
+            <span class="lpe-field-inline">
+              <span>Meta description</span>
+              <span class="lpe-counter ${metaDescription.length > 160 ? "is-over" : ""}" data-seo-counter="metaDescription">${escapeHtml(
+                metaDescriptionCount
+              )}/160</span>
+            </span>
+            <textarea data-bind-path="theme.seo.metaDescription" maxlength="300">${escapeHtml(metaDescription)}</textarea>
+          </label>
+          ${baseTextField("OG title", "theme.seo.ogTitle", ogTitle, 180)}
+          ${baseTextareaField("OG description", "theme.seo.ogDescription", ogDescription, 300)}
+          ${baseTextField("OG image URL", "theme.seo.ogImageUrl", ogImageUrl, 2400)}
+          <label class="lpe-field">
+            <span>Twitter card</span>
+            <select data-bind-path="theme.seo.twitterCard">
+              <option value="summary" ${twitterCard === "summary" ? "selected" : ""}>summary</option>
+              <option value="summary_large_image" ${
+                twitterCard === "summary_large_image" ? "selected" : ""
+              }>summary_large_image</option>
+            </select>
+          </label>
+          ${baseTextField("Twitter title", "theme.seo.twitterTitle", twitterTitle, 180)}
+          ${baseTextareaField("Twitter description", "theme.seo.twitterDescription", twitterDescription, 300)}
+          ${baseTextField("Twitter image URL", "theme.seo.twitterImageUrl", twitterImageUrl, 2400)}
+        </div>
+      </details>
     `;
     enhanceImageUploadControls(els.themeControls);
     refreshSeoPreviews();
@@ -1871,6 +1909,39 @@
     }
   }
 
+  function setFocusMode(enabled) {
+    const next = Boolean(enabled);
+    state.focusMode = next;
+
+    if (next) {
+      state.focusMemory = {
+        leftPanelCollapsed: state.leftPanelCollapsed,
+        rightPanelCollapsed: state.rightPanelCollapsed,
+        leftPanelWidth: state.leftPanelWidth,
+        rightPanelWidth: state.rightPanelWidth,
+      };
+      state.leftPanelCollapsed = true;
+      state.rightPanelCollapsed = true;
+      setRailExpanded(false);
+    } else if (state.focusMemory) {
+      state.leftPanelCollapsed = Boolean(state.focusMemory.leftPanelCollapsed);
+      state.rightPanelCollapsed = Boolean(state.focusMemory.rightPanelCollapsed);
+      state.leftPanelWidth = Number(state.focusMemory.leftPanelWidth) || 292;
+      state.rightPanelWidth = Number(state.focusMemory.rightPanelWidth) || 360;
+      state.focusMemory = null;
+    }
+
+    if (els.shell) {
+      els.shell.classList.toggle("is-focus-mode", state.focusMode);
+    }
+    if (els.focusBtn) {
+      els.focusBtn.classList.toggle("is-active", state.focusMode);
+      els.focusBtn.textContent = state.focusMode ? "Exit Focus" : "Focus";
+      els.focusBtn.setAttribute("aria-pressed", state.focusMode ? "true" : "false");
+    }
+    applyPanelLayout();
+  }
+
   function applyPanelLayout() {
     if (!els.layout) return;
     const leftWidth = state.leftPanelCollapsed ? 0 : Math.round(state.leftPanelWidth);
@@ -1896,6 +1967,9 @@
   }
 
   function togglePanelCollapse(side) {
+    if (state.focusMode) {
+      setFocusMode(false);
+    }
     if (side === "left") {
       state.leftPanelCollapsed = !state.leftPanelCollapsed;
       if (!state.leftPanelCollapsed && state.leftPanelWidth < 260) state.leftPanelWidth = 292;
@@ -1918,6 +1992,7 @@
   function bindPanelFrameEvents() {
     setRailExpanded(false);
     activateRailTool("sections");
+    setFocusMode(false);
     applyPanelLayout();
     setRightTab(state.rightTab);
 
@@ -1972,6 +2047,7 @@
       if (!handle) return;
       handle.addEventListener("mousedown", (event) => {
         event.preventDefault();
+        if (state.focusMode) setFocusMode(false);
         const startX = event.clientX;
         const startLeft = state.leftPanelWidth;
         const startRight = state.rightPanelWidth;
@@ -2364,6 +2440,11 @@
     if (els.previewBtn) els.previewBtn.addEventListener("click", openPreview);
     if (els.copyLinkBtn) els.copyLinkBtn.addEventListener("click", copyLink);
     if (els.publishBtn) els.publishBtn.addEventListener("click", publishPage);
+    if (els.focusBtn) {
+      els.focusBtn.addEventListener("click", () => {
+        setFocusMode(!state.focusMode);
+      });
+    }
     if (els.saveTopBtn) {
       els.saveTopBtn.addEventListener("click", () => {
         if (state.saveTimer) clearTimeout(state.saveTimer);
@@ -2376,6 +2457,13 @@
         saveDraft(true);
       });
     }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "\\" || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      event.preventDefault();
+      setFocusMode(!state.focusMode);
+    });
   }
 
   function bindSectionsEvents() {
@@ -2396,6 +2484,13 @@
       state.openRowMenuSectionId = "";
       renderSectionsList();
     };
+
+    if (els.sectionsFilter) {
+      els.sectionsFilter.addEventListener("input", () => {
+        state.sectionsFilterText = safeText(els.sectionsFilter.value, "");
+        renderSectionsList();
+      });
+    }
 
     els.sectionsList.addEventListener("click", (event) => {
       const target = event.target;

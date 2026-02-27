@@ -76,32 +76,26 @@
       <main id="lpe-layout" class="lpe-layout">
         <aside id="lpe-utility-rail" class="lpe-utility-rail is-collapsed" aria-label="Editor tools">
           <button
-            id="lpe-rail-toggle"
-            type="button"
-            class="lpe-rail-btn lpe-rail-toggle"
-            aria-label="Expand tools"
-            data-tooltip="Expand tools"
-          >
-            <span class="lpe-rail-icon" aria-hidden="true">&#9776;</span>
-            <span class="lpe-rail-label">Tools</span>
-          </button>
-          <button
             type="button"
             class="lpe-rail-btn is-active"
             data-rail-tool="sections"
             data-tooltip="Sections"
             aria-label="Sections"
+            title="Sections"
           >
             <span class="lpe-rail-icon" aria-hidden="true">&#9778;</span>
             <span class="lpe-rail-label">Sections</span>
           </button>
-          <button type="button" class="lpe-rail-btn" data-rail-tool="element" data-tooltip="Element" aria-label="Element">
+          <button
+            type="button"
+            class="lpe-rail-btn"
+            data-rail-tool="settings"
+            data-tooltip="Settings"
+            aria-label="Settings"
+            title="Settings"
+          >
             <span class="lpe-rail-icon" aria-hidden="true">&#9881;</span>
-            <span class="lpe-rail-label">Element</span>
-          </button>
-          <button type="button" class="lpe-rail-btn" data-rail-tool="theme" data-tooltip="Theme" aria-label="Theme">
-            <span class="lpe-rail-icon" aria-hidden="true">&#127912;</span>
-            <span class="lpe-rail-label">Theme</span>
+            <span class="lpe-rail-label">Settings</span>
           </button>
         </aside>
 
@@ -150,9 +144,6 @@
         ></button>
 
         <section class="lpe-center-panel">
-          <header class="lpe-preview-head">
-            <span class="lpe-preview-label">Live Preview</span>
-          </header>
           <div id="lpe-preview-frame" class="lpe-preview-frame is-desktop">
             <div id="lpe-preview-root"></div>
           </div>
@@ -177,7 +168,7 @@
 
             <div class="lpe-settings-tabs" role="tablist" aria-label="Settings type">
               <button type="button" class="is-active" data-right-tab-btn="element">Element</button>
-              <button type="button" data-right-tab-btn="theme">Theme</button>
+              <button type="button" data-right-tab-btn="theme">Settings</button>
             </div>
 
             <section class="lpe-right-tab-panel is-active" data-right-tab-panel="element">
@@ -195,7 +186,7 @@
 
             <section class="lpe-right-tab-panel" data-right-tab-panel="theme">
               <div class="lpe-panel-head">
-                <h3>Global Theme</h3>
+                <h3>Theme & SEO Settings</h3>
               </div>
               <div id="lpe-theme-controls" class="lpe-controls"></div>
               <details class="lpe-control-group">

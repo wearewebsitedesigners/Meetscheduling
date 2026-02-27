@@ -1854,6 +1854,7 @@
           state.selectedSectionId = sectionId;
           openRightPanel("element");
           setRightTab("element");
+          activateRailTool("sections");
           renderSectionsList();
           renderSectionControls();
         },
@@ -1893,7 +1894,7 @@
   function setRightTab(tabName) {
     const normalized = tabName === "theme" ? "theme" : "element";
     state.rightTab = normalized;
-    activateRailTool(normalized);
+    activateRailTool(normalized === "theme" ? "settings" : "sections");
     els.rightTabButtons.forEach((button) => {
       const active = button.getAttribute("data-right-tab-btn") === normalized;
       button.classList.toggle("is-active", active);
@@ -2042,15 +2043,12 @@
         const tool = button.getAttribute("data-rail-tool");
         if (!tool) return;
         activateRailTool(tool);
-        if (tool === "theme") {
+        if (tool === "settings") {
           openRightPanel("theme");
           return;
         }
-        if (tool === "element") {
-          openRightPanel("element");
-          return;
-        }
         if (tool === "sections") {
+          closeRightPanel();
           if (state.leftPanelCollapsed) togglePanelCollapse("left");
           if (els.leftPanel) els.leftPanel.scrollTo({ top: 0, behavior: "smooth" });
         }
@@ -2544,6 +2542,7 @@
         state.selectedSectionId = sectionId;
         openRightPanel("element");
         setRightTab("element");
+        activateRailTool("sections");
         renderSectionsList();
         renderSectionControls();
         renderPreview();

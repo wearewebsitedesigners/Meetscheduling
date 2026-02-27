@@ -330,8 +330,7 @@
   background: var(--color-surface, #fff);
   box-shadow: var(--shadow-sm, 0 4px 12px rgba(16, 39, 72, 0.08));
   min-height: 100%;
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: block;
 }
 
 .lpe-preview-head {

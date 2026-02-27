@@ -31,28 +31,65 @@
           <p id="lpe-page-meta">Loading page...</p>
         </div>
         <div class="lpe-topbar-actions">
+          <span id="lpe-top-save-state" class="lpe-top-save-state is-saved">Saved</span>
           <div class="lpe-device-toggle" role="tablist" aria-label="Preview device">
             <button type="button" class="is-active" data-device="desktop">Desktop</button>
             <button type="button" data-device="mobile">Mobile</button>
           </div>
           <button type="button" id="lpe-preview-btn" class="lpe-btn lpe-btn-secondary">Preview</button>
           <button type="button" id="lpe-copy-link-btn" class="lpe-btn lpe-btn-secondary">Copy link</button>
+          <button type="button" id="lpe-save-top-btn" class="lpe-btn lpe-btn-muted" disabled>Save</button>
           <button type="button" id="lpe-publish-btn" class="lpe-btn lpe-btn-primary">Publish</button>
-          <button type="button" id="lpe-save-top-btn" class="lpe-btn lpe-btn-muted">Save</button>
         </div>
       </header>
 
-      <main class="lpe-layout">
-        <aside class="lpe-utility-rail" aria-label="Editor tools">
-          <button type="button" class="lpe-rail-btn is-active" aria-label="Sections">S</button>
-          <button type="button" class="lpe-rail-btn" aria-label="Styles">T</button>
-          <button type="button" class="lpe-rail-btn" aria-label="Apps">A</button>
+      <main id="lpe-layout" class="lpe-layout">
+        <aside id="lpe-utility-rail" class="lpe-utility-rail is-collapsed" aria-label="Editor tools">
+          <button
+            id="lpe-rail-toggle"
+            type="button"
+            class="lpe-rail-btn lpe-rail-toggle"
+            aria-label="Expand tools"
+            data-tooltip="Expand tools"
+          >
+            <span class="lpe-rail-icon" aria-hidden="true">&#9776;</span>
+            <span class="lpe-rail-label">Tools</span>
+          </button>
+          <button
+            type="button"
+            class="lpe-rail-btn is-active"
+            data-rail-tool="sections"
+            data-tooltip="Sections"
+            aria-label="Sections"
+          >
+            <span class="lpe-rail-icon" aria-hidden="true">&#9778;</span>
+            <span class="lpe-rail-label">Sections</span>
+          </button>
+          <button type="button" class="lpe-rail-btn" data-rail-tool="element" data-tooltip="Element" aria-label="Element">
+            <span class="lpe-rail-icon" aria-hidden="true">&#9881;</span>
+            <span class="lpe-rail-label">Element</span>
+          </button>
+          <button type="button" class="lpe-rail-btn" data-rail-tool="theme" data-tooltip="Theme" aria-label="Theme">
+            <span class="lpe-rail-icon" aria-hidden="true">&#127912;</span>
+            <span class="lpe-rail-label">Theme</span>
+          </button>
         </aside>
 
-        <aside class="lpe-left-panel">
+        <aside id="lpe-left-panel" class="lpe-left-panel">
           <section class="lpe-panel-card lpe-sections-card">
             <div class="lpe-panel-head">
               <h2>Home page</h2>
+              <div class="lpe-panel-head-actions">
+                <button
+                  id="lpe-left-collapse"
+                  type="button"
+                  class="lpe-icon-btn"
+                  aria-label="Collapse sections panel"
+                  title="Collapse panel"
+                >
+                  <span aria-hidden="true">&lsaquo;</span>
+                </button>
+              </div>
             </div>
             <p class="lpe-card-subtitle">Page sections</p>
             <ul id="lpe-sections-list" class="lpe-sections-list"></ul>
@@ -68,6 +105,14 @@
           </section>
         </aside>
 
+        <button
+          id="lpe-resizer-left"
+          type="button"
+          class="lpe-resizer lpe-resizer-left"
+          aria-label="Resize sections panel"
+          title="Resize panel"
+        ></button>
+
         <section class="lpe-center-panel">
           <header class="lpe-preview-head">
             <span id="lpe-save-status" class="lpe-save-status">Saved</span>
@@ -78,29 +123,73 @@
           </div>
         </section>
 
-        <aside class="lpe-right-panel">
-          <section class="lpe-panel-card">
+        <button
+          id="lpe-resizer-right"
+          type="button"
+          class="lpe-resizer lpe-resizer-right"
+          aria-label="Resize settings panel"
+          title="Resize panel"
+        ></button>
+
+        <aside id="lpe-right-panel" class="lpe-right-panel">
+          <section class="lpe-panel-card lpe-settings-shell">
             <div class="lpe-panel-head">
-              <h2>Theme</h2>
+              <h2>Settings</h2>
+              <div class="lpe-panel-head-actions">
+                <button
+                  id="lpe-right-collapse"
+                  type="button"
+                  class="lpe-icon-btn"
+                  aria-label="Collapse settings panel"
+                  title="Collapse panel"
+                >
+                  <span aria-hidden="true">&rsaquo;</span>
+                </button>
+              </div>
             </div>
-            <div id="lpe-theme-controls" class="lpe-controls"></div>
+
+            <div class="lpe-settings-tabs" role="tablist" aria-label="Settings type">
+              <button type="button" class="is-active" data-right-tab-btn="element">Element</button>
+              <button type="button" data-right-tab-btn="theme">Theme</button>
+            </div>
+
+            <section class="lpe-right-tab-panel is-active" data-right-tab-panel="element">
+              <div class="lpe-panel-head">
+                <h3>Selected Section</h3>
+              </div>
+              <div id="lpe-section-controls" class="lpe-controls"></div>
+              <div class="lpe-panel-head">
+                <h3>Version History</h3>
+              </div>
+              <div id="lpe-history-list" class="lpe-history-list"></div>
+            </section>
+
+            <section class="lpe-right-tab-panel" data-right-tab-panel="theme">
+              <div class="lpe-panel-head">
+                <h3>Global Theme</h3>
+              </div>
+              <div id="lpe-theme-controls" class="lpe-controls"></div>
+            </section>
           </section>
 
-          <section class="lpe-panel-card">
+          <section class="lpe-panel-card lpe-seo-preview-card">
             <div class="lpe-panel-head">
-              <h2>Section Settings</h2>
+              <h2>Search Preview</h2>
             </div>
-            <div id="lpe-section-controls" class="lpe-controls"></div>
+            <article class="lpe-google-snippet" id="lpe-google-snippet"></article>
+            <div class="lpe-social-previews">
+              <article class="lpe-social-preview">
+                <h3>Open Graph</h3>
+                <div id="lpe-og-preview" class="lpe-social-card"></div>
+              </article>
+              <article class="lpe-social-preview">
+                <h3>Twitter</h3>
+                <div id="lpe-twitter-preview" class="lpe-social-card"></div>
+              </article>
+            </div>
           </section>
 
-          <section class="lpe-panel-card">
-            <div class="lpe-panel-head">
-              <h2>Version History</h2>
-            </div>
-            <div id="lpe-history-list" class="lpe-history-list"></div>
-          </section>
-
-          <button id="lpe-save-btn" type="button" class="lpe-btn lpe-btn-primary lpe-save-btn">Save Changes</button>
+          <button id="lpe-save-btn" type="button" class="lpe-btn lpe-btn-primary lpe-save-btn" disabled>Save Changes</button>
         </aside>
       </main>
     </div>

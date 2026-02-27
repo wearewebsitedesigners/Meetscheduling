@@ -16,11 +16,21 @@
     pageTitle: document.getElementById("lpe-page-title"),
     pageMeta: document.getElementById("lpe-page-meta"),
     saveStatus: document.getElementById("lpe-save-status"),
+    topSaveState: document.getElementById("lpe-top-save-state"),
     previewBtn: document.getElementById("lpe-preview-btn"),
     copyLinkBtn: document.getElementById("lpe-copy-link-btn"),
     publishBtn: document.getElementById("lpe-publish-btn"),
     saveTopBtn: document.getElementById("lpe-save-top-btn"),
     saveBtn: document.getElementById("lpe-save-btn"),
+    layout: document.getElementById("lpe-layout"),
+    utilityRail: document.getElementById("lpe-utility-rail"),
+    railToggle: document.getElementById("lpe-rail-toggle"),
+    leftPanel: document.getElementById("lpe-left-panel"),
+    rightPanel: document.getElementById("lpe-right-panel"),
+    leftCollapseBtn: document.getElementById("lpe-left-collapse"),
+    rightCollapseBtn: document.getElementById("lpe-right-collapse"),
+    leftResizer: document.getElementById("lpe-resizer-left"),
+    rightResizer: document.getElementById("lpe-resizer-right"),
     sectionsList: document.getElementById("lpe-sections-list"),
     previewFrame: document.getElementById("lpe-preview-frame"),
     previewRoot: document.getElementById("lpe-preview-root"),
@@ -28,6 +38,11 @@
     themeControls: document.getElementById("lpe-theme-controls"),
     sectionControls: document.getElementById("lpe-section-controls"),
     historyList: document.getElementById("lpe-history-list"),
+    rightTabButtons: Array.from(document.querySelectorAll("[data-right-tab-btn]")),
+    rightTabPanels: Array.from(document.querySelectorAll("[data-right-tab-panel]")),
+    googleSnippet: document.getElementById("lpe-google-snippet"),
+    ogPreview: document.getElementById("lpe-og-preview"),
+    twitterPreview: document.getElementById("lpe-twitter-preview"),
     addSectionBtn: document.getElementById("lpe-add-section-btn"),
     addDialog: document.getElementById("lpe-add-dialog"),
     dialogCancel: document.getElementById("lpe-dialog-cancel"),
@@ -236,8 +251,17 @@
     sectionLibrary: [],
     presets: [],
     selectedSectionId: "",
+    openRowMenuSectionId: "",
     selectedLibraryType: "",
+    rightTab: "element",
     device: "desktop",
+    railExpanded: false,
+    leftPanelCollapsed: false,
+    rightPanelCollapsed: false,
+    leftPanelWidth: 292,
+    rightPanelWidth: 360,
+    isDirty: false,
+    saveStatusType: "saved",
     saveTimer: null,
     saveInFlight: false,
     saveQueued: false,
@@ -326,10 +350,8 @@
   }
 
   function getUploadInputByPath(path) {
-    if (!els.sectionControls || !path) return null;
-    const candidates = Array.from(
-      els.sectionControls.querySelectorAll("input[type='file'][data-upload-input='true']")
-    );
+    if (!path) return null;
+    const candidates = Array.from(document.querySelectorAll("input[type='file'][data-upload-input='true']"));
     return candidates.find((input) => input.getAttribute("data-path") === path) || null;
   }
 
@@ -388,20 +410,44 @@
     return sectionList().findIndex((item) => String(item.id) === String(sectionId));
   }
 
+  function updateSaveActions() {
+    const shouldDisableSave = !state.isDirty || state.saveInFlight;
+    if (els.saveTopBtn) {
+      els.saveTopBtn.disabled = shouldDisableSave;
+      els.saveTopBtn.setAttribute("aria-disabled", shouldDisableSave ? "true" : "false");
+    }
+    if (els.saveBtn) {
+      els.saveBtn.disabled = shouldDisableSave;
+      els.saveBtn.setAttribute("aria-disabled", shouldDisableSave ? "true" : "false");
+    }
+  }
+
+  function setDirty(value) {
+    state.isDirty = Boolean(value);
+    updateSaveActions();
+  }
+
+  function applySaveStatus(node, type, text) {
+    if (!node) return;
+    node.classList.remove("is-saving", "is-error", "is-dirty", "is-saved");
+    node.classList.add(
+      type === "error" ? "is-error" : type === "saving" ? "is-saving" : type === "dirty" ? "is-dirty" : "is-saved"
+    );
+    node.textContent = text;
+  }
+
   function setSaveStatus(type, customText) {
-    if (!els.saveStatus) return;
-    els.saveStatus.classList.remove("is-saving", "is-error");
-    if (type === "saving") {
-      els.saveStatus.classList.add("is-saving");
-      els.saveStatus.textContent = customText || "Saving...";
-      return;
+    state.saveStatusType = type;
+    let text = customText || "Saved";
+    if (!customText) {
+      if (type === "saving") text = "Saving...";
+      if (type === "error") text = "Save failed";
+      if (type === "dirty") text = "Unsaved changes";
+      if (type === "saved") text = "Saved";
     }
-    if (type === "error") {
-      els.saveStatus.classList.add("is-error");
-      els.saveStatus.textContent = customText || "Save failed";
-      return;
-    }
-    els.saveStatus.textContent = customText || "Saved";
+    applySaveStatus(els.saveStatus, type, text);
+    applySaveStatus(els.topSaveState, type, text);
+    updateSaveActions();
   }
 
   function ensureSelection() {
@@ -776,7 +822,8 @@
   }
 
   function queueAutosave() {
-    setSaveStatus("saving", "Saving draft...");
+    setDirty(true);
+    setSaveStatus("dirty", "Unsaved changes");
     if (state.saveTimer) clearTimeout(state.saveTimer);
     state.saveTimer = setTimeout(() => {
       saveDraft();
@@ -786,9 +833,9 @@
   async function saveDraft(forceNow) {
     if (state.saveInFlight && !forceNow) {
       state.saveQueued = true;
-      return;
+      return false;
     }
-    if (!state.pageId || !state.draftConfig) return;
+    if (!state.pageId || !state.draftConfig) return false;
 
     state.saveInFlight = true;
     setSaveStatus("saving");
@@ -802,17 +849,22 @@
         }),
       });
       normalizePayload(payload);
+      setDirty(false);
       setSaveStatus("saved", "Saved");
       renderStaticSections();
       renderPreview();
+      return true;
     } catch (error) {
+      setDirty(true);
       setSaveStatus("error", error.message || "Save failed");
+      return false;
     } finally {
       state.saveInFlight = false;
       if (state.saveQueued) {
         state.saveQueued = false;
         saveDraft();
       }
+      updateSaveActions();
     }
   }
 
@@ -839,6 +891,8 @@
         '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="3" width="8" height="10" rx="1.5"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1H8"/></svg>',
       x:
         '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>',
+      menu:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="13" cy="8" r="1"/></svg>',
     };
     return icons[name] || "";
   }
@@ -888,6 +942,7 @@
     const rows = [];
 
     sections.forEach((section, index) => {
+      const sectionTitle = safeText(section.customLabel, labelByType.get(String(section.type)) || section.type);
       const inHeaderGroup = headerTypes.has(String(section.type || ""));
       if (inHeaderGroup && !hasHeaderGroup) {
         hasHeaderGroup = true;
@@ -906,7 +961,7 @@
               <span class="lpe-section-grip" aria-hidden="true">${sectionIcon("grip")}</span>
               <button type="button" class="lpe-section-name" data-action="select-section" data-section-id="${escapeHtml(
                 section.id
-              )}">${escapeHtml(labelByType.get(String(section.type)) || section.type)}</button>
+              )}">${escapeHtml(sectionTitle)}</button>
             </div>
             <div class="lpe-section-actions">
               <button type="button" class="lpe-icon-btn ${
@@ -914,12 +969,20 @@
               }" data-action="toggle-section" data-section-id="${escapeHtml(section.id)}" aria-label="${
                 section.enabled === false ? "Show section" : "Hide section"
               }">${section.enabled === false ? sectionIcon("eyeOff") : sectionIcon("eye")}</button>
-              <button type="button" class="lpe-icon-btn" data-action="duplicate-section" data-section-id="${escapeHtml(
+              <button
+                type="button"
+                class="lpe-icon-btn"
+                data-action="toggle-row-menu"
+                data-section-id="${escapeHtml(section.id)}"
+                aria-label="Open section actions"
+              >${sectionIcon("menu")}</button>
+              <div class="lpe-context-menu ${state.openRowMenuSectionId === section.id ? "is-open" : ""}" data-row-menu="${escapeHtml(
                 section.id
-              )}" aria-label="Duplicate section">${sectionIcon("copy")}</button>
-              <button type="button" class="lpe-icon-btn" data-action="delete-section" data-section-id="${escapeHtml(
-                section.id
-              )}" aria-label="Delete section">${sectionIcon("x")}</button>
+              )}">
+                <button type="button" data-action="rename-section" data-section-id="${escapeHtml(section.id)}">Rename</button>
+                <button type="button" data-action="duplicate-section" data-section-id="${escapeHtml(section.id)}">Duplicate</button>
+                <button type="button" data-action="delete-section" data-section-id="${escapeHtml(section.id)}">Delete</button>
+              </div>
             </div>
           </li>
         `);
@@ -944,7 +1007,25 @@
   function renderThemeControls() {
     if (!els.themeControls) return;
     const theme = state.draftConfig?.theme || {};
+    const seo = theme.seo && typeof theme.seo === "object" ? theme.seo : {};
+    const metaTitle = safeText(seo.metaTitle, state.page?.title || "", 180);
+    const metaDescription = safeText(
+      seo.metaDescription,
+      "Describe your services to attract the right customers.",
+      300
+    );
+    const ogTitle = safeText(seo.ogTitle, metaTitle, 180);
+    const ogDescription = safeText(seo.ogDescription, metaDescription, 300);
+    const ogImageUrl = safeText(seo.ogImageUrl, "", 2400);
+    const twitterTitle = safeText(seo.twitterTitle, ogTitle, 180);
+    const twitterDescription = safeText(seo.twitterDescription, ogDescription, 300);
+    const twitterImageUrl = safeText(seo.twitterImageUrl, ogImageUrl, 2400);
+    const twitterCard = safeText(seo.twitterCard, "summary_large_image", 40);
+    const metaTitleCount = String(metaTitle.length);
+    const metaDescriptionCount = String(metaDescription.length);
+
     els.themeControls.innerHTML = `
+      <p class="lpe-controls-group-title">General</p>
       ${themeField("Page title", "page.title", state.page?.title || "", "text", 'maxlength="160"')}
       ${themeField("Page slug", "page.slug", state.page?.slug || "", "text", 'maxlength="80"')}
       <div class="lpe-row-grid">
@@ -1008,7 +1089,152 @@
           <option value="bold" ${theme.animationStyle === "bold" ? "selected" : ""}>Bold</option>
         </select>
       </label>
+      <hr class="lpe-divider" />
+      <p class="lpe-controls-group-title">SEO & Social</p>
+      <label class="lpe-field">
+        <span class="lpe-field-inline">
+          <span>Meta title</span>
+          <span class="lpe-counter ${metaTitle.length > 60 ? "is-over" : ""}" data-seo-counter="metaTitle">${escapeHtml(
+            metaTitleCount
+          )}/60</span>
+        </span>
+        <input type="text" data-bind-path="theme.seo.metaTitle" value="${escapeHtml(metaTitle)}" maxlength="120" />
+      </label>
+      <label class="lpe-field">
+        <span class="lpe-field-inline">
+          <span>Meta description</span>
+          <span class="lpe-counter ${metaDescription.length > 160 ? "is-over" : ""}" data-seo-counter="metaDescription">${escapeHtml(
+            metaDescriptionCount
+          )}/160</span>
+        </span>
+        <textarea data-bind-path="theme.seo.metaDescription" maxlength="300">${escapeHtml(metaDescription)}</textarea>
+      </label>
+      ${baseTextField("OG title", "theme.seo.ogTitle", ogTitle, 180)}
+      ${baseTextareaField("OG description", "theme.seo.ogDescription", ogDescription, 300)}
+      ${baseTextField("OG image URL", "theme.seo.ogImageUrl", ogImageUrl, 2400)}
+      <label class="lpe-field">
+        <span>Twitter card</span>
+        <select data-bind-path="theme.seo.twitterCard">
+          <option value="summary" ${twitterCard === "summary" ? "selected" : ""}>summary</option>
+          <option value="summary_large_image" ${
+            twitterCard === "summary_large_image" ? "selected" : ""
+          }>summary_large_image</option>
+        </select>
+      </label>
+      ${baseTextField("Twitter title", "theme.seo.twitterTitle", twitterTitle, 180)}
+      ${baseTextareaField("Twitter description", "theme.seo.twitterDescription", twitterDescription, 300)}
+      ${baseTextField("Twitter image URL", "theme.seo.twitterImageUrl", twitterImageUrl, 2400)}
     `;
+    enhanceImageUploadControls(els.themeControls);
+    refreshSeoPreviews();
+  }
+
+  function readControlValue(path, fallback = "") {
+    if (!els.themeControls) return fallback;
+    const escapedPath =
+      typeof CSS !== "undefined" && typeof CSS.escape === "function"
+        ? CSS.escape(path)
+        : String(path).replace(/"/g, '\\"');
+    const control = els.themeControls.querySelector(`[data-bind-path="${escapedPath}"]`);
+    if (!(control instanceof HTMLElement)) return fallback;
+    if (control instanceof HTMLInputElement && control.type === "checkbox") {
+      return control.checked;
+    }
+    if (
+      control instanceof HTMLInputElement ||
+      control instanceof HTMLTextAreaElement ||
+      control instanceof HTMLSelectElement
+    ) {
+      return control.value;
+    }
+    return fallback;
+  }
+
+  function refreshSeoPreviews() {
+    const slug = safeText(String(readControlValue("page.slug", state.page?.slug || "")), state.page?.slug || "", 120);
+    const previewUrl = `${window.location.origin}/${slug}`;
+    const metaTitle = safeText(
+      String(readControlValue("theme.seo.metaTitle", state.page?.title || "")),
+      state.page?.title || "",
+      180
+    );
+    const metaDescription = safeText(
+      String(
+        readControlValue(
+          "theme.seo.metaDescription",
+          "Describe your services to attract the right customers."
+        )
+      ),
+      "Describe your services to attract the right customers.",
+      300
+    );
+    const ogTitle = safeText(String(readControlValue("theme.seo.ogTitle", metaTitle)), metaTitle, 180);
+    const ogDescription = safeText(String(readControlValue("theme.seo.ogDescription", metaDescription)), metaDescription, 300);
+    const ogImageUrl = safeText(String(readControlValue("theme.seo.ogImageUrl", "")), "", 2400);
+    const twitterTitle = safeText(String(readControlValue("theme.seo.twitterTitle", ogTitle)), ogTitle, 180);
+    const twitterDescription = safeText(
+      String(readControlValue("theme.seo.twitterDescription", ogDescription)),
+      ogDescription,
+      300
+    );
+    const twitterImageUrl = safeText(String(readControlValue("theme.seo.twitterImageUrl", ogImageUrl)), ogImageUrl, 2400);
+    const twitterCard = safeText(
+      String(readControlValue("theme.seo.twitterCard", "summary_large_image")),
+      "summary_large_image",
+      40
+    );
+
+    const metaTitleCounter = els.themeControls
+      ? els.themeControls.querySelector('[data-seo-counter="metaTitle"]')
+      : null;
+    const metaDescriptionCounter = els.themeControls
+      ? els.themeControls.querySelector('[data-seo-counter="metaDescription"]')
+      : null;
+
+    if (metaTitleCounter) {
+      metaTitleCounter.textContent = `${metaTitle.length}/60`;
+      metaTitleCounter.classList.toggle("is-over", metaTitle.length > 60);
+    }
+    if (metaDescriptionCounter) {
+      metaDescriptionCounter.textContent = `${metaDescription.length}/160`;
+      metaDescriptionCounter.classList.toggle("is-over", metaDescription.length > 160);
+    }
+
+    if (els.googleSnippet) {
+      els.googleSnippet.innerHTML = `
+        <p class="lpe-snippet-url">${escapeHtml(previewUrl)}</p>
+        <p class="lpe-snippet-title">${escapeHtml(metaTitle || state.page?.title || "Your page title")}</p>
+        <p class="lpe-snippet-description">${escapeHtml(metaDescription || "Your meta description will appear here.")}</p>
+      `;
+    }
+
+    if (els.ogPreview) {
+      els.ogPreview.innerHTML = `
+        <div class="lpe-social-card-image"${
+          ogImageUrl ? ` style="background-image:url('${escapeHtml(ogImageUrl)}')"` : ""
+        }></div>
+        <div class="lpe-social-card-body">
+          <p class="lpe-social-card-kicker">Open Graph</p>
+          <p class="lpe-social-card-title">${escapeHtml(ogTitle || "OG title preview")}</p>
+          <p class="lpe-social-card-description">${escapeHtml(ogDescription || "OG description preview")}</p>
+        </div>
+      `;
+    }
+
+    if (els.twitterPreview) {
+      els.twitterPreview.innerHTML = `
+        <div class="lpe-social-card-image"${
+          twitterImageUrl ? ` style="background-image:url('${escapeHtml(twitterImageUrl)}')"` : ""
+        }></div>
+        <div class="lpe-social-card-body">
+          <p class="lpe-social-card-kicker">Twitter (${escapeHtml(twitterCard)})</p>
+          <p class="lpe-social-card-title">${escapeHtml(twitterTitle || "Twitter title preview")}</p>
+          <p class="lpe-social-card-description">${escapeHtml(
+            twitterDescription || "Twitter description preview"
+          )}</p>
+        </div>
+      `;
+    }
   }
 
   function baseTextField(label, path, value, max) {
@@ -1499,12 +1725,12 @@
     const selected = selectedSection();
     const index = selected ? findSectionIndexById(selected.id) : -1;
     els.sectionControls.innerHTML = sectionControlsHtml(selected, index);
-    enhanceImageUploadControls();
+    enhanceImageUploadControls(els.sectionControls);
   }
 
-  function enhanceImageUploadControls() {
-    if (!els.sectionControls) return;
-    const fields = Array.from(els.sectionControls.querySelectorAll(".lpe-field"));
+  function enhanceImageUploadControls(container) {
+    if (!container) return;
+    const fields = Array.from(container.querySelectorAll(".lpe-field"));
     fields.forEach((field) => {
       const labelNode = field.querySelector(":scope > span");
       const textInput = field.querySelector("input[type='text'][data-bind-path]");
@@ -1586,6 +1812,7 @@
         selectedSectionId: state.selectedSectionId,
         onSelectSection(sectionId) {
           state.selectedSectionId = sectionId;
+          setRightTab("element");
           renderSectionsList();
           renderSectionControls();
         },
@@ -1605,11 +1832,176 @@
     renderThemeControls();
     renderSectionControls();
     renderHistory();
+    setRightTab(state.rightTab);
+    updateSaveActions();
   }
 
   function renderAll() {
     renderStaticSections();
     renderPreview();
+  }
+
+  function setRightTab(tabName) {
+    const normalized = tabName === "theme" ? "theme" : "element";
+    state.rightTab = normalized;
+    activateRailTool(normalized);
+    els.rightTabButtons.forEach((button) => {
+      const active = button.getAttribute("data-right-tab-btn") === normalized;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    els.rightTabPanels.forEach((panel) => {
+      const active = panel.getAttribute("data-right-tab-panel") === normalized;
+      panel.classList.toggle("is-active", active);
+      panel.hidden = !active;
+    });
+  }
+
+  function setRailExpanded(expanded) {
+    if (!els.utilityRail) return;
+    state.railExpanded = Boolean(expanded);
+    els.utilityRail.classList.toggle("is-expanded", state.railExpanded);
+    els.utilityRail.classList.toggle("is-collapsed", !state.railExpanded);
+    if (els.layout) {
+      els.layout.style.setProperty("--lpe-rail-width", state.railExpanded ? "172px" : "56px");
+    }
+    if (els.railToggle) {
+      els.railToggle.setAttribute("aria-label", state.railExpanded ? "Collapse tools" : "Expand tools");
+      els.railToggle.setAttribute("data-tooltip", state.railExpanded ? "Collapse tools" : "Expand tools");
+    }
+  }
+
+  function applyPanelLayout() {
+    if (!els.layout) return;
+    const leftWidth = state.leftPanelCollapsed ? 0 : Math.round(state.leftPanelWidth);
+    const rightWidth = state.rightPanelCollapsed ? 0 : Math.round(state.rightPanelWidth);
+    els.layout.style.setProperty("--lpe-left-width", `${leftWidth}px`);
+    els.layout.style.setProperty("--lpe-right-width", `${rightWidth}px`);
+    els.layout.classList.toggle("is-left-collapsed", state.leftPanelCollapsed);
+    els.layout.classList.toggle("is-right-collapsed", state.rightPanelCollapsed);
+    if (els.leftCollapseBtn) {
+      els.leftCollapseBtn.innerHTML = `<span aria-hidden="true">${state.leftPanelCollapsed ? "&rsaquo;" : "&lsaquo;"}</span>`;
+      els.leftCollapseBtn.setAttribute(
+        "aria-label",
+        state.leftPanelCollapsed ? "Expand sections panel" : "Collapse sections panel"
+      );
+    }
+    if (els.rightCollapseBtn) {
+      els.rightCollapseBtn.innerHTML = `<span aria-hidden="true">${state.rightPanelCollapsed ? "&lsaquo;" : "&rsaquo;"}</span>`;
+      els.rightCollapseBtn.setAttribute(
+        "aria-label",
+        state.rightPanelCollapsed ? "Expand settings panel" : "Collapse settings panel"
+      );
+    }
+  }
+
+  function togglePanelCollapse(side) {
+    if (side === "left") {
+      state.leftPanelCollapsed = !state.leftPanelCollapsed;
+      if (!state.leftPanelCollapsed && state.leftPanelWidth < 260) state.leftPanelWidth = 292;
+    }
+    if (side === "right") {
+      state.rightPanelCollapsed = !state.rightPanelCollapsed;
+      if (!state.rightPanelCollapsed && state.rightPanelWidth < 300) state.rightPanelWidth = 360;
+    }
+    applyPanelLayout();
+  }
+
+  function activateRailTool(tool) {
+    if (!els.utilityRail) return;
+    const buttons = Array.from(els.utilityRail.querySelectorAll("[data-rail-tool]"));
+    buttons.forEach((button) => {
+      button.classList.toggle("is-active", button.getAttribute("data-rail-tool") === tool);
+    });
+  }
+
+  function bindPanelFrameEvents() {
+    setRailExpanded(false);
+    activateRailTool("sections");
+    applyPanelLayout();
+    setRightTab(state.rightTab);
+
+    if (els.railToggle) {
+      els.railToggle.addEventListener("click", () => {
+        setRailExpanded(!state.railExpanded);
+      });
+    }
+
+    if (els.utilityRail) {
+      els.utilityRail.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const button = target.closest("[data-rail-tool]");
+        if (!(button instanceof HTMLElement)) return;
+        const tool = button.getAttribute("data-rail-tool");
+        if (!tool) return;
+        activateRailTool(tool);
+        if (tool === "theme") {
+          if (state.rightPanelCollapsed) togglePanelCollapse("right");
+          setRightTab("theme");
+          return;
+        }
+        if (tool === "element") {
+          if (state.rightPanelCollapsed) togglePanelCollapse("right");
+          setRightTab("element");
+          return;
+        }
+        if (tool === "sections") {
+          if (state.leftPanelCollapsed) togglePanelCollapse("left");
+        }
+      });
+    }
+
+    if (els.leftCollapseBtn) {
+      els.leftCollapseBtn.addEventListener("click", () => togglePanelCollapse("left"));
+    }
+
+    if (els.rightCollapseBtn) {
+      els.rightCollapseBtn.addEventListener("click", () => togglePanelCollapse("right"));
+    }
+
+    els.rightTabButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const tab = button.getAttribute("data-right-tab-btn");
+        if (!tab) return;
+        setRightTab(tab);
+      });
+    });
+
+    const bindResizer = (handle, side) => {
+      if (!handle) return;
+      handle.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        const startX = event.clientX;
+        const startLeft = state.leftPanelWidth;
+        const startRight = state.rightPanelWidth;
+
+        const onMove = (moveEvent) => {
+          const deltaX = moveEvent.clientX - startX;
+          if (side === "left") {
+            state.leftPanelCollapsed = false;
+            state.leftPanelWidth = Math.max(240, Math.min(460, startLeft + deltaX));
+          } else {
+            state.rightPanelCollapsed = false;
+            state.rightPanelWidth = Math.max(300, Math.min(520, startRight - deltaX));
+          }
+          applyPanelLayout();
+        };
+
+        const onUp = () => {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+          document.body.classList.remove("is-panel-resizing");
+        };
+
+        document.body.classList.add("is-panel-resizing");
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+    };
+
+    bindResizer(els.leftResizer, "left");
+    bindResizer(els.rightResizer, "right");
   }
 
   function categoryName(categoryId) {
@@ -1829,6 +2221,7 @@
         { method: "POST" }
       );
       normalizePayload(payload);
+      setDirty(false);
       renderAll();
       setSaveStatus("saved", "Restored");
     } catch (error) {
@@ -1840,13 +2233,19 @@
     if (!window.confirm("Publish current draft to live page?")) return;
     setSaveStatus("saving", "Publishing...");
     try {
+      if (state.isDirty) {
+        const saved = await saveDraft(true);
+        if (!saved) return;
+      }
       const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/publish`, {
         method: "POST",
       });
       normalizePayload(payload);
+      setDirty(false);
       renderAll();
       setSaveStatus("saved", "Published");
     } catch (error) {
+      setDirty(true);
       setSaveStatus("error", error.message || "Publish failed");
     }
   }
@@ -1992,18 +2391,37 @@
       dropRow = null;
     };
 
+    const closeRowMenu = () => {
+      if (!state.openRowMenuSectionId) return;
+      state.openRowMenuSectionId = "";
+      renderSectionsList();
+    };
+
     els.sectionsList.addEventListener("click", (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
-      const action = target.getAttribute("data-action");
-      const sectionId = target.getAttribute("data-section-id");
+      const actionEl = target.closest("[data-action]");
+      if (!(actionEl instanceof HTMLElement)) return;
+      const action = actionEl.getAttribute("data-action");
+      const sectionId = actionEl.getAttribute("data-section-id");
       if (!action || !sectionId) return;
+
+      if (action !== "toggle-row-menu") {
+        state.openRowMenuSectionId = "";
+      }
 
       if (action === "select-section") {
         state.selectedSectionId = sectionId;
+        setRightTab("element");
         renderSectionsList();
         renderSectionControls();
         renderPreview();
+        return;
+      }
+
+      if (action === "toggle-row-menu") {
+        state.openRowMenuSectionId = state.openRowMenuSectionId === sectionId ? "" : sectionId;
+        renderSectionsList();
         return;
       }
 
@@ -2024,6 +2442,17 @@
         clone.id = `${source.type}-${Math.random().toString(36).slice(2, 8)}`;
         sectionList().splice(index + 1, 0, clone);
         state.selectedSectionId = clone.id;
+        renderAll();
+        queueAutosave();
+        return;
+      }
+
+      if (action === "rename-section") {
+        const section = sectionList()[index];
+        const currentName = safeText(section.customLabel, section.type);
+        const nextName = window.prompt("Section name", currentName);
+        if (!nextName || !nextName.trim()) return;
+        section.customLabel = nextName.trim().slice(0, 80);
         renderAll();
         queueAutosave();
         return;
@@ -2091,6 +2520,19 @@
       clearDragClasses();
       dragFrom = -1;
     });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (!target.closest("#lpe-sections-list")) {
+        closeRowMenu();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      closeRowMenu();
+    });
   }
 
   function bindControlsEvents() {
@@ -2111,6 +2553,11 @@
         setPathValue(path, value, kind);
         if (path.startsWith("theme.")) {
           renderPresetThemes();
+          refreshSeoPreviews();
+        }
+        if (path === "page.slug" || path === "page.title") {
+          renderPageMeta();
+          refreshSeoPreviews();
         }
         renderPreview();
         queueAutosave();
@@ -2131,6 +2578,28 @@
         const templateId = button.getAttribute("data-template-id");
         if (!templateId) return;
         applyPrebuiltTemplateById(templateId);
+      });
+    }
+
+    if (els.themeControls) {
+      els.themeControls.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const action = target.getAttribute("data-action");
+        if (action !== "choose-image-upload") return;
+        const path = target.getAttribute("data-path");
+        const uploadInput = getUploadInputByPath(path);
+        if (uploadInput) uploadInput.click();
+      });
+
+      els.themeControls.addEventListener("change", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) return;
+        if (target.type === "file" && target.getAttribute("data-upload-input") === "true") {
+          const path = target.getAttribute("data-path");
+          if (!path) return;
+          handleImageUpload(path, target);
+        }
       });
     }
 
@@ -2302,13 +2771,16 @@
     try {
       const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/draft`);
       normalizePayload(payload);
+      setDirty(false);
       renderAll();
-      setSaveStatus("saved", "Loaded");
+      setSaveStatus("saved", "Saved");
     } catch (error) {
+      setDirty(true);
       setSaveStatus("error", error.message || "Load failed");
     }
   }
 
+  bindPanelFrameEvents();
   bindTopbarEvents();
   bindSectionsEvents();
   bindControlsEvents();

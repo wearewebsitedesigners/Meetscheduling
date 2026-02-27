@@ -265,7 +265,7 @@
     focusMemory: null,
     leftPanelCollapsed: false,
     rightPanelCollapsed: true,
-    leftPanelWidth: 360,
+    leftPanelWidth: 280,
     rightPanelWidth: 360,
     isDirty: false,
     saveStatusType: "saved",
@@ -1948,7 +1948,7 @@
     } else if (state.focusMemory) {
       state.leftPanelCollapsed = Boolean(state.focusMemory.leftPanelCollapsed);
       state.rightPanelCollapsed = Boolean(state.focusMemory.rightPanelCollapsed);
-      state.leftPanelWidth = Number(state.focusMemory.leftPanelWidth) || 360;
+      state.leftPanelWidth = Number(state.focusMemory.leftPanelWidth) || 280;
       state.rightPanelWidth = Number(state.focusMemory.rightPanelWidth) || 360;
       state.focusMemory = null;
     }
@@ -2014,7 +2014,7 @@
     }
     if (side === "left") {
       state.leftPanelCollapsed = !state.leftPanelCollapsed;
-      if (!state.leftPanelCollapsed && state.leftPanelWidth < 300) state.leftPanelWidth = 360;
+      if (!state.leftPanelCollapsed && state.leftPanelWidth < 240) state.leftPanelWidth = 280;
     }
     if (side === "right") {
       state.rightPanelCollapsed = !state.rightPanelCollapsed;
@@ -2098,7 +2098,7 @@
           const deltaX = moveEvent.clientX - startX;
           if (side === "left") {
             state.leftPanelCollapsed = false;
-            state.leftPanelWidth = Math.max(300, Math.min(560, startLeft + deltaX));
+            state.leftPanelWidth = Math.max(240, Math.min(520, startLeft + deltaX));
           } else {
             state.rightPanelCollapsed = false;
             state.rightPanelWidth = Math.max(300, Math.min(520, startRight - deltaX));

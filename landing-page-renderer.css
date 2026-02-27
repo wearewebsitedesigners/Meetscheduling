@@ -1029,7 +1029,15 @@
 }
 
 .lp-live-mode .lp-section {
+  padding-inline: 0;
   scroll-margin-top: 84px;
+}
+
+.lp-live-mode .lp-shell {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding-inline: 0;
 }
 
 .lp-services-card,

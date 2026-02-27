@@ -2020,7 +2020,7 @@ body.is-panel-resizing {
 }
 
 .lpe-left-panel .lpe-sections-card {
-  padding: 8px 10px 6px;
+  padding: 6px 8px 4px;
 }
 
 .lpe-card-subtitle {
@@ -2041,24 +2041,24 @@ body.is-panel-resizing {
 }
 
 .lpe-sections-list {
-  gap: 1px;
+  gap: 0;
 }
 
 .lpe-section-group {
-  margin: 6px 0 2px;
+  margin: 4px 0 1px;
   font-size: 0.66rem;
   letter-spacing: 0.1em;
 }
 
 .lpe-section-row {
-  min-height: 28px;
-  padding: 1px 5px;
+  min-height: 26px;
+  padding: 0 4px;
   border-radius: 6px;
   border-color: transparent;
 }
 
 .lpe-section-main {
-  gap: 6px;
+  gap: 4px;
 }
 
 .lpe-section-row:hover {
@@ -2071,7 +2071,7 @@ body.is-panel-resizing {
 }
 
 .lpe-section-name {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 500;
 }
 
@@ -2086,26 +2086,26 @@ body.is-panel-resizing {
 }
 
 .lpe-section-grip {
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   color: #a2acbb;
 }
 
 .lpe-section-actions {
-  gap: 1px;
+  gap: 0;
 }
 
 .lpe-sections-list .lpe-icon-btn {
-  min-width: 22px;
-  width: 22px;
-  min-height: 22px;
+  min-width: 20px;
+  width: 20px;
+  min-height: 20px;
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
 }
 
 .lpe-sections-list .lpe-icon-svg {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
 }
 
 .lpe-btn-add {

@@ -14,6 +14,7 @@ const contactsRoutes = require("./routes/contacts.routes");
 const workflowsRoutes = require("./routes/workflows.routes");
 const routingRoutes = require("./routes/routing.routes");
 const landingPageRoutes = require("./routes/landing-page.routes");
+const uploadsRoutes = require("./routes/uploads.routes");
 const { notFoundHandler, errorHandler } = require("./middleware/error-handler");
 
 function buildApp() {
@@ -21,8 +22,8 @@ function buildApp() {
   const staticRoot = path.resolve(__dirname, "..");
 
   app.disable("x-powered-by");
-  app.use(express.json({ limit: "1mb" }));
-  app.use(express.urlencoded({ extended: false }));
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 
   app.use((req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -57,6 +58,7 @@ function buildApp() {
   app.use("/api/workflows", workflowsRoutes);
   app.use("/api/routing", routingRoutes);
   app.use("/api/landing-page", landingPageRoutes);
+  app.use("/api/uploads", uploadsRoutes);
 
   app.get("/favicon.ico", (req, res) => {
     res.sendFile(path.join(staticRoot, "assets", "favicon.svg"));

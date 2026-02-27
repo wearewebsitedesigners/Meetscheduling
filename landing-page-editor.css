@@ -536,6 +536,27 @@
   gap: 6px;
 }
 
+.lpe-upload-actions {
+  margin-top: 2px;
+  align-items: center;
+}
+
+.lpe-upload-actions .lpe-btn {
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+.lpe-upload-preview {
+  width: 100%;
+  max-height: 148px;
+  margin-top: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #d3deef);
+  background: #fff;
+  object-fit: cover;
+  display: block;
+}
+
 .lpe-list-stack {
   display: grid;
   gap: 6px;

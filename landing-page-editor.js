@@ -3,6 +3,14 @@
   if (!renderer) return;
 
   const AUTH_TOKEN_KEY = "meetscheduling_auth_token";
+  const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+  const ALLOWED_UPLOAD_TYPES = new Set([
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+  ]);
 
   const els = {
     pageTitle: document.getElementById("lpe-page-title"),
@@ -302,6 +310,66 @@
     }
 
     return payload;
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(String(reader.result || ""));
+      };
+      reader.onerror = () => {
+        reject(new Error("Could not read selected image."));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function getUploadInputByPath(path) {
+    if (!els.sectionControls || !path) return null;
+    const candidates = Array.from(
+      els.sectionControls.querySelectorAll("input[type='file'][data-upload-input='true']")
+    );
+    return candidates.find((input) => input.getAttribute("data-path") === path) || null;
+  }
+
+  async function handleImageUpload(path, inputEl) {
+    const file = inputEl?.files && inputEl.files[0] ? inputEl.files[0] : null;
+    if (!file || !path) return;
+
+    if (!ALLOWED_UPLOAD_TYPES.has(String(file.type || "").toLowerCase())) {
+      setSaveStatus("error", "Use PNG, JPG, WEBP, or GIF.");
+      inputEl.value = "";
+      return;
+    }
+    if (Number(file.size || 0) > MAX_UPLOAD_BYTES) {
+      setSaveStatus("error", "Image too large. Max 5MB.");
+      inputEl.value = "";
+      return;
+    }
+
+    setSaveStatus("saving", "Uploading image...");
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const payload = await apiRequest("/api/uploads/images", {
+        method: "POST",
+        body: JSON.stringify({
+          dataUrl,
+          fileName: file.name || "upload-image",
+        }),
+      });
+      const uploadedUrl = safeText(payload.url, "");
+      if (!uploadedUrl) throw new Error("Image upload failed.");
+
+      setPathValue(path, uploadedUrl, "string");
+      renderAll();
+      queueAutosave();
+      setSaveStatus("saved", "Image uploaded");
+    } catch (error) {
+      setSaveStatus("error", error.message || "Image upload failed");
+    } finally {
+      inputEl.value = "";
+    }
   }
 
   function sectionList() {
@@ -1431,6 +1499,54 @@
     const selected = selectedSection();
     const index = selected ? findSectionIndexById(selected.id) : -1;
     els.sectionControls.innerHTML = sectionControlsHtml(selected, index);
+    enhanceImageUploadControls();
+  }
+
+  function enhanceImageUploadControls() {
+    if (!els.sectionControls) return;
+    const fields = Array.from(els.sectionControls.querySelectorAll(".lpe-field"));
+    fields.forEach((field) => {
+      const labelNode = field.querySelector(":scope > span");
+      const textInput = field.querySelector("input[type='text'][data-bind-path]");
+      if (!(labelNode instanceof HTMLElement) || !(textInput instanceof HTMLInputElement)) return;
+      const labelText = String(labelNode.textContent || "").trim();
+      if (!/image url|logo url/i.test(labelText)) return;
+      if (field.querySelector("[data-action='choose-image-upload']")) return;
+
+      const path = textInput.getAttribute("data-bind-path");
+      if (!path) return;
+
+      const actions = document.createElement("div");
+      actions.className = "lpe-inline-actions lpe-upload-actions";
+
+      const uploadButton = document.createElement("button");
+      uploadButton.type = "button";
+      uploadButton.className = "lpe-btn lpe-btn-secondary";
+      uploadButton.textContent = "Upload image";
+      uploadButton.setAttribute("data-action", "choose-image-upload");
+      uploadButton.setAttribute("data-path", path);
+
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = "image/png,image/jpeg,image/webp,image/gif";
+      fileInput.hidden = true;
+      fileInput.setAttribute("data-upload-input", "true");
+      fileInput.setAttribute("data-path", path);
+
+      actions.appendChild(uploadButton);
+      actions.appendChild(fileInput);
+      field.appendChild(actions);
+
+      const currentValue = safeText(textInput.value, "");
+      if (currentValue && !field.querySelector(".lpe-upload-preview")) {
+        const preview = document.createElement("img");
+        preview.className = "lpe-upload-preview";
+        preview.src = currentValue;
+        preview.alt = `${labelText} preview`;
+        preview.loading = "lazy";
+        field.appendChild(preview);
+      }
+    });
   }
 
   function renderHistory() {
@@ -2025,6 +2141,13 @@
         const action = target.getAttribute("data-action");
         if (!action) return;
 
+        if (action === "choose-image-upload") {
+          const path = target.getAttribute("data-path");
+          const uploadInput = getUploadInputByPath(path);
+          if (uploadInput) uploadInput.click();
+          return;
+        }
+
         if (action === "add-array-item") {
           const path = target.getAttribute("data-path");
           const template = target.getAttribute("data-template");
@@ -2099,6 +2222,15 @@
       els.sectionControls.addEventListener("change", (event) => {
         const target = event.target;
         if (!(target instanceof HTMLInputElement)) return;
+        if (
+          target.type === "file" &&
+          target.getAttribute("data-upload-input") === "true"
+        ) {
+          const path = target.getAttribute("data-path");
+          if (!path) return;
+          handleImageUpload(path, target);
+          return;
+        }
         const action = target.getAttribute("data-action");
         if (action !== "toggle-category-id") return;
         const sectionIndex = Number(target.getAttribute("data-section-index"));

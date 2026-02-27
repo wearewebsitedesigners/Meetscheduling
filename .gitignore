@@ -4,3 +4,4 @@ data/*.db
 .DS_Store
 .npm-cache
 .vercel
+uploads/

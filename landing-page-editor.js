@@ -277,7 +277,7 @@
   };
 
   function escapeHtml(value) {
-    return String(value || "")
+    return String(value ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -295,6 +295,12 @@
     if (!text) return "";
     if (!max) return text;
     return text.slice(0, max);
+  }
+
+  function safeNumber(value, fallback) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return Number(fallback);
+    return parsed;
   }
 
   function token() {
@@ -842,9 +848,27 @@
     }, 700);
   }
 
+  function waitForSaveIdle() {
+    if (!state.saveInFlight) return Promise.resolve();
+    return new Promise((resolve) => {
+      const tick = () => {
+        if (!state.saveInFlight) {
+          resolve();
+          return;
+        }
+        window.setTimeout(tick, 40);
+      };
+      tick();
+    });
+  }
+
   async function saveDraft(forceNow) {
     if (state.saveInFlight) {
       state.saveQueued = true;
+      if (forceNow) {
+        await waitForSaveIdle();
+        return saveDraft(true);
+      }
       return false;
     }
     if (!state.pageId || !state.draftConfig) return false;
@@ -1100,15 +1124,15 @@
         <div class="lpe-control-group-body">
           <div class="lpe-row-grid">
             <label class="lpe-field">
-              <span>Radius (${Number(theme.radius || 14)})</span>
+              <span>Radius (${safeNumber(theme.radius, 14)})</span>
               <input type="range" min="0" max="28" value="${Number(
-                theme.radius || 14
+                safeNumber(theme.radius, 14)
               )}" data-bind-path="theme.radius" data-bind-type="number" />
             </label>
             <label class="lpe-field">
-              <span>Section Padding (${Number(theme.sectionPadding || 52)})</span>
+              <span>Section Padding (${safeNumber(theme.sectionPadding, 52)})</span>
               <input type="range" min="20" max="120" value="${Number(
-                theme.sectionPadding || 52
+                safeNumber(theme.sectionPadding, 52)
               )}" data-bind-path="theme.sectionPadding" data-bind-type="number" />
             </label>
           </div>
@@ -1300,7 +1324,7 @@
     return `
       <label class="lpe-field">
         <span>${escapeHtml(label)}</span>
-        <input type="text" data-bind-path="${escapeHtml(path)}" value="${escapeHtml(String(value || ""))}" ${
+        <input type="text" data-bind-path="${escapeHtml(path)}" value="${escapeHtml(String(value ?? ""))}" ${
       max ? `maxlength="${Number(max)}"` : ""
     } />
       </label>
@@ -1313,7 +1337,7 @@
         <span>${escapeHtml(label)}</span>
         <textarea data-bind-path="${escapeHtml(path)}" ${
       max ? `maxlength="${Number(max)}"` : ""
-    }>${escapeHtml(String(value || ""))}</textarea>
+    }>${escapeHtml(String(value ?? ""))}</textarea>
       </label>
     `;
   }
@@ -1335,9 +1359,9 @@
     if (section.type === "marquee") {
       html += `
         <label class="lpe-field">
-          <span>Speed (${Number(settings.speed || 28)}s)</span>
+          <span>Speed (${safeNumber(settings.speed, 28)}s)</span>
           <input type="range" min="10" max="80" data-bind-path="${settingsPath}.speed" data-bind-type="number" value="${Number(
-            settings.speed || 28
+            safeNumber(settings.speed, 28)
           )}" />
         </label>
         <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.uppercase" data-bind-type="boolean" ${
@@ -1396,9 +1420,9 @@
           ${baseTextField("Button href", `${settingsPath}.buttonHref`, settings.buttonHref, 240)}
         </div>
         <label class="lpe-field">
-          <span>Overlay opacity (${Number(settings.overlayOpacity || 22)}%)</span>
+          <span>Overlay opacity (${safeNumber(settings.overlayOpacity, 22)}%)</span>
           <input type="range" min="0" max="80" data-bind-path="${settingsPath}.overlayOpacity" data-bind-type="number" value="${Number(
-            settings.overlayOpacity || 22
+            safeNumber(settings.overlayOpacity, 22)
           )}" />
         </label>
       `;
@@ -1411,9 +1435,9 @@
             settings.autoplay ? "checked" : ""
           } /> Autoplay</label>
           <label class="lpe-field">
-            <span>Interval (${Number(settings.intervalSeconds || 6)}s)</span>
+            <span>Interval (${safeNumber(settings.intervalSeconds, 6)}s)</span>
             <input type="range" min="3" max="12" data-bind-path="${settingsPath}.intervalSeconds" data-bind-type="number" value="${Number(
-              settings.intervalSeconds || 6
+              safeNumber(settings.intervalSeconds, 6)
             )}" />
           </label>
         </div>
@@ -1461,13 +1485,13 @@
           <label class="lpe-field">
             <span>Desktop columns</span>
             <input type="number" min="1" max="4" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
-        settings.columnsDesktop || 3
+        safeNumber(settings.columnsDesktop, 3)
       )}" />
           </label>
           <label class="lpe-field">
             <span>Mobile columns</span>
             <input type="number" min="1" max="2" data-bind-path="${settingsPath}.columnsMobile" data-bind-type="number" value="${Number(
-        settings.columnsMobile || 1
+        safeNumber(settings.columnsMobile, 1)
       )}" />
           </label>
         </div>
@@ -1511,13 +1535,13 @@
           <label class="lpe-field">
             <span>Desktop columns</span>
             <input type="number" min="1" max="3" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
-        settings.columnsDesktop || 2
+        safeNumber(settings.columnsDesktop, 2)
       )}" />
           </label>
           <label class="lpe-field">
             <span>Card radius</span>
             <input type="range" min="0" max="30" data-bind-path="${settingsPath}.cardRadius" data-bind-type="number" value="${Number(
-        settings.cardRadius || 14
+        safeNumber(settings.cardRadius, 14)
       )}" />
           </label>
         </div>
@@ -1584,7 +1608,7 @@
         <label class="lpe-field">
           <span>Desktop columns</span>
           <input type="number" min="1" max="4" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
-            settings.columnsDesktop || 3
+            safeNumber(settings.columnsDesktop, 3)
           )}" />
         </label>
         <div class="lpe-list-stack">
@@ -1611,13 +1635,13 @@
           <label class="lpe-field">
             <span>Desktop columns</span>
             <input type="number" min="1" max="4" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
-              settings.columnsDesktop || 4
+              safeNumber(settings.columnsDesktop, 4)
             )}" />
           </label>
           <label class="lpe-field">
             <span>Card limit</span>
             <input type="number" min="1" max="24" data-bind-path="${settingsPath}.limit" data-bind-type="number" value="${Number(
-              settings.limit || 8
+              safeNumber(settings.limit, 8)
             )}" />
           </label>
         </div>
@@ -1648,9 +1672,9 @@
             </select>
           </label>
           <label class="lpe-field">
-            <span>Speed (${Number(settings.speed || 35)}s)</span>
+            <span>Speed (${safeNumber(settings.speed, 35)}s)</span>
             <input type="range" min="10" max="80" data-bind-path="${settingsPath}.speed" data-bind-type="number" value="${Number(
-        settings.speed || 35
+        safeNumber(settings.speed, 35)
       )}" />
           </label>
         </div>
@@ -1693,7 +1717,7 @@
           <label class="lpe-field">
             <span>Desktop columns</span>
             <input type="number" min="1" max="3" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
-              settings.columnsDesktop || 3
+              safeNumber(settings.columnsDesktop, 3)
             )}" />
           </label>
           <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showStars" data-bind-type="boolean" ${
@@ -1710,7 +1734,7 @@
           <label class="lpe-field">
             <span>Desktop columns</span>
             <input type="number" min="2" max="6" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
-              settings.columnsDesktop || 5
+              safeNumber(settings.columnsDesktop, 5)
             )}" />
           </label>
         </div>

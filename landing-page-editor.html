@@ -109,6 +109,55 @@
             </summary>
             <div id="lpe-preset-themes" class="lpe-preset-themes"></div>
           </details>
+
+          <section class="lpe-panel-card lpe-settings-shell lpe-settings-in-left">
+            <div class="lpe-panel-head">
+              <h2>Settings</h2>
+            </div>
+
+            <div class="lpe-settings-tabs" role="tablist" aria-label="Settings type">
+              <button type="button" class="is-active" data-right-tab-btn="element">Element</button>
+              <button type="button" data-right-tab-btn="theme">Theme</button>
+            </div>
+
+            <section class="lpe-right-tab-panel is-active" data-right-tab-panel="element">
+              <div class="lpe-panel-head">
+                <h3>Selected Section</h3>
+              </div>
+              <div id="lpe-section-controls" class="lpe-controls"></div>
+              <details class="lpe-control-group">
+                <summary>Version History</summary>
+                <div class="lpe-control-group-body">
+                  <div id="lpe-history-list" class="lpe-history-list"></div>
+                </div>
+              </details>
+            </section>
+
+            <section class="lpe-right-tab-panel" data-right-tab-panel="theme">
+              <div class="lpe-panel-head">
+                <h3>Global Theme</h3>
+              </div>
+              <div id="lpe-theme-controls" class="lpe-controls"></div>
+              <details class="lpe-control-group">
+                <summary>Search & Social Preview</summary>
+                <div class="lpe-control-group-body">
+                  <article class="lpe-google-snippet" id="lpe-google-snippet"></article>
+                  <div class="lpe-social-previews">
+                    <article class="lpe-social-preview">
+                      <h3>Open Graph</h3>
+                      <div id="lpe-og-preview" class="lpe-social-card"></div>
+                    </article>
+                    <article class="lpe-social-preview">
+                      <h3>Twitter</h3>
+                      <div id="lpe-twitter-preview" class="lpe-social-card"></div>
+                    </article>
+                  </div>
+                </div>
+              </details>
+            </section>
+          </section>
+
+          <button id="lpe-save-btn" type="button" class="lpe-btn lpe-btn-primary lpe-save-btn" disabled>Save Changes</button>
         </aside>
 
         <button
@@ -128,75 +177,6 @@
             <div id="lpe-preview-root"></div>
           </div>
         </section>
-
-        <button
-          id="lpe-resizer-right"
-          type="button"
-          class="lpe-resizer lpe-resizer-right"
-          aria-label="Resize settings panel"
-          title="Resize panel"
-        ></button>
-
-        <aside id="lpe-right-panel" class="lpe-right-panel">
-          <section class="lpe-panel-card lpe-settings-shell">
-            <div class="lpe-panel-head">
-              <h2>Settings</h2>
-              <div class="lpe-panel-head-actions">
-                <button
-                  id="lpe-right-collapse"
-                  type="button"
-                  class="lpe-icon-btn"
-                  aria-label="Collapse settings panel"
-                  title="Collapse panel"
-                >
-                  <span aria-hidden="true">&rsaquo;</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="lpe-settings-tabs" role="tablist" aria-label="Settings type">
-              <button type="button" class="is-active" data-right-tab-btn="element">Element</button>
-              <button type="button" data-right-tab-btn="theme">Theme</button>
-            </div>
-
-            <section class="lpe-right-tab-panel is-active" data-right-tab-panel="element">
-              <div class="lpe-panel-head">
-                <h3>Selected Section</h3>
-              </div>
-              <div id="lpe-section-controls" class="lpe-controls"></div>
-              <div class="lpe-panel-head">
-                <h3>Version History</h3>
-              </div>
-              <div id="lpe-history-list" class="lpe-history-list"></div>
-            </section>
-
-            <section class="lpe-right-tab-panel" data-right-tab-panel="theme">
-              <div class="lpe-panel-head">
-                <h3>Global Theme</h3>
-              </div>
-              <div id="lpe-theme-controls" class="lpe-controls"></div>
-            </section>
-          </section>
-
-          <section class="lpe-panel-card lpe-seo-preview-card">
-            <div class="lpe-panel-head">
-              <h2>Search Preview</h2>
-            </div>
-            <article class="lpe-google-snippet" id="lpe-google-snippet"></article>
-            <div class="lpe-social-previews">
-              <article class="lpe-social-preview">
-                <h3>Open Graph</h3>
-                <div id="lpe-og-preview" class="lpe-social-card"></div>
-              </article>
-              <article class="lpe-social-preview">
-                <h3>Twitter</h3>
-                <div id="lpe-twitter-preview" class="lpe-social-card"></div>
-              </article>
-            </div>
-          </section>
-
-          <button id="lpe-save-btn" type="button" class="lpe-btn lpe-btn-primary lpe-save-btn" disabled>Save Changes</button>
-        </aside>
       </main>
     </div>
 

@@ -264,7 +264,7 @@
     focusMemory: null,
     leftPanelCollapsed: false,
     rightPanelCollapsed: false,
-    leftPanelWidth: 292,
+    leftPanelWidth: 360,
     rightPanelWidth: 360,
     isDirty: false,
     saveStatusType: "saved",
@@ -1926,7 +1926,7 @@
     } else if (state.focusMemory) {
       state.leftPanelCollapsed = Boolean(state.focusMemory.leftPanelCollapsed);
       state.rightPanelCollapsed = Boolean(state.focusMemory.rightPanelCollapsed);
-      state.leftPanelWidth = Number(state.focusMemory.leftPanelWidth) || 292;
+      state.leftPanelWidth = Number(state.focusMemory.leftPanelWidth) || 360;
       state.rightPanelWidth = Number(state.focusMemory.rightPanelWidth) || 360;
       state.focusMemory = null;
     }
@@ -1972,7 +1972,7 @@
     }
     if (side === "left") {
       state.leftPanelCollapsed = !state.leftPanelCollapsed;
-      if (!state.leftPanelCollapsed && state.leftPanelWidth < 260) state.leftPanelWidth = 292;
+      if (!state.leftPanelCollapsed && state.leftPanelWidth < 300) state.leftPanelWidth = 360;
     }
     if (side === "right") {
       state.rightPanelCollapsed = !state.rightPanelCollapsed;
@@ -2012,17 +2012,20 @@
         if (!tool) return;
         activateRailTool(tool);
         if (tool === "theme") {
-          if (state.rightPanelCollapsed) togglePanelCollapse("right");
+          if (state.leftPanelCollapsed) togglePanelCollapse("left");
           setRightTab("theme");
+          if (els.leftPanel) els.leftPanel.scrollTo({ top: els.leftPanel.scrollHeight, behavior: "smooth" });
           return;
         }
         if (tool === "element") {
-          if (state.rightPanelCollapsed) togglePanelCollapse("right");
+          if (state.leftPanelCollapsed) togglePanelCollapse("left");
           setRightTab("element");
+          if (els.leftPanel) els.leftPanel.scrollTo({ top: els.leftPanel.scrollHeight, behavior: "smooth" });
           return;
         }
         if (tool === "sections") {
           if (state.leftPanelCollapsed) togglePanelCollapse("left");
+          if (els.leftPanel) els.leftPanel.scrollTo({ top: 0, behavior: "smooth" });
         }
       });
     }
@@ -2056,7 +2059,7 @@
           const deltaX = moveEvent.clientX - startX;
           if (side === "left") {
             state.leftPanelCollapsed = false;
-            state.leftPanelWidth = Math.max(240, Math.min(460, startLeft + deltaX));
+            state.leftPanelWidth = Math.max(300, Math.min(560, startLeft + deltaX));
           } else {
             state.rightPanelCollapsed = false;
             state.rightPanelWidth = Math.max(300, Math.min(520, startRight - deltaX));

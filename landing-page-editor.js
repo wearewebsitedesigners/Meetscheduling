@@ -272,6 +272,7 @@
     saveTimer: null,
     saveInFlight: false,
     saveQueued: false,
+    changeVersion: 0,
     previewRenderFrame: 0,
   };
 
@@ -832,6 +833,7 @@
   }
 
   function queueAutosave() {
+    state.changeVersion += 1;
     setDirty(true);
     setSaveStatus("dirty", "Unsaved changes");
     if (state.saveTimer) clearTimeout(state.saveTimer);
@@ -841,13 +843,14 @@
   }
 
   async function saveDraft(forceNow) {
-    if (state.saveInFlight && !forceNow) {
+    if (state.saveInFlight) {
       state.saveQueued = true;
       return false;
     }
     if (!state.pageId || !state.draftConfig) return false;
 
     state.saveInFlight = true;
+    const startedAtChangeVersion = state.changeVersion;
     setSaveStatus("saving");
     try {
       const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/draft`, {
@@ -858,11 +861,17 @@
           config: state.draftConfig,
         }),
       });
-      normalizePayload(payload);
-      setDirty(false);
-      setSaveStatus("saved", "Saved");
-      renderStaticSections();
-      renderPreview();
+      const hasNewerChanges = state.changeVersion !== startedAtChangeVersion || state.saveQueued;
+      if (!hasNewerChanges) {
+        normalizePayload(payload);
+        setDirty(false);
+        setSaveStatus("saved", "Saved");
+        renderStaticSections();
+        renderPreview();
+      } else {
+        setDirty(true);
+        setSaveStatus("dirty", "Unsaved changes");
+      }
       return true;
     } catch (error) {
       setDirty(true);

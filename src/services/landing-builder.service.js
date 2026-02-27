@@ -443,7 +443,7 @@ function clamp(value, min, max, fallback) {
 function safeText(value, fallback = "", max = 5000) {
   if (value === undefined || value === null) return fallback;
   const text = String(value).trim();
-  if (!text) return fallback;
+  if (!text) return "";
   return text.slice(0, max);
 }
 

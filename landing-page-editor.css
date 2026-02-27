@@ -1713,7 +1713,8 @@ body.is-panel-resizing {
     var(--lpe-rail-width)
     var(--lpe-left-width)
     var(--lpe-resizer-width)
-    minmax(0, 1fr) !important;
+    minmax(0, 1fr)
+    var(--lpe-right-width) !important;
 }
 
 .lpe-center-panel {
@@ -1741,25 +1742,27 @@ body.is-panel-resizing {
 }
 
 #lpe-right-panel.lpe-slide-panel {
-  position: absolute;
-  inset: 0 0 0 auto;
-  width: min(var(--lpe-right-width), 94vw);
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: calc(100vh - 56px);
+  max-height: calc(100vh - 56px);
   border-left: 1px solid #dadddf;
   background: #f8f8f9;
-  box-shadow: -16px 0 32px rgba(15, 23, 42, 0.14);
+  box-shadow: none;
   z-index: 24;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto auto;
-  transform: translateX(0);
   transition:
-    transform 190ms ease,
-    opacity 160ms ease;
+    opacity 140ms ease,
+    transform 160ms ease;
 }
 
 .lpe-layout.is-right-collapsed #lpe-right-panel.lpe-slide-panel {
-  transform: translateX(105%);
+  transform: translateX(8px);
   opacity: 0;
   pointer-events: none;
+  border-left-color: transparent;
 }
 
 .lpe-slide-panel .lpe-settings-shell {
@@ -1779,7 +1782,7 @@ body.is-panel-resizing {
 .lpe-slide-panel .lpe-right-tab-panel {
   min-height: 0;
   overflow: auto;
-  padding-right: 2px;
+  padding-right: 4px;
 }
 
 .lpe-slide-panel .lpe-settings-tabs {
@@ -1847,6 +1850,342 @@ body.is-panel-resizing {
   }
 
   #lpe-right-panel.lpe-slide-panel {
-    width: min(420px, 100vw);
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: min(400px, 94vw);
+    box-shadow: -14px 0 26px rgba(15, 23, 42, 0.14);
+    max-height: 100%;
+    min-height: 100%;
+  }
+}
+
+/* Minimal top builder bar */
+.lpe-shell {
+  width: min(100%, calc(100% - 8px));
+  margin: 4px auto;
+}
+
+.lpe-topbar {
+  min-height: 50px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border-color: #e1e6ef;
+  box-shadow: none;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.lpe-topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.lpe-back-link {
+  min-height: 32px;
+  min-width: 32px;
+  width: 32px;
+  padding: 0;
+  border-radius: 9px;
+}
+
+.lpe-brand-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.lpe-brand-live {
+  min-height: 24px;
+  padding: 0 10px;
+  font-size: 0.75rem;
+}
+
+.lpe-top-dots {
+  min-height: 30px;
+  min-width: 30px;
+  width: 30px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #6a7485;
+}
+
+.lpe-top-dots:hover {
+  border-color: #d4dbe8;
+  background: #f3f6fb;
+}
+
+.lpe-topbar-center {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lpe-topbar-home {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.lpe-topbar-center #lpe-page-title {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 600;
+  color: #2d3748;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(56vw, 360px);
+}
+
+.lpe-topbar-actions {
+  gap: 6px;
+}
+
+.lpe-device-toggle {
+  padding: 2px;
+  border-radius: 10px;
+  background: #f3f5f8;
+  border-color: #e0e6ef;
+}
+
+.lpe-device-toggle button {
+  min-width: 34px;
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 0.95rem;
+}
+
+.lpe-top-icon-btn {
+  min-width: 34px;
+  min-height: 34px;
+  width: 34px;
+  padding: 0;
+  border-radius: 10px;
+  font-size: 0.96rem;
+}
+
+#lpe-save-top-btn {
+  min-height: 34px;
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 0.82rem;
+  background: #f2f4f7;
+  border-color: #dde3eb;
+  color: #8a94a7;
+}
+
+#lpe-save-top-btn:not(:disabled) {
+  color: #4f5d75;
+}
+
+#lpe-publish-btn {
+  min-height: 34px;
+  border-radius: 10px;
+  padding: 0 14px;
+  border-color: #0f1117;
+  background: #0f1117;
+  box-shadow: none;
+}
+
+#lpe-publish-btn:hover {
+  border-color: #1d2230;
+  background: #1d2230;
+  box-shadow: none;
+}
+
+@media (max-width: 920px) {
+  .lpe-topbar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .lpe-topbar-center {
+    display: none;
+  }
+
+  #lpe-save-top-btn {
+    display: none;
+  }
+}
+
+/* Compact sidebars like Shopify editor */
+.lpe-layout {
+  --lpe-left-width: 320px;
+  --lpe-right-width: 320px;
+}
+
+.lpe-left-panel .lpe-sections-card {
+  padding: 10px 12px 8px;
+}
+
+.lpe-card-subtitle {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+}
+
+.lpe-sections-filter-wrap {
+  gap: 4px;
+}
+
+#lpe-sections-filter {
+  min-height: 30px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  padding: 0 9px;
+}
+
+.lpe-sections-list {
+  gap: 2px;
+}
+
+.lpe-section-group {
+  margin: 8px 0 3px;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+}
+
+.lpe-section-row {
+  min-height: 32px;
+  padding: 2px 6px;
+  border-radius: 7px;
+  border-color: transparent;
+}
+
+.lpe-section-name {
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.lpe-section-row.is-active {
+  background: #edf3ff;
+  border-color: #bfd2f4;
+}
+
+.lpe-section-grip {
+  font-size: 0.86rem;
+  color: #a2acbb;
+}
+
+.lpe-section-actions {
+  gap: 2px;
+}
+
+.lpe-sections-list .lpe-icon-btn {
+  min-width: 24px;
+  width: 24px;
+  min-height: 24px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.lpe-sections-list .lpe-icon-svg {
+  width: 14px;
+  height: 14px;
+}
+
+.lpe-btn-add {
+  min-height: 32px;
+  margin: 8px 12px;
+  width: calc(100% - 24px);
+  border-radius: 8px;
+  font-size: 0.84rem;
+}
+
+.lpe-panel-disclosure summary {
+  padding: 8px 12px 0;
+}
+
+.lpe-preset-themes {
+  margin: 8px 12px 0;
+}
+
+.lpe-slide-panel .lpe-settings-shell {
+  padding: 10px 12px;
+  gap: 8px;
+}
+
+.lpe-slide-panel .lpe-panel-head h2 {
+  font-size: 0.92rem;
+}
+
+.lpe-slide-panel .lpe-right-tab-panel {
+  gap: 8px;
+}
+
+.lpe-slide-panel .lpe-right-tab-panel .lpe-panel-head h3 {
+  font-size: 0.85rem;
+}
+
+.lpe-slide-panel .lpe-controls {
+  gap: 8px;
+}
+
+.lpe-slide-panel .lpe-field {
+  gap: 4px;
+}
+
+.lpe-slide-panel .lpe-field > label,
+.lpe-slide-panel .lpe-field > .lpe-field-label {
+  font-size: 0.76rem;
+}
+
+.lpe-slide-panel .lpe-field input,
+.lpe-slide-panel .lpe-field select,
+.lpe-slide-panel .lpe-field textarea {
+  min-height: 34px;
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 0.84rem;
+}
+
+.lpe-slide-panel .lpe-field textarea {
+  min-height: 74px;
+}
+
+.lpe-slide-panel .lpe-checkbox {
+  min-height: 30px;
+  font-size: 0.84rem;
+  gap: 6px;
+}
+
+.lpe-slide-panel .lpe-list-item,
+.lpe-slide-panel .lpe-history-item,
+.lpe-slide-panel .lpe-control-group-body {
+  padding: 8px;
+}
+
+.lpe-slide-panel .lpe-control-group > summary {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 0.8rem;
+}
+
+.lpe-slide-panel .lpe-btn {
+  min-height: 34px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+}
+
+.lpe-save-btn {
+  margin: 8px 12px 8px;
+  width: calc(100% - 24px);
+}
+
+.lpe-settings-done-btn {
+  margin: 0 12px 12px;
+  width: calc(100% - 24px);
+}
+
+@media (max-width: 1360px) {
+  .lpe-layout {
+    --lpe-left-width: 300px;
+    --lpe-right-width: 300px;
   }
 }

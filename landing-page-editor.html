@@ -23,15 +23,51 @@
           <a href="/dashboard" class="lpe-back-link" aria-label="Back to dashboard">&larr;</a>
           <span class="lpe-brand-name">MeetScheduling</span>
           <span class="lpe-brand-live">Live</span>
+          <button type="button" class="lpe-top-icon-btn lpe-top-dots" aria-label="More options" title="More options">
+            <span aria-hidden="true">&hellip;</span>
+          </button>
+        </div>
+        <div class="lpe-topbar-center">
+          <span class="lpe-topbar-home" aria-hidden="true">&#8962;</span>
+          <h1 id="lpe-page-title">Home page</h1>
         </div>
         <div class="lpe-topbar-actions">
           <div class="lpe-device-toggle" role="tablist" aria-label="Preview device">
-            <button type="button" class="is-active" data-device="desktop">Desktop</button>
-            <button type="button" data-device="mobile">Mobile</button>
+            <button type="button" class="is-active" data-device="desktop" aria-label="Desktop view" title="Desktop view">
+              <span aria-hidden="true">&#128421;</span>
+            </button>
+            <button type="button" data-device="mobile" aria-label="Mobile view" title="Mobile view">
+              <span aria-hidden="true">&#128241;</span>
+            </button>
           </div>
-          <button type="button" id="lpe-focus-btn" class="lpe-btn lpe-btn-secondary" aria-pressed="false">Focus</button>
-          <button type="button" id="lpe-preview-btn" class="lpe-btn lpe-btn-secondary">Preview</button>
-          <button type="button" id="lpe-copy-link-btn" class="lpe-btn lpe-btn-secondary">Copy link</button>
+          <button
+            type="button"
+            id="lpe-focus-btn"
+            class="lpe-btn lpe-btn-secondary lpe-top-icon-btn"
+            aria-pressed="false"
+            aria-label="Focus mode"
+            title="Focus mode"
+          >
+            <span aria-hidden="true">&#9974;</span>
+          </button>
+          <button
+            type="button"
+            id="lpe-preview-btn"
+            class="lpe-btn lpe-btn-secondary lpe-top-icon-btn"
+            aria-label="Open preview"
+            title="Open preview"
+          >
+            <span aria-hidden="true">&#128065;</span>
+          </button>
+          <button
+            type="button"
+            id="lpe-copy-link-btn"
+            class="lpe-btn lpe-btn-secondary lpe-top-icon-btn"
+            aria-label="Copy link"
+            title="Copy link"
+          >
+            <span aria-hidden="true">&#128279;</span>
+          </button>
           <button type="button" id="lpe-save-top-btn" class="lpe-btn lpe-btn-muted" disabled>Save</button>
           <button type="button" id="lpe-publish-btn" class="lpe-btn lpe-btn-primary">Publish</button>
         </div>
@@ -95,7 +131,7 @@
 
           <button id="lpe-add-section-btn" type="button" class="lpe-btn lpe-btn-add">+ Add Section</button>
 
-          <details class="lpe-panel-card lpe-panel-disclosure" open>
+          <details class="lpe-panel-card lpe-panel-disclosure">
             <summary>
               <span>Prebuilt Themes</span>
               <span class="lpe-disclosure-hint">Apply full page designs</span>

@@ -1947,7 +1947,9 @@
     }
     if (els.focusBtn) {
       els.focusBtn.classList.toggle("is-active", state.focusMode);
-      els.focusBtn.textContent = state.focusMode ? "Exit Focus" : "Focus";
+      els.focusBtn.innerHTML = '<span aria-hidden="true">&#9974;</span>';
+      els.focusBtn.setAttribute("title", state.focusMode ? "Exit focus mode" : "Focus mode");
+      els.focusBtn.setAttribute("aria-label", state.focusMode ? "Exit focus mode" : "Focus mode");
       els.focusBtn.setAttribute("aria-pressed", state.focusMode ? "true" : "false");
     }
     applyPanelLayout();

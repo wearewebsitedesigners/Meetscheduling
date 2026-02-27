@@ -53,6 +53,7 @@ const APP_SECTIONS = [
 const LANDING_LEAD_STATUS_FILTERS = ["all", "new", "contacted", "won", "closed"];
 const CONTACT_FILTERS = ["all", "lead", "customer", "vip"];
 const WORKFLOW_FILTERS = ["all", "active", "paused", "draft"];
+const WORKFLOW_STATUS = ["active", "paused", "draft"];
 const INTEGRATION_FILTERS = ["all", "connected", "available"];
 const INTEGRATION_TABS = ["Discover", "Manage"];
 const INTEGRATION_SORT_OPTIONS = ["Most popular", "A-Z", "Category"];
@@ -966,6 +967,20 @@ function normalizeState(raw, fallback) {
     if (WORKFLOW_FILTERS.includes(raw.workflows.filter)) {
       merged.workflows.filter = raw.workflows.filter;
     }
+    if (typeof raw.workflows.selectedTemplateId === "string") {
+      merged.workflows.selectedTemplateId = raw.workflows.selectedTemplateId;
+    }
+    if (Array.isArray(raw.workflows.templates)) {
+      merged.workflows.templates = raw.workflows.templates.map((item) => ({
+        id: item.id || makeId("wft"),
+        name: item.name || "Workflow template",
+        description: item.description || "",
+        trigger: item.trigger || "After booking",
+        channel: item.channel || "Email",
+        offset: item.offset || "24 hours before",
+        status: WORKFLOW_STATUS.includes(item.status) ? item.status : "draft",
+      }));
+    }
     if (Array.isArray(raw.workflows.items)) {
       merged.workflows.items = raw.workflows.items.map((item) => ({
         id: item.id || makeId("wfl"),
@@ -973,9 +988,7 @@ function normalizeState(raw, fallback) {
         trigger: item.trigger || "After booking",
         channel: item.channel || "Email",
         offset: item.offset || "24 hours before",
-        status: ["active", "paused", "draft"].includes(item.status)
-          ? item.status
-          : "draft",
+        status: WORKFLOW_STATUS.includes(item.status) ? item.status : "draft",
         lastRun: item.lastRun || "Never",
       }));
     }
@@ -1502,6 +1515,8 @@ function createDefaultState() {
     workflows: {
       search: "",
       filter: "all",
+      selectedTemplateId: "",
+      templates: [],
       items: [
         {
           id: makeId("wfl"),
@@ -2676,10 +2691,20 @@ function mapApiWorkflowToUi(workflow) {
     trigger: workflow.trigger || "After booking",
     channel: workflow.channel || "Email",
     offset: workflow.offset || "24 hours before",
-    status: ["active", "paused", "draft"].includes(workflow.status)
-      ? workflow.status
-      : "draft",
+    status: WORKFLOW_STATUS.includes(workflow.status) ? workflow.status : "draft",
     lastRun: formatUiDateTime(workflow.lastRun, "Never"),
+  };
+}
+
+function mapApiWorkflowTemplateToUi(template) {
+  return {
+    id: template.id || makeId("wft"),
+    name: template.name || "Workflow template",
+    description: template.description || "",
+    trigger: template.trigger || "After booking",
+    channel: template.channel || "Email",
+    offset: template.offset || "24 hours before",
+    status: WORKFLOW_STATUS.includes(template.status) ? template.status : "draft",
   };
 }
 
@@ -2983,6 +3008,21 @@ async function loadWorkflowsFromApi() {
   state.workflows.items = rows.map(mapApiWorkflowToUi);
 }
 
+async function loadWorkflowTemplatesFromApi() {
+  const payload = await apiRequest("/api/workflows/templates");
+  const rows = Array.isArray(payload.templates) ? payload.templates : [];
+  state.workflows.templates = rows.map(mapApiWorkflowTemplateToUi);
+
+  if (
+    state.workflows.selectedTemplateId &&
+    !state.workflows.templates.some(
+      (template) => template.id === state.workflows.selectedTemplateId
+    )
+  ) {
+    state.workflows.selectedTemplateId = "";
+  }
+}
+
 async function loadRoutingFromApi() {
   const payload = await apiRequest(
     `/api/routing?search=${encodeURIComponent(
@@ -3144,6 +3184,7 @@ async function bootstrapDashboard() {
     refreshIntegrationsFromApi(state.integrations.activeTab),
     refreshCalendarSettingsFromApi(),
     loadContactsFromApi(),
+    loadWorkflowTemplatesFromApi(),
     loadWorkflowsFromApi(),
     loadRoutingFromApi(),
     loadLandingPageFromApi(),
@@ -3382,7 +3423,7 @@ function bindEvents() {
             .catch(() => null);
         }
         if (section === "workflows") {
-          loadWorkflowsFromApi()
+          Promise.allSettled([loadWorkflowTemplatesFromApi(), loadWorkflowsFromApi()])
             .then(() => {
               saveState();
               render();
@@ -4790,6 +4831,16 @@ function onViewChange(event) {
     return;
   }
 
+  if (target.matches('[data-action="workflows-template"]')) {
+    const value = String(target.value || "");
+    if (!value || state.workflows.templates.some((item) => item.id === value)) {
+      state.workflows.selectedTemplateId = value;
+      saveState();
+      render();
+    }
+    return;
+  }
+
   if (target.matches('[data-action="integrations-filter"]')) {
     const value = String(target.value || "all");
     if (INTEGRATION_FILTERS.includes(value)) {
@@ -5802,26 +5853,52 @@ async function toggleContactVipRemote(contactId) {
 }
 
 async function createWorkflow() {
-  const name = prompt("Workflow name", "Booking reminder");
-  if (!name) return;
-  const trigger = prompt("Trigger", "24h before event") || "24h before event";
-  const channel = prompt("Channel", "Email") || "Email";
-  const offset = prompt("Offset", "24 hours before") || "24 hours before";
+  if (!state.workflows.templates.length) {
+    try {
+      await loadWorkflowTemplatesFromApi();
+    } catch (_error) {
+      // Fall back to manual creation if template loading fails.
+    }
+  }
+
+  const selectedTemplate = state.workflows.templates.find(
+    (item) => item.id === state.workflows.selectedTemplateId
+  );
+  const payload = {};
+
+  if (selectedTemplate) {
+    const name = prompt(
+      `Workflow name (${selectedTemplate.name} template)`,
+      selectedTemplate.name
+    );
+    if (name === null) return;
+    payload.templateId = selectedTemplate.id;
+    payload.name = String(name || "").trim() || selectedTemplate.name;
+  } else {
+    const name = prompt("Workflow name", "Booking reminder");
+    if (!name) return;
+    const trigger = prompt("Trigger", "24h before event");
+    if (trigger === null) return;
+    const channel = prompt("Channel", "Email");
+    if (channel === null) return;
+    const offset = prompt("Offset", "24 hours before");
+    if (offset === null) return;
+    payload.name = String(name || "").trim() || "Workflow";
+    payload.trigger = String(trigger || "").trim() || "After booking";
+    payload.channel = String(channel || "").trim() || "Email";
+    payload.offset = String(offset || "").trim() || "24 hours before";
+    payload.status = "draft";
+  }
+
   try {
     await apiRequest("/api/workflows", {
       method: "POST",
-      body: JSON.stringify({
-        name: String(name || "").trim() || "Workflow",
-        trigger: String(trigger || "").trim() || "After booking",
-        channel: String(channel || "").trim() || "Email",
-        offset: String(offset || "").trim() || "24 hours before",
-        status: "draft",
-      }),
+      body: JSON.stringify(payload),
     });
     await loadWorkflowsFromApi();
     saveState();
     render();
-    showToast("Workflow created");
+    showToast(selectedTemplate ? "Workflow template added" : "Workflow created");
   } catch (error) {
     showToast(error?.message || "Could not create workflow");
   }
@@ -8091,6 +8168,10 @@ function renderWorkflowsView() {
   const filter = WORKFLOW_FILTERS.includes(state.workflows.filter)
     ? state.workflows.filter
     : "all";
+  const templates = Array.isArray(state.workflows.templates) ? state.workflows.templates : [];
+  const selectedTemplate = templates.find(
+    (item) => item.id === state.workflows.selectedTemplateId
+  );
   const items = state.workflows.items.filter((item) => {
     if (query) {
       const haystack = `${item.name} ${item.trigger} ${item.channel} ${item.offset}`.toLowerCase();
@@ -8116,9 +8197,23 @@ function renderWorkflowsView() {
           <option value="paused" ${filter === "paused" ? "selected" : ""}>Paused</option>
           <option value="draft" ${filter === "draft" ? "selected" : ""}>Draft</option>
         </select>
+        <select class="filter-select" data-action="workflows-template" title="Template">
+          <option value="" ${selectedTemplate ? "" : "selected"}>Custom automation</option>
+          ${templates
+      .map(
+        (item) =>
+          `<option value="${escapeHtml(item.id)}" ${selectedTemplate?.id === item.id ? "selected" : ""
+          }>${escapeHtml(item.name)}</option>`
+      )
+      .join("")}
+        </select>
       </div>
       <button class="pill-btn" type="button" data-action="create-workflow">+ New email automation</button>
       </section>
+    ${selectedTemplate
+      ? `<p class="text-muted">Template: ${escapeHtml(selectedTemplate.description || selectedTemplate.name)}</p>`
+      : ""
+    }
     ${items.length
       ? `<section class="data-list resource-list">
             ${items

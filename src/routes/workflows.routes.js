@@ -3,6 +3,7 @@ const asyncHandler = require("../middleware/async-handler");
 const { requireAuth } = require("../middleware/auth");
 const { assertOptionalString } = require("../utils/validation");
 const {
+  listWorkflowTemplates,
   listWorkflowsForUser,
   createWorkflowForUser,
   updateWorkflowForUser,
@@ -13,6 +14,14 @@ const {
 
 const router = express.Router();
 router.use(requireAuth);
+
+router.get(
+  "/templates",
+  asyncHandler(async (_req, res) => {
+    const templates = listWorkflowTemplates();
+    res.json({ templates });
+  })
+);
 
 router.get(
   "/",
@@ -69,4 +78,3 @@ router.delete(
 );
 
 module.exports = router;
-

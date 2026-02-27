@@ -2263,3 +2263,291 @@ body.is-panel-resizing {
     min-height: 0;
   }
 }
+
+/* Shopify-like clean settings panel */
+.lpe-slide-panel {
+  --lpe-settings-bg: #f2f4f7;
+  --lpe-settings-surface: #ffffff;
+  --lpe-settings-border: #c7ced8;
+  --lpe-settings-border-strong: #aeb7c5;
+  --lpe-settings-text: #2d3440;
+  --lpe-settings-muted: #6a7380;
+}
+
+#lpe-right-panel.lpe-slide-panel {
+  background: var(--lpe-settings-bg);
+  border-left: 1px solid #d6dbe3;
+}
+
+.lpe-slide-panel .lpe-settings-shell {
+  background: transparent;
+  padding: 12px 14px;
+  gap: 12px;
+}
+
+.lpe-slide-panel .lpe-panel-head h2 {
+  color: var(--lpe-settings-text);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.lpe-slide-panel .lpe-right-tab-panel {
+  gap: 12px;
+}
+
+.lpe-slide-panel .lpe-right-tab-panel .lpe-panel-head h3 {
+  font-size: 0.83rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #687387;
+}
+
+.lpe-slide-panel .lpe-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.lpe-slide-panel .lpe-field {
+  gap: 6px;
+}
+
+.lpe-slide-panel .lpe-field > span,
+.lpe-slide-panel .lpe-field > label,
+.lpe-slide-panel .lpe-field > .lpe-field-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #3f4754;
+  line-height: 1.3;
+}
+
+.lpe-slide-panel .lpe-field input:not([type="range"]):not([type="checkbox"]),
+.lpe-slide-panel .lpe-field select,
+.lpe-slide-panel .lpe-field textarea {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--lpe-settings-border);
+  background: var(--lpe-settings-surface);
+  color: var(--lpe-settings-text);
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.lpe-slide-panel .lpe-field textarea {
+  min-height: 92px;
+  padding: 10px 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.lpe-slide-panel .lpe-field select {
+  appearance: none;
+  padding-right: 34px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6f7783 50%),
+    linear-gradient(135deg, #6f7783 50%, transparent 50%);
+  background-position:
+    calc(100% - 17px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.lpe-slide-panel .lpe-field input:focus-visible,
+.lpe-slide-panel .lpe-field select:focus-visible,
+.lpe-slide-panel .lpe-field textarea:focus-visible,
+.lpe-slide-panel .lpe-checkbox input[type="checkbox"]:focus-visible {
+  outline: 2px solid rgba(38, 53, 73, 0.2);
+  outline-offset: 1px;
+  border-color: #7e8aa0;
+}
+
+.lpe-slide-panel .lpe-checkbox {
+  min-height: 36px;
+  padding: 1px 0;
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  color: #3a4452;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.lpe-slide-panel .lpe-checkbox input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 40px;
+  min-width: 40px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid #959daa;
+  background: #adb3bc;
+  cursor: pointer;
+  position: relative;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.lpe-slide-panel .lpe-checkbox input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 140ms ease;
+}
+
+.lpe-slide-panel .lpe-checkbox input[type="checkbox"]:checked {
+  background: #1f2630;
+  border-color: #1f2630;
+}
+
+.lpe-slide-panel .lpe-checkbox input[type="checkbox"]:checked::after {
+  transform: translateX(16px);
+}
+
+.lpe-slide-panel input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border: none;
+  border-radius: 999px;
+  background: repeating-linear-gradient(
+    to right,
+    #d0d5dd 0 3px,
+    transparent 3px 6px
+  );
+  margin: 8px 0 2px;
+}
+
+.lpe-slide-panel input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: #333842;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+.lpe-slide-panel input[type="range"]::-moz-range-track {
+  height: 4px;
+  border: none;
+  border-radius: 999px;
+  background: repeating-linear-gradient(
+    to right,
+    #d0d5dd 0 3px,
+    transparent 3px 6px
+  );
+}
+
+.lpe-slide-panel input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #333842;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+.lpe-slide-panel .lpe-row-grid {
+  gap: 10px;
+}
+
+.lpe-slide-panel .lpe-inline-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lpe-slide-panel .lpe-list-item,
+.lpe-slide-panel .lpe-history-item {
+  border: 1px solid var(--lpe-settings-border);
+  border-radius: 12px;
+  background: var(--lpe-settings-surface);
+  padding: 10px;
+  gap: 8px;
+}
+
+.lpe-slide-panel .lpe-list-item strong {
+  color: #2f3744;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.lpe-slide-panel .lpe-list-item p,
+.lpe-slide-panel .lpe-history-item time {
+  color: var(--lpe-settings-muted);
+  font-size: 0.8rem;
+}
+
+.lpe-slide-panel .lpe-control-group {
+  border: 1px solid var(--lpe-settings-border);
+  border-radius: 12px;
+  background: var(--lpe-settings-surface);
+}
+
+.lpe-slide-panel .lpe-control-group > summary {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 0.83rem;
+  color: #3b4350;
+  font-weight: 700;
+}
+
+.lpe-slide-panel .lpe-control-group[open] > summary {
+  background: #f8f9fb;
+  border-bottom-color: #e6e9ee;
+}
+
+.lpe-slide-panel .lpe-control-group-body {
+  padding: 10px;
+  gap: 10px;
+}
+
+.lpe-slide-panel .lpe-btn {
+  min-height: 36px;
+  border-radius: 10px;
+  border-color: #c7ced8;
+  background: #fff;
+  color: #2f3744;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.lpe-slide-panel .lpe-btn-secondary:hover {
+  border-color: var(--lpe-settings-border-strong);
+  background: #f6f8fb;
+  color: #1f2937;
+}
+
+.lpe-slide-panel .lpe-btn-primary {
+  border-color: #111827;
+  background: #111827;
+  color: #fff;
+}
+
+.lpe-slide-panel .lpe-btn-primary:hover {
+  border-color: #202733;
+  background: #202733;
+}
+
+.lpe-slide-panel .lpe-inline-actions .lpe-icon-btn {
+  width: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--lpe-settings-border);
+  background: #f9fafb;
+  color: #5b6574;
+}

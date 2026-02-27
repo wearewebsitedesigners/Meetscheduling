@@ -24,14 +24,7 @@
           <span class="lpe-brand-name">MeetScheduling</span>
           <span class="lpe-brand-live">Live</span>
         </div>
-        <div class="lpe-topbar-center">
-          <span class="lpe-home-glyph" aria-hidden="true">&#8962;</span>
-          <h1 id="lpe-page-title">Home page</h1>
-          <span class="lpe-editing-badge">Editing</span>
-          <p id="lpe-page-meta">Loading page...</p>
-        </div>
         <div class="lpe-topbar-actions">
-          <span id="lpe-top-save-state" class="lpe-top-save-state is-saved">Saved</span>
           <div class="lpe-device-toggle" role="tablist" aria-label="Preview device">
             <button type="button" class="is-active" data-device="desktop">Desktop</button>
             <button type="button" data-device="mobile">Mobile</button>
@@ -110,9 +103,40 @@
             <div id="lpe-preset-themes" class="lpe-preset-themes"></div>
           </details>
 
-          <section class="lpe-panel-card lpe-settings-shell lpe-settings-in-left">
+        </aside>
+
+        <button
+          id="lpe-resizer-left"
+          type="button"
+          class="lpe-resizer lpe-resizer-left"
+          aria-label="Resize sections panel"
+          title="Resize panel"
+        ></button>
+
+        <section class="lpe-center-panel">
+          <header class="lpe-preview-head">
+            <span class="lpe-preview-label">Live Preview</span>
+          </header>
+          <div id="lpe-preview-frame" class="lpe-preview-frame is-desktop">
+            <div id="lpe-preview-root"></div>
+          </div>
+        </section>
+
+        <aside id="lpe-right-panel" class="lpe-right-panel lpe-slide-panel" aria-label="Section settings" aria-hidden="true">
+          <section class="lpe-panel-card lpe-settings-shell">
             <div class="lpe-panel-head">
               <h2>Settings</h2>
+              <div class="lpe-panel-head-actions">
+                <button
+                  id="lpe-right-collapse"
+                  type="button"
+                  class="lpe-icon-btn"
+                  aria-label="Close settings panel"
+                  title="Done editing"
+                >
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
             </div>
 
             <div class="lpe-settings-tabs" role="tablist" aria-label="Settings type">
@@ -158,25 +182,8 @@
           </section>
 
           <button id="lpe-save-btn" type="button" class="lpe-btn lpe-btn-primary lpe-save-btn" disabled>Save Changes</button>
+          <button id="lpe-settings-done-btn" type="button" class="lpe-btn lpe-btn-secondary lpe-settings-done-btn">Done Editing</button>
         </aside>
-
-        <button
-          id="lpe-resizer-left"
-          type="button"
-          class="lpe-resizer lpe-resizer-left"
-          aria-label="Resize sections panel"
-          title="Resize panel"
-        ></button>
-
-        <section class="lpe-center-panel">
-          <header class="lpe-preview-head">
-            <span id="lpe-save-status" class="lpe-save-status">Saved</span>
-            <span class="lpe-preview-label">Live Preview</span>
-          </header>
-          <div id="lpe-preview-frame" class="lpe-preview-frame is-desktop">
-            <div id="lpe-preview-root"></div>
-          </div>
-        </section>
       </main>
     </div>
 

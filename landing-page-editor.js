@@ -31,6 +31,7 @@
     rightPanel: document.getElementById("lpe-right-panel"),
     leftCollapseBtn: document.getElementById("lpe-left-collapse"),
     rightCollapseBtn: document.getElementById("lpe-right-collapse"),
+    settingsDoneBtn: document.getElementById("lpe-settings-done-btn"),
     leftResizer: document.getElementById("lpe-resizer-left"),
     rightResizer: document.getElementById("lpe-resizer-right"),
     sectionsFilter: document.getElementById("lpe-sections-filter"),
@@ -263,7 +264,7 @@
     focusMode: false,
     focusMemory: null,
     leftPanelCollapsed: false,
-    rightPanelCollapsed: false,
+    rightPanelCollapsed: true,
     leftPanelWidth: 360,
     rightPanelWidth: 360,
     isDirty: false,
@@ -271,6 +272,7 @@
     saveTimer: null,
     saveInFlight: false,
     saveQueued: false,
+    previewRenderFrame: 0,
   };
 
   function escapeHtml(value) {
@@ -1850,6 +1852,7 @@
         selectedSectionId: state.selectedSectionId,
         onSelectSection(sectionId) {
           state.selectedSectionId = sectionId;
+          openRightPanel("element");
           setRightTab("element");
           renderSectionsList();
           renderSectionControls();
@@ -1857,10 +1860,18 @@
         onInlineEdit(path, value) {
           setPathValue(path, value, "string");
           queueAutosave();
-          renderPreview();
+          queuePreviewRender();
         },
       }
     );
+  }
+
+  function queuePreviewRender() {
+    if (state.previewRenderFrame) return;
+    state.previewRenderFrame = window.requestAnimationFrame(() => {
+      state.previewRenderFrame = 0;
+      renderPreview();
+    });
   }
 
   function renderStaticSections() {
@@ -1950,6 +1961,9 @@
     els.layout.style.setProperty("--lpe-right-width", `${rightWidth}px`);
     els.layout.classList.toggle("is-left-collapsed", state.leftPanelCollapsed);
     els.layout.classList.toggle("is-right-collapsed", state.rightPanelCollapsed);
+    if (els.rightPanel) {
+      els.rightPanel.setAttribute("aria-hidden", state.rightPanelCollapsed ? "true" : "false");
+    }
     if (els.leftCollapseBtn) {
       els.leftCollapseBtn.innerHTML = `<span aria-hidden="true">${state.leftPanelCollapsed ? "&rsaquo;" : "&lsaquo;"}</span>`;
       els.leftCollapseBtn.setAttribute(
@@ -1958,12 +1972,27 @@
       );
     }
     if (els.rightCollapseBtn) {
-      els.rightCollapseBtn.innerHTML = `<span aria-hidden="true">${state.rightPanelCollapsed ? "&lsaquo;" : "&rsaquo;"}</span>`;
-      els.rightCollapseBtn.setAttribute(
-        "aria-label",
-        state.rightPanelCollapsed ? "Expand settings panel" : "Collapse settings panel"
-      );
+      els.rightCollapseBtn.innerHTML = '<span aria-hidden="true">&times;</span>';
+      els.rightCollapseBtn.setAttribute("aria-label", "Close settings panel");
     }
+  }
+
+  function openRightPanel(tabName) {
+    if (state.focusMode) setFocusMode(false);
+    if (tabName) setRightTab(tabName);
+    state.rightPanelCollapsed = false;
+    applyPanelLayout();
+    if (els.rightPanel) {
+      window.requestAnimationFrame(() => {
+        const activePanel = els.rightTabPanels.find((panel) => panel.classList.contains("is-active"));
+        if (activePanel) activePanel.scrollTop = 0;
+      });
+    }
+  }
+
+  function closeRightPanel() {
+    state.rightPanelCollapsed = true;
+    applyPanelLayout();
   }
 
   function togglePanelCollapse(side) {
@@ -2012,15 +2041,11 @@
         if (!tool) return;
         activateRailTool(tool);
         if (tool === "theme") {
-          if (state.leftPanelCollapsed) togglePanelCollapse("left");
-          setRightTab("theme");
-          if (els.leftPanel) els.leftPanel.scrollTo({ top: els.leftPanel.scrollHeight, behavior: "smooth" });
+          openRightPanel("theme");
           return;
         }
         if (tool === "element") {
-          if (state.leftPanelCollapsed) togglePanelCollapse("left");
-          setRightTab("element");
-          if (els.leftPanel) els.leftPanel.scrollTo({ top: els.leftPanel.scrollHeight, behavior: "smooth" });
+          openRightPanel("element");
           return;
         }
         if (tool === "sections") {
@@ -2035,7 +2060,11 @@
     }
 
     if (els.rightCollapseBtn) {
-      els.rightCollapseBtn.addEventListener("click", () => togglePanelCollapse("right"));
+      els.rightCollapseBtn.addEventListener("click", () => closeRightPanel());
+    }
+
+    if (els.settingsDoneBtn) {
+      els.settingsDoneBtn.addEventListener("click", () => closeRightPanel());
     }
 
     els.rightTabButtons.forEach((button) => {
@@ -2288,7 +2317,7 @@
     const next = current.filter((item) => item !== String(categoryId));
     if (checked) next.push(String(categoryId));
     section.settings.categoryIds = Array.from(new Set(next));
-    renderPreview();
+    queuePreviewRender();
     queueAutosave();
   }
 
@@ -2374,6 +2403,7 @@
     const next = createSection(type);
     sectionList().push(next);
     state.selectedSectionId = next.id;
+    openRightPanel("element");
     renderAll();
     queueAutosave();
   }
@@ -2510,6 +2540,7 @@
 
       if (action === "select-section") {
         state.selectedSectionId = sectionId;
+        openRightPanel("element");
         setRightTab("element");
         renderSectionsList();
         renderSectionControls();
@@ -2540,6 +2571,7 @@
         clone.id = `${source.type}-${Math.random().toString(36).slice(2, 8)}`;
         sectionList().splice(index + 1, 0, clone);
         state.selectedSectionId = clone.id;
+        openRightPanel("element");
         renderAll();
         queueAutosave();
         return;
@@ -2657,7 +2689,7 @@
           renderPageMeta();
           refreshSeoPreviews();
         }
-        renderPreview();
+        queuePreviewRender();
         queueAutosave();
       };
       container.addEventListener("input", handleBind);

@@ -994,7 +994,7 @@
   content: "";
   position: absolute;
   inset: 2px;
-  border: 1px dashed transparent;
+  border: 1px dashed rgba(79, 111, 158, 0.34);
   border-radius: 14px;
   pointer-events: none;
   transition: border-color 120ms ease, background 120ms ease;

@@ -988,6 +988,12 @@
 
 .lp-preview-mode .lp-section {
   cursor: pointer;
+  padding-inline: 0;
+}
+
+.lp-preview-mode .lp-shell {
+  width: 100%;
+  max-width: none;
 }
 
 .lp-preview-mode .lp-section::after {

@@ -49,7 +49,7 @@
   function safeText(value, fallback, max) {
     if (value === undefined || value === null) return fallback || "";
     const text = String(value).trim();
-    if (!text) return fallback || "";
+    if (!text) return "";
     if (!max) return text;
     return text.slice(0, max);
   }

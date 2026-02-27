@@ -288,10 +288,12 @@
     return JSON.parse(JSON.stringify(value));
   }
 
-  function safeText(value, fallback) {
+  function safeText(value, fallback, max) {
     if (value === undefined || value === null) return fallback || "";
-    const text = String(value);
-    return text.trim() ? text : fallback || "";
+    const text = String(value).trim();
+    if (!text) return "";
+    if (!max) return text;
+    return text.slice(0, max);
   }
 
   function token() {
@@ -951,7 +953,8 @@
     const rows = [];
 
     sections.forEach((section, index) => {
-      const sectionTitle = safeText(section.customLabel, labelByType.get(String(section.type)) || section.type);
+      const customSectionLabel = safeText(section.customLabel, "");
+      const sectionTitle = customSectionLabel || labelByType.get(String(section.type)) || section.type;
       const matches =
         !query ||
         sectionTitle.toLowerCase().includes(query) ||
@@ -986,6 +989,13 @@
               }" data-action="toggle-section" data-section-id="${escapeHtml(section.id)}" aria-label="${
                 section.enabled === false ? "Show section" : "Hide section"
               }">${section.enabled === false ? sectionIcon("eyeOff") : sectionIcon("eye")}</button>
+              <button
+                type="button"
+                class="lpe-icon-btn"
+                data-action="duplicate-section"
+                data-section-id="${escapeHtml(section.id)}"
+                aria-label="Duplicate section"
+              >${sectionIcon("copy")}</button>
               <button
                 type="button"
                 class="lpe-icon-btn"
@@ -2650,6 +2660,21 @@
     els.sectionsList.addEventListener("dragend", () => {
       clearDragClasses();
       dragFrom = -1;
+    });
+
+    els.sectionsList.addEventListener("contextmenu", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const row = target.closest(".lpe-section-row[data-section-id]");
+      if (!(row instanceof HTMLElement)) return;
+      const sectionId = String(row.getAttribute("data-section-id") || "");
+      if (!sectionId) return;
+      event.preventDefault();
+      state.selectedSectionId = sectionId;
+      state.openRowMenuSectionId = sectionId;
+      renderSectionsList();
+      renderSectionControls();
+      renderPreview();
     });
 
     document.addEventListener("click", (event) => {

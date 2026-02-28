@@ -2015,8 +2015,8 @@ body.is-panel-resizing {
 
 /* Compact sidebars like Shopify editor */
 .lpe-layout {
-  --lpe-left-width: 280px;
-  --lpe-right-width: 180px;
+  --lpe-left-width: 196px;
+  --lpe-right-width: 216px;
 }
 
 .lpe-left-panel .lpe-sections-card {
@@ -2254,8 +2254,8 @@ body.is-panel-resizing {
 
 @media (max-width: 1360px) {
   .lpe-layout {
-    --lpe-left-width: 280px;
-    --lpe-right-width: 150px;
+    --lpe-left-width: 180px;
+    --lpe-right-width: 200px;
   }
 }
 

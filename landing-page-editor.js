@@ -11,10 +11,12 @@
     "image/webp",
     "image/gif",
   ]);
-  const LEFT_PANEL_DEFAULT_WIDTH = 280;
-  const RIGHT_PANEL_DEFAULT_WIDTH = 180;
-  const RIGHT_PANEL_MIN_WIDTH = 150;
-  const RIGHT_PANEL_MAX_WIDTH = 260;
+  const LEFT_PANEL_DEFAULT_WIDTH = 196;
+  const LEFT_PANEL_MIN_WIDTH = 160;
+  const LEFT_PANEL_MAX_WIDTH = 420;
+  const RIGHT_PANEL_DEFAULT_WIDTH = 216;
+  const RIGHT_PANEL_MIN_WIDTH = 180;
+  const RIGHT_PANEL_MAX_WIDTH = 320;
 
   const els = {
     shell: document.querySelector(".lpe-shell"),
@@ -2195,7 +2197,9 @@
     }
     if (side === "left") {
       state.leftPanelCollapsed = !state.leftPanelCollapsed;
-      if (!state.leftPanelCollapsed && state.leftPanelWidth < 240) state.leftPanelWidth = 280;
+      if (!state.leftPanelCollapsed && state.leftPanelWidth < LEFT_PANEL_MIN_WIDTH) {
+        state.leftPanelWidth = LEFT_PANEL_DEFAULT_WIDTH;
+      }
     }
     if (side === "right") {
       state.rightPanelCollapsed = !state.rightPanelCollapsed;
@@ -2281,7 +2285,10 @@
           const deltaX = moveEvent.clientX - startX;
           if (side === "left") {
             state.leftPanelCollapsed = false;
-            state.leftPanelWidth = Math.max(240, Math.min(520, startLeft + deltaX));
+            state.leftPanelWidth = Math.max(
+              LEFT_PANEL_MIN_WIDTH,
+              Math.min(LEFT_PANEL_MAX_WIDTH, startLeft + deltaX)
+            );
           } else {
             state.rightPanelCollapsed = false;
             state.rightPanelWidth = Math.max(

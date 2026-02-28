@@ -137,12 +137,12 @@ const SECTION_DEFINITIONS = Object.freeze({
   },
   servicesMenu: {
     category: "salon",
-    label: "Appointments / Services Menu",
+    label: "Services",
     description: "Tabbed or stacked service cards with pricing and booking.",
     icon: "scissors",
     singleton: false,
     defaultSettings: {
-      title: "Service Menu",
+      title: "Services",
       subtitle:
         "Indulge in our curated selection of professional beauty treatments.",
       viewMode: "tabs",
@@ -881,7 +881,7 @@ function normalizeSectionSettings(type, settings, fallbackSettings) {
 
   if (type === "servicesMenu") {
     return {
-      title: safeText(source.title, safeText(fallback.title, "Service Menu", 140), 140),
+      title: safeText(source.title, safeText(fallback.title, "Services", 140), 140),
       subtitle: safeText(source.subtitle, safeText(fallback.subtitle, "", 400), 400),
       viewMode: ["tabs", "stacked"].includes(safeText(source.viewMode, "", 20))
         ? safeText(source.viewMode, "tabs", 20)

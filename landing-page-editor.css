@@ -882,7 +882,7 @@
 }
 
 .lpe-layout {
-  grid-template-columns: 46px 292px minmax(0, 1fr) 360px;
+  grid-template-columns: 34px 292px minmax(0, 1fr) 360px;
   gap: 0;
   min-height: calc(100vh - 56px);
 }
@@ -893,7 +893,7 @@
   display: grid;
   align-content: start;
   gap: 8px;
-  padding: 10px 6px;
+  padding: 8px 4px;
 }
 
 .lpe-rail-btn {
@@ -1088,7 +1088,7 @@
 
 @media (max-width: 1360px) {
   .lpe-layout {
-    grid-template-columns: 42px 268px minmax(0, 1fr) 330px;
+    grid-template-columns: 30px 268px minmax(0, 1fr) 330px;
   }
 }
 
@@ -1111,7 +1111,7 @@
 
 /* UI system upgrade */
 .lpe-layout {
-  --lpe-rail-width: 56px;
+  --lpe-rail-width: 34px;
   --lpe-left-width: 292px;
   --lpe-right-width: 360px;
   --lpe-resizer-width: 8px;
@@ -1703,7 +1703,7 @@ body.is-panel-resizing {
 
 /* Contextual settings drawer layout */
 .lpe-layout {
-  --lpe-rail-width: 56px;
+  --lpe-rail-width: 34px;
   --lpe-left-width: 300px;
   --lpe-right-width: 372px;
   --lpe-resizer-width: 8px;
@@ -2015,7 +2015,7 @@ body.is-panel-resizing {
 
 /* Compact sidebars like Shopify editor */
 .lpe-layout {
-  --lpe-left-width: 196px;
+  --lpe-left-width: 150px;
   --lpe-right-width: 216px;
 }
 
@@ -2254,7 +2254,7 @@ body.is-panel-resizing {
 
 @media (max-width: 1360px) {
   .lpe-layout {
-    --lpe-left-width: 180px;
+    --lpe-left-width: 138px;
     --lpe-right-width: 200px;
   }
 }

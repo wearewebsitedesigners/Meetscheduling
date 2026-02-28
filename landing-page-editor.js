@@ -11,12 +11,14 @@
     "image/webp",
     "image/gif",
   ]);
-  const LEFT_PANEL_DEFAULT_WIDTH = 196;
-  const LEFT_PANEL_MIN_WIDTH = 160;
-  const LEFT_PANEL_MAX_WIDTH = 420;
+  const LEFT_PANEL_DEFAULT_WIDTH = 150;
+  const LEFT_PANEL_MIN_WIDTH = 120;
+  const LEFT_PANEL_MAX_WIDTH = 360;
   const RIGHT_PANEL_DEFAULT_WIDTH = 216;
   const RIGHT_PANEL_MIN_WIDTH = 180;
   const RIGHT_PANEL_MAX_WIDTH = 320;
+  const RAIL_COLLAPSED_WIDTH = 34;
+  const RAIL_EXPANDED_WIDTH = 104;
 
   const els = {
     shell: document.querySelector(".lpe-shell"),
@@ -137,7 +139,7 @@
       images: [{ url: "", alt: "Style showcase 1" }],
     },
     servicesMenu: {
-      title: "Service Menu",
+      title: "Services",
       subtitle: "Indulge in our curated selection of professional beauty treatments.",
       viewMode: "tabs",
       showSearch: true,
@@ -427,6 +429,12 @@
     return Array.isArray(state.draftConfig?.sections) ? state.draftConfig.sections : [];
   }
 
+  function sectionLabelByType(type, fallbackLabel) {
+    const normalizedType = String(type || "");
+    if (normalizedType === "servicesMenu") return "Services";
+    return String(fallbackLabel || normalizedType);
+  }
+
   function getSectionById(sectionId) {
     return sectionList().find((item) => String(item.id) === String(sectionId)) || null;
   }
@@ -644,7 +652,7 @@
           { type: "marquee", settings: { items: ["PREMIUM HAIR SERVICES", "BOOK INSTANTLY ONLINE", "NEW CLIENT OFFERS LIVE"], speed: 24 } },
           { type: "header", settings: { brandName: "{{businessName}}", showSearch: true, searchPlaceholder: "Search services..." } },
           { type: "imageBanner", settings: { pretitle: "Luxury Hair Experience", title: "{{businessName}} Beauty Studio", subtitle: "Install, color, and treatment services with expert stylists.", buttonLabel: "Book now", buttonHref: "#services" } },
-          { type: "servicesMenu", settings: { title: "Service Menu", subtitle: "Choose your treatment and reserve your best slot.", showSearch: true, showPhotos: true, showDuration: true, showPrice: true, columnsDesktop: 2 } },
+          { type: "servicesMenu", settings: { title: "Services", subtitle: "Choose your treatment and reserve your best slot.", showSearch: true, showPhotos: true, showDuration: true, showPrice: true, columnsDesktop: 2 } },
           { type: "spotlightGrid" },
           { type: "productGrid" },
           { type: "stylists" },
@@ -1127,7 +1135,7 @@
     const labelByType = new Map(
       (Array.isArray(state.sectionLibrary) ? state.sectionLibrary : []).map((item) => [
         String(item.type || ""),
-        String(item.label || item.type || ""),
+        sectionLabelByType(item.type, item.label || item.type || ""),
       ])
     );
     const headerTypes = new Set(["marquee", "header"]);
@@ -2105,7 +2113,8 @@
     els.utilityRail.classList.toggle("is-expanded", state.railExpanded);
     els.utilityRail.classList.toggle("is-collapsed", !state.railExpanded);
     if (els.layout) {
-      els.layout.style.setProperty("--lpe-rail-width", state.railExpanded ? "172px" : "56px");
+      const railWidth = state.railExpanded ? RAIL_EXPANDED_WIDTH : RAIL_COLLAPSED_WIDTH;
+      els.layout.style.setProperty("--lpe-rail-width", `${railWidth}px`);
     }
     if (els.railToggle) {
       els.railToggle.setAttribute("aria-label", state.railExpanded ? "Collapse tools" : "Expand tools");
@@ -2637,7 +2646,7 @@
                     <article class="lpe-library-card ${
                       state.selectedLibraryType === item.type ? "is-selected" : ""
                     }" data-action="select-library" data-type="${escapeHtml(item.type)}">
-                      <h4>${escapeHtml(item.label)}</h4>
+                      <h4>${escapeHtml(sectionLabelByType(item.type, item.label))}</h4>
                       <p>${escapeHtml(item.description)}</p>
                     </article>
                   `

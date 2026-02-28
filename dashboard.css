@@ -645,6 +645,17 @@ html[data-theme="dark"] .mobile-menu-btn {
   background: var(--surface);
 }
 
+html[data-theme="dark"] .logo,
+html[data-theme="dark"] .logo-fallback,
+html[data-theme="dark"] .logo-wordmark,
+html[data-theme="dark"] .logo-text {
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .logo-img {
+  filter: brightness(0) saturate(100%) invert(100%);
+}
+
 html[data-theme="dark"] .icon-btn:hover,
 html[data-theme="dark"] .profile-btn:hover {
   background: rgba(102, 168, 255, 0.14);

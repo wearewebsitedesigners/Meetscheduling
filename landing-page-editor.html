@@ -125,13 +125,11 @@
 
           <button id="lpe-add-section-btn" type="button" class="lpe-btn lpe-btn-add">+ Add Section</button>
 
-          <details class="lpe-panel-card lpe-panel-disclosure">
-            <summary>
-              <span>Prebuilt Themes</span>
-              <span class="lpe-disclosure-hint">Apply full page designs</span>
-            </summary>
-            <div id="lpe-preset-themes" class="lpe-preset-themes"></div>
-          </details>
+          <button id="lpe-open-theme-dialog" type="button" class="lpe-prebuilt-trigger lpe-panel-card">
+            <span class="lpe-prebuilt-trigger-title">Prebuilt Themes</span>
+            <span class="lpe-prebuilt-trigger-subtitle">Apply full page designs</span>
+            <span id="lpe-prebuilt-trigger-meta" class="lpe-prebuilt-trigger-meta">Browse 5 theme templates</span>
+          </button>
 
         </aside>
 
@@ -224,6 +222,20 @@
         <footer class="lpe-dialog-actions">
           <button type="button" id="lpe-dialog-cancel" class="lpe-btn lpe-btn-secondary">Cancel</button>
           <button type="button" id="lpe-dialog-select" class="lpe-btn lpe-btn-primary">Select Section</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog id="lpe-theme-dialog" class="lpe-dialog lpe-theme-dialog">
+      <form method="dialog" class="lpe-dialog-content lpe-theme-dialog-content">
+        <header>
+          <h2>Choose a Prebuilt Theme</h2>
+          <p>Pick one of 5 complete page designs with live preview and apply it instantly.</p>
+        </header>
+        <div id="lpe-theme-grid" class="lpe-theme-grid"></div>
+        <footer class="lpe-dialog-actions">
+          <button type="button" id="lpe-theme-dialog-cancel" class="lpe-btn lpe-btn-secondary">Cancel</button>
+          <button type="button" id="lpe-theme-dialog-apply" class="lpe-btn lpe-btn-primary">Apply Theme</button>
         </footer>
       </form>
     </dialog>

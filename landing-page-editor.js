@@ -38,7 +38,8 @@
     sectionsList: document.getElementById("lpe-sections-list"),
     previewFrame: document.getElementById("lpe-preview-frame"),
     previewRoot: document.getElementById("lpe-preview-root"),
-    presetThemes: document.getElementById("lpe-preset-themes"),
+    openThemeDialogBtn: document.getElementById("lpe-open-theme-dialog"),
+    prebuiltTriggerMeta: document.getElementById("lpe-prebuilt-trigger-meta"),
     themeControls: document.getElementById("lpe-theme-controls"),
     sectionControls: document.getElementById("lpe-section-controls"),
     historyList: document.getElementById("lpe-history-list"),
@@ -52,6 +53,10 @@
     dialogCancel: document.getElementById("lpe-dialog-cancel"),
     dialogSelect: document.getElementById("lpe-dialog-select"),
     libraryGrid: document.getElementById("lpe-library-grid"),
+    themeDialog: document.getElementById("lpe-theme-dialog"),
+    themeDialogCancel: document.getElementById("lpe-theme-dialog-cancel"),
+    themeDialogApply: document.getElementById("lpe-theme-dialog-apply"),
+    themeGrid: document.getElementById("lpe-theme-grid"),
   };
 
   const SECTION_DEFAULTS = Object.freeze({
@@ -257,6 +262,7 @@
     selectedSectionId: "",
     openRowMenuSectionId: "",
     selectedLibraryType: "",
+    selectedThemeTemplateId: "",
     sectionsFilterText: "",
     rightTab: "element",
     device: "desktop",
@@ -676,6 +682,41 @@
           { type: "footer", settings: { copyright: "© {{businessName}}" } },
         ],
       },
+      {
+        id: "client-magnet",
+        name: "Client Magnet",
+        description: "High-conversion layout tuned for first-time visitors and rapid bookings.",
+        presetId: "minimal",
+        sections: [
+          { type: "marquee", settings: { items: ["LIMITED WEEKDAY OFFERS", "SAME-DAY APPOINTMENTS", "BOOK ONLINE IN 60 SECONDS"], speed: 26 } },
+          { type: "header", settings: { brandName: "{{businessName}}", showSearch: true } },
+          { type: "hero", settings: { badge: "Most Booked Services", title: "Get your dream look booked today", subtitle: "Fast online booking, transparent pricing, and expert stylists." } },
+          { type: "servicesMenu", settings: { viewMode: "tabs", showSearch: true, showPhotos: true, showDuration: true, showPrice: true, columnsDesktop: 2 } },
+          { type: "reviewsMarquee", settings: { title: "What clients say", speed: 30, showStars: true } },
+          { type: "faq" },
+          { type: "contactMap" },
+          { type: "footer", settings: { copyright: "© {{businessName}}" } },
+        ],
+      },
+      {
+        id: "signature-luxe",
+        name: "Signature Luxe",
+        description: "Premium storytelling design with bold visuals and strong brand personality.",
+        presetId: "hairluxury",
+        sections: [
+          { type: "marquee", settings: { items: ["SIGNATURE LUXURY INSTALLS", "VIP APPOINTMENTS", "PREMIUM HAIR ONLY"], speed: 28 } },
+          { type: "header", settings: { brandName: "{{businessName}}", showSearch: false } },
+          { type: "imageBanner", settings: { pretitle: "Signature Collection", title: "{{businessName}} Signature Experience", subtitle: "Luxury installs, custom color, and precision styling tailored to you.", buttonLabel: "Start booking", buttonHref: "#services" } },
+          { type: "imageShowcase" },
+          { type: "spotlightGrid" },
+          { type: "productGrid" },
+          { type: "stylists" },
+          { type: "customerReviewBlock" },
+          { type: "instagramGrid" },
+          { type: "newsletterSignup" },
+          { type: "footer", settings: { copyright: "© {{businessName}}" } },
+        ],
+      },
     ];
   }
 
@@ -767,16 +808,44 @@
     setSaveStatus("saving", `Applying ${template.name}...`);
   }
 
-  function renderPresetThemes() {
-    if (!els.presetThemes) return;
+  function getActiveTemplateId() {
+    const activeTemplate = prebuiltTemplates().find((template) => isTemplateActive(template));
+    return activeTemplate ? String(activeTemplate.id) : "";
+  }
+
+  function renderThemeDialogTemplates() {
+    if (!els.themeGrid) return;
     const templates = prebuiltTemplates();
     if (!templates.length) {
-      els.presetThemes.innerHTML = '<p class="lp-empty">No prebuilt themes available.</p>';
+      els.themeGrid.innerHTML = '<p class="lp-empty">No prebuilt themes available.</p>';
+      if (els.themeDialogApply) {
+        els.themeDialogApply.disabled = true;
+      }
       return;
     }
 
-    els.presetThemes.innerHTML = templates
+    if (
+      !state.selectedThemeTemplateId ||
+      !templates.some((template) => String(template.id) === String(state.selectedThemeTemplateId))
+    ) {
+      const activeTemplateId = getActiveTemplateId();
+      state.selectedThemeTemplateId = activeTemplateId || String(templates[0].id || "");
+    }
+
+    const selectedTemplate = templates.find(
+      (template) => String(template.id) === String(state.selectedThemeTemplateId)
+    );
+    if (els.themeDialogApply) {
+      els.themeDialogApply.disabled = !selectedTemplate;
+      els.themeDialogApply.textContent = selectedTemplate
+        ? `Apply ${selectedTemplate.name}`
+        : "Apply Theme";
+    }
+
+    els.themeGrid.innerHTML = templates
       .map((template) => {
+        const templateId = String(template.id || "");
+        const selected = templateId === String(state.selectedThemeTemplateId);
         const active = isTemplateActive(template);
         const theme = template.theme || {};
         const swatches = [
@@ -786,26 +855,101 @@
           theme.text || "#111827",
         ];
         const sectionCount = templateTypeSignature(template).length;
+        const previewStyle = [
+          `--preview-primary:${escapeHtml(String(theme.primary || "#1a73e8"))}`,
+          `--preview-secondary:${escapeHtml(String(theme.secondary || "#0f766e"))}`,
+          `--preview-bg:${escapeHtml(String(theme.background || "#f4f7fb"))}`,
+          `--preview-surface:${escapeHtml(String(theme.surface || "#ffffff"))}`,
+          `--preview-text:${escapeHtml(String(theme.text || "#111827"))}`,
+        ].join(";");
         return `
-          <article class="lpe-preset-card ${active ? "is-active" : ""}">
+          <article class="lpe-theme-option ${selected ? "is-selected" : ""} ${active ? "is-active" : ""}" data-action="select-theme-template" data-template-id="${escapeHtml(
+            templateId
+          )}">
+            <div class="lpe-theme-preview" style="${previewStyle}" aria-hidden="true">
+              <span class="lpe-theme-preview-top"></span>
+              <span class="lpe-theme-preview-hero"></span>
+              <span class="lpe-theme-preview-body">
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+            </div>
             <div class="lpe-preset-card-head">
               <div>
                 <h3>${escapeHtml(template.name)}</h3>
                 <p>${escapeHtml(template.description)}</p>
               </div>
-              <span class="lpe-preset-badge">${active ? "Active" : "Full design"}</span>
+              <span class="lpe-preset-badge">${active ? "Active" : selected ? "Selected" : "Full design"}</span>
             </div>
             <p class="lpe-preset-meta">${escapeHtml(String(sectionCount))} sections included</p>
             <div class="lpe-preset-swatches" aria-hidden="true">
               ${swatches.map((color) => `<span style="background:${escapeHtml(String(color))};"></span>`).join("")}
             </div>
-            <button type="button" class="lpe-btn lpe-btn-secondary" data-action="apply-prebuilt-template" data-template-id="${escapeHtml(
-              template.id
-            )}">${active ? "Applied" : "Apply full design"}</button>
+            <button type="button" class="lpe-btn lpe-btn-secondary lpe-theme-option-apply" data-action="quick-apply-theme-template" data-template-id="${escapeHtml(
+              templateId
+            )}">${active ? "Reapply theme" : "Apply this theme"}</button>
           </article>
         `;
       })
       .join("");
+  }
+
+  function renderPresetThemes() {
+    const templates = prebuiltTemplates();
+    if (!templates.length) {
+      if (els.prebuiltTriggerMeta) {
+        els.prebuiltTriggerMeta.textContent = "No prebuilt themes available";
+      }
+      if (els.openThemeDialogBtn) {
+        els.openThemeDialogBtn.disabled = true;
+      }
+      return;
+    }
+
+    if (els.openThemeDialogBtn) {
+      els.openThemeDialogBtn.disabled = false;
+    }
+    const activeTemplateId = getActiveTemplateId();
+    const activeTemplate = templates.find(
+      (template) => String(template.id) === String(activeTemplateId)
+    );
+    if (els.prebuiltTriggerMeta) {
+      els.prebuiltTriggerMeta.textContent = activeTemplate
+        ? `Active: ${activeTemplate.name}`
+        : `Browse ${templates.length} theme templates`;
+    }
+    if (
+      !state.selectedThemeTemplateId ||
+      !templates.some((template) => String(template.id) === String(state.selectedThemeTemplateId))
+    ) {
+      state.selectedThemeTemplateId = activeTemplateId || String(templates[0].id || "");
+    }
+    renderThemeDialogTemplates();
+  }
+
+  function openThemeDialog() {
+    if (!els.themeDialog) return;
+    const templates = prebuiltTemplates();
+    if (!templates.length) {
+      alert("No prebuilt themes available yet.");
+      return;
+    }
+    const activeTemplateId = getActiveTemplateId();
+    state.selectedThemeTemplateId = activeTemplateId || String(templates[0].id || "");
+    renderThemeDialogTemplates();
+    els.themeDialog.showModal();
+  }
+
+  function applySelectedThemeTemplate() {
+    if (!state.selectedThemeTemplateId) {
+      alert("Select a theme first.");
+      return;
+    }
+    applyPrebuiltTemplateById(state.selectedThemeTemplateId);
+    if (els.themeDialog && els.themeDialog.open) {
+      els.themeDialog.close();
+    }
   }
 
   function setPathValue(path, rawValue, kind) {
@@ -2738,18 +2882,6 @@
     attachValueBinding(els.themeControls);
     attachValueBinding(els.sectionControls);
 
-    if (els.presetThemes) {
-      els.presetThemes.addEventListener("click", (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) return;
-        const button = target.closest("[data-action='apply-prebuilt-template']");
-        if (!(button instanceof HTMLElement)) return;
-        const templateId = button.getAttribute("data-template-id");
-        if (!templateId) return;
-        applyPrebuiltTemplateById(templateId);
-      });
-    }
-
     if (els.themeControls) {
       els.themeControls.addEventListener("click", (event) => {
         const target = event.target;
@@ -2893,6 +3025,12 @@
   }
 
   function bindModalEvents() {
+    if (els.openThemeDialogBtn) {
+      els.openThemeDialogBtn.addEventListener("click", () => {
+        openThemeDialog();
+      });
+    }
+
     if (els.addSectionBtn) {
       els.addSectionBtn.addEventListener("click", () => {
         openAddDialog();
@@ -2926,6 +3064,41 @@
         }
         addSection(state.selectedLibraryType);
         if (els.addDialog) els.addDialog.close();
+      });
+    }
+
+    if (els.themeDialogCancel) {
+      els.themeDialogCancel.addEventListener("click", () => {
+        if (els.themeDialog) els.themeDialog.close();
+      });
+    }
+
+    if (els.themeGrid) {
+      els.themeGrid.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+
+        const quickApplyButton = target.closest("[data-action='quick-apply-theme-template']");
+        if (quickApplyButton instanceof HTMLElement) {
+          const templateId = quickApplyButton.getAttribute("data-template-id");
+          if (!templateId) return;
+          state.selectedThemeTemplateId = templateId;
+          applySelectedThemeTemplate();
+          return;
+        }
+
+        const card = target.closest("[data-action='select-theme-template']");
+        if (!(card instanceof HTMLElement)) return;
+        const templateId = card.getAttribute("data-template-id");
+        if (!templateId) return;
+        state.selectedThemeTemplateId = templateId;
+        renderThemeDialogTemplates();
+      });
+    }
+
+    if (els.themeDialogApply) {
+      els.themeDialogApply.addEventListener("click", () => {
+        applySelectedThemeTemplate();
       });
     }
   }

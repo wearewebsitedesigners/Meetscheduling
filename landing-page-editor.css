@@ -2846,6 +2846,26 @@ body.is-panel-resizing {
   color: #334155;
 }
 
+.lpe-device-toggle button,
+.lpe-top-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.lpe-topbar-icon-svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
 #lpe-save-top-btn {
   min-height: 34px;
   border-radius: 10px;
@@ -3366,5 +3386,43 @@ body.is-panel-resizing {
     min-height: 100%;
     max-height: 100%;
     box-shadow: -14px 0 26px rgba(15, 23, 42, 0.14);
+  }
+}
+
+/* Remove utility rail column from editor layout */
+#lpe-utility-rail {
+  display: none !important;
+}
+
+#lpe-layout.lpe-layout {
+  --lpe-rail-width: 0px;
+  grid-template-columns:
+    var(--lpe-left-width)
+    var(--lpe-resizer-width)
+    minmax(0, 1fr)
+    var(--lpe-right-width) !important;
+}
+
+/* Zoom out preview so more of the landing page is visible at once */
+#lpe-preview-frame.lpe-preview-frame {
+  --lpe-preview-zoom: 0.82;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+#lpe-preview-frame.lpe-preview-frame.is-mobile {
+  --lpe-preview-zoom: 0.9;
+}
+
+#lpe-preview-frame.lpe-preview-frame > #lpe-preview-root {
+  zoom: var(--lpe-preview-zoom);
+  transform-origin: top center;
+}
+
+@supports not (zoom: 1) {
+  #lpe-preview-frame.lpe-preview-frame > #lpe-preview-root {
+    transform: scale(var(--lpe-preview-zoom));
+    transform-origin: top center;
   }
 }

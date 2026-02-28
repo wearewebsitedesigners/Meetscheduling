@@ -19,6 +19,7 @@
   const RIGHT_PANEL_MAX_WIDTH = 440;
   const RAIL_COLLAPSED_WIDTH = 34;
   const RAIL_EXPANDED_WIDTH = 104;
+  const TOPBAR_FOCUS_ICON = `<svg class="lpe-topbar-icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M16 3h3a2 2 0 0 1 2 2v3"></path><path d="M8 21H5a2 2 0 0 1-2-2v-3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path></svg>`;
 
   const els = {
     shell: document.querySelector(".lpe-shell"),
@@ -2150,7 +2151,7 @@
     }
     if (els.focusBtn) {
       els.focusBtn.classList.toggle("is-active", state.focusMode);
-      els.focusBtn.innerHTML = '<span aria-hidden="true">&#9974;</span>';
+      els.focusBtn.innerHTML = TOPBAR_FOCUS_ICON;
       els.focusBtn.setAttribute("title", state.focusMode ? "Exit focus mode" : "Focus mode");
       els.focusBtn.setAttribute("aria-label", state.focusMode ? "Exit focus mode" : "Focus mode");
       els.focusBtn.setAttribute("aria-pressed", state.focusMode ? "true" : "false");

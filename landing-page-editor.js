@@ -11,9 +11,9 @@
     "image/webp",
     "image/gif",
   ]);
-  const LEFT_PANEL_DEFAULT_WIDTH = 272;
-  const LEFT_PANEL_MIN_WIDTH = 220;
-  const LEFT_PANEL_MAX_WIDTH = 420;
+  const LEFT_PANEL_DEFAULT_WIDTH = 340;
+  const LEFT_PANEL_MIN_WIDTH = 300;
+  const LEFT_PANEL_MAX_WIDTH = 520;
   const RIGHT_PANEL_DEFAULT_WIDTH = 320;
   const RIGHT_PANEL_MIN_WIDTH = 260;
   const RIGHT_PANEL_MAX_WIDTH = 440;
@@ -32,7 +32,6 @@
     copyLinkBtn: document.getElementById("lpe-copy-link-btn"),
     publishBtn: document.getElementById("lpe-publish-btn"),
     saveTopBtn: document.getElementById("lpe-save-top-btn"),
-    saveBtn: document.getElementById("lpe-save-btn"),
     layout: document.getElementById("lpe-layout"),
     utilityRail: document.getElementById("lpe-utility-rail"),
     railToggle: document.getElementById("lpe-rail-toggle"),
@@ -40,7 +39,6 @@
     rightPanel: document.getElementById("lpe-right-panel"),
     leftCollapseBtn: document.getElementById("lpe-left-collapse"),
     rightCollapseBtn: document.getElementById("lpe-right-collapse"),
-    settingsDoneBtn: document.getElementById("lpe-settings-done-btn"),
     leftResizer: document.getElementById("lpe-resizer-left"),
     rightResizer: document.getElementById("lpe-resizer-right"),
     sectionsFilter: document.getElementById("lpe-sections-filter"),
@@ -79,6 +77,8 @@
       logoUrl: "/assets/scheduling-logo.svg",
       brandDisplay: "image",
       styleVariant: "style1",
+      desktopMenuMode: "center",
+      mobileMenuMode: "drawer",
       logoWidth: 46,
       logoHeight: 46,
       navLinks: [
@@ -490,10 +490,6 @@
       } else {
         els.saveTopBtn.textContent = state.isDirty ? "Save" : "Saved";
       }
-    }
-    if (els.saveBtn) {
-      els.saveBtn.disabled = shouldDisableSave;
-      els.saveBtn.setAttribute("aria-disabled", shouldDisableSave ? "true" : "false");
     }
     updatePublishButtonState();
   }
@@ -1405,6 +1401,7 @@
       </details>
     `;
     enhanceImageUploadControls(els.themeControls);
+    enhanceRangeControls(els.themeControls);
     refreshSeoPreviews();
   }
 
@@ -1595,6 +1592,23 @@
             </select>
           </label>
         </div>
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Desktop menu</span>
+            <select data-bind-path="${settingsPath}.desktopMenuMode">
+              <option value="inline" ${safeText(settings.desktopMenuMode, "center") === "inline" ? "selected" : ""}>Inline menu</option>
+              <option value="center" ${safeText(settings.desktopMenuMode, "center") === "center" ? "selected" : ""}>Centered menu</option>
+            </select>
+          </label>
+          <label class="lpe-field">
+            <span>Mobile menu</span>
+            <select data-bind-path="${settingsPath}.mobileMenuMode">
+              <option value="drawer" ${safeText(settings.mobileMenuMode, "drawer") === "drawer" ? "selected" : ""}>Hamburger drawer</option>
+              <option value="inline" ${safeText(settings.mobileMenuMode, "drawer") === "inline" ? "selected" : ""}>Inline links</option>
+            </select>
+          </label>
+        </div>
+        <p class="lpe-disclosure-hint">Use Mobile menu: Hamburger drawer for a cleaner mobile header layout.</p>
         ${baseTextField("Brand name", `${settingsPath}.brandName`, settings.brandName, 120)}
         ${
           headerBrandDisplay === "image"
@@ -2053,6 +2067,7 @@
     const index = selected ? findSectionIndexById(selected.id) : -1;
     els.sectionControls.innerHTML = sectionControlsHtml(selected, index);
     enhanceImageUploadControls(els.sectionControls);
+    enhanceRangeControls(els.sectionControls);
   }
 
   function enhanceImageUploadControls(container) {
@@ -2099,6 +2114,109 @@
         preview.loading = "lazy";
         field.appendChild(preview);
       }
+    });
+  }
+
+  function enhanceRangeControls(container) {
+    if (!container) return;
+    const rangeInputs = Array.from(container.querySelectorAll(".lpe-field input[type='range'][data-bind-path]"));
+
+    const parseMeta = (labelText) => {
+      const text = String(labelText || "").trim();
+      const match = text.match(/^(.*?)(?:\s*\(([^)]*)\))\s*$/);
+      if (!match) return { label: text, unit: "" };
+      const label = String(match[1] || "").trim() || text;
+      const token = String(match[2] || "").trim();
+      const unit = token.replace(/[-+]?\d*\.?\d+/g, "").trim();
+      return { label, unit };
+    };
+
+    const formatValue = (inputEl) => {
+      const raw = Number(inputEl.value);
+      if (!Number.isFinite(raw)) return String(inputEl.value || "");
+      const step = Number(inputEl.step);
+      const decimals =
+        Number.isFinite(step) && step > 0 && step < 1
+          ? Math.min(3, String(step).split(".")[1]?.length || 1)
+          : 0;
+      if (!decimals) return String(Math.round(raw));
+      return raw.toFixed(decimals).replace(/\.?0+$/, "");
+    };
+
+    const syncProgress = (inputEl) => {
+      const min = Number(inputEl.min);
+      const max = Number(inputEl.max);
+      const value = Number(inputEl.value);
+      if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min || !Number.isFinite(value)) {
+        inputEl.style.setProperty("--lpe-range-progress", "0%");
+        return;
+      }
+      const pct = ((value - min) / (max - min)) * 100;
+      const clamped = Math.min(100, Math.max(0, pct));
+      inputEl.style.setProperty("--lpe-range-progress", `${clamped}%`);
+    };
+
+    rangeInputs.forEach((inputEl) => {
+      if (!(inputEl instanceof HTMLInputElement)) return;
+      const field = inputEl.closest(".lpe-field");
+      if (!(field instanceof HTMLElement)) return;
+
+      const labelNode = field.querySelector(":scope > span, :scope > .lpe-field-label, :scope > label");
+      let unit = "";
+      if (labelNode instanceof HTMLElement) {
+        const meta = parseMeta(labelNode.textContent || "");
+        unit = meta.unit;
+        if (meta.label) labelNode.textContent = meta.label;
+      }
+
+      let valueChip = field.querySelector(":scope .lpe-range-value");
+      let valueTextNode = valueChip ? valueChip.querySelector(".lpe-range-value-text") : null;
+      let unitNode = valueChip ? valueChip.querySelector(".lpe-range-value-unit") : null;
+
+      if (!(valueChip instanceof HTMLElement)) {
+        const row = document.createElement("div");
+        row.className = "lpe-range-row";
+        row.appendChild(inputEl);
+
+        valueChip = document.createElement("output");
+        valueChip.className = "lpe-range-value";
+        valueChip.setAttribute("aria-live", "polite");
+
+        valueTextNode = document.createElement("span");
+        valueTextNode.className = "lpe-range-value-text";
+        valueChip.appendChild(valueTextNode);
+
+        unitNode = document.createElement("span");
+        unitNode.className = "lpe-range-value-unit";
+        valueChip.appendChild(unitNode);
+
+        row.appendChild(valueChip);
+        field.appendChild(row);
+      } else if (!valueChip.closest(".lpe-range-row")) {
+        const row = document.createElement("div");
+        row.className = "lpe-range-row";
+        inputEl.after(row);
+        row.appendChild(inputEl);
+        row.appendChild(valueChip);
+      }
+
+      inputEl.classList.add("lpe-range-input");
+      const applyValue = () => {
+        syncProgress(inputEl);
+        const formattedValue = formatValue(inputEl);
+        if (valueTextNode instanceof HTMLElement) valueTextNode.textContent = formattedValue;
+        if (unitNode instanceof HTMLElement) {
+          unitNode.textContent = unit || "";
+          unitNode.classList.toggle("is-empty", !unit);
+        }
+        if (valueChip instanceof HTMLOutputElement) {
+          valueChip.value = `${formattedValue}${unit || ""}`;
+        }
+      };
+
+      inputEl.addEventListener("input", applyValue);
+      inputEl.addEventListener("change", applyValue);
+      applyValue();
     });
   }
 
@@ -2247,7 +2365,9 @@
 
   function applyPanelLayout() {
     if (!els.layout) return;
-    const leftWidth = state.leftPanelCollapsed ? 0 : Math.round(state.leftPanelWidth);
+    const leftWidth = state.leftPanelCollapsed
+      ? 0
+      : Math.round(Math.max(LEFT_PANEL_MIN_WIDTH, safeNumber(state.leftPanelWidth, LEFT_PANEL_DEFAULT_WIDTH)));
     const rightWidth = state.rightPanelCollapsed ? 0 : Math.round(state.rightPanelWidth);
     els.layout.style.setProperty("--lpe-left-width", `${leftWidth}px`);
     els.layout.style.setProperty("--lpe-right-width", `${rightWidth}px`);
@@ -2354,10 +2474,6 @@
 
     if (els.rightCollapseBtn) {
       els.rightCollapseBtn.addEventListener("click", () => closeRightPanel());
-    }
-
-    if (els.settingsDoneBtn) {
-      els.settingsDoneBtn.addEventListener("click", () => closeRightPanel());
     }
 
     els.rightTabButtons.forEach((button) => {
@@ -2789,13 +2905,6 @@
         saveDraft(true);
       });
     }
-    if (els.saveBtn) {
-      els.saveBtn.addEventListener("click", () => {
-        if (state.saveTimer) clearTimeout(state.saveTimer);
-        saveDraft(true);
-      });
-    }
-
     document.addEventListener("keydown", (event) => {
       if (event.key !== "\\" || event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;

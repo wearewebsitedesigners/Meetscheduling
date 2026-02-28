@@ -2909,7 +2909,7 @@ body.is-panel-resizing {
 }
 
 #lpe-layout.lpe-layout {
-  --lpe-left-width: 272px;
+  --lpe-left-width: 340px;
   --lpe-right-width: 320px;
   --lpe-resizer-width: 6px;
   height: calc(100vh - 56px);
@@ -3380,7 +3380,7 @@ body.is-panel-resizing {
 
 @media (max-width: 1360px) {
   #lpe-layout.lpe-layout {
-    --lpe-left-width: 246px;
+    --lpe-left-width: 320px;
     --lpe-right-width: 300px;
   }
 }
@@ -3442,4 +3442,146 @@ body.is-panel-resizing {
     transform: scale(var(--lpe-preview-zoom));
     transform-origin: top center;
   }
+}
+
+/* Right settings panel: single-column workflow + clean range controls */
+#lpe-right-panel.lpe-slide-panel .lpe-right-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-row-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 12px;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-field {
+  gap: 8px;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-range-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-range-value {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 88px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid #cdd6e3;
+  background: #ffffff;
+  color: #334155;
+  font-size: 1.02rem;
+  font-weight: 600;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-range-value-unit {
+  font-size: 0.88rem;
+  color: #64748b;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-range-value-unit.is-empty {
+  display: none;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-field input[type="range"].lpe-range-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  margin: 0;
+  height: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #2f3642 0 var(--lpe-range-progress, 0%),
+    #d7deea var(--lpe-range-progress, 0%) 100%
+  );
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-field input[type="range"].lpe-range-input::-webkit-slider-runnable-track {
+  height: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-field input[type="range"].lpe-range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  margin-top: -9px;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  background: #2f3642;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.2), 0 3px 8px rgba(15, 23, 42, 0.18);
+  cursor: pointer;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-field input[type="range"].lpe-range-input::-moz-range-track {
+  height: 6px;
+  border: none;
+  border-radius: 999px;
+  background: #d7deea;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-field input[type="range"].lpe-range-input::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: #2f3642;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-field input[type="range"].lpe-range-input::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  background: #2f3642;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.2), 0 3px 8px rgba(15, 23, 42, 0.18);
+  cursor: pointer;
+}
+
+/* Ensure section names truncate before action buttons are clipped */
+#lpe-left-panel .lpe-sections-list .lpe-section-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+#lpe-left-panel .lpe-sections-list .lpe-section-main {
+  min-width: 0;
+  overflow: hidden;
+}
+
+#lpe-left-panel .lpe-sections-list .lpe-section-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#lpe-left-panel .lpe-sections-list .lpe-section-actions {
+  margin-left: 0;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }

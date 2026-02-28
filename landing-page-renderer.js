@@ -707,6 +707,12 @@
     )
       ? safeText(settings.styleVariant, "style1", 16)
       : "style1";
+    const desktopMenuMode = ["inline", "center"].includes(safeText(settings.desktopMenuMode, "", 16))
+      ? safeText(settings.desktopMenuMode, "center", 16)
+      : "center";
+    const mobileMenuMode = ["drawer", "inline"].includes(safeText(settings.mobileMenuMode, "", 16))
+      ? safeText(settings.mobileMenuMode, "drawer", 16)
+      : "drawer";
     const logoWidth = clamp(settings.logoWidth, 28, 240, 46);
     const logoHeight = clamp(settings.logoHeight, 28, 140, 46);
     const links = Array.isArray(settings.navLinks) ? settings.navLinks : [];
@@ -726,8 +732,18 @@
       })
       .join("");
     const ctaHref = safeUrl(settings.ctaHref) || "#services";
+    const searchMarkup = settings.showSearch
+      ? `<input class="lp-search-input" type="search" placeholder="${escapeHtml(
+          safeText(settings.searchPlaceholder, "Search services...")
+        )}" />`
+      : "";
+    const ctaMarkup = `<a class="lp-btn lp-btn-primary" href="${escapeHtml(ctaHref)}">${escapeHtml(
+      safeText(settings.ctaLabel, "Book Now")
+    )}</a>`;
     return `
-      <div class="lp-shell lp-header-shell lp-header-variant-${escapeHtml(styleVariant)} ${
+      <div class="lp-shell lp-header-shell lp-header-variant-${escapeHtml(styleVariant)} lp-desktop-menu-${escapeHtml(
+        desktopMenuMode
+      )} lp-mobile-menu-${escapeHtml(mobileMenuMode)} ${
       settings.sticky ? "is-sticky" : ""
     }" id="top" style="--lp-logo-width:${logoWidth}px;--lp-logo-height:${logoHeight}px;">
         <div class="lp-brand-wrap">
@@ -751,18 +767,31 @@
         <div class="lp-header-actions">
           ${navItems ? `<nav class="lp-nav lp-header-nav">${navItems}</nav>` : '<span class="lp-header-nav"></span>'}
           <div class="lp-header-tools">
-            ${
-              settings.showSearch
-                ? `<input class="lp-search-input" type="search" placeholder="${escapeHtml(
-                    safeText(settings.searchPlaceholder, "Search services...")
-                  )}" />`
-                : ""
-            }
-            <a class="lp-btn lp-btn-primary" href="${escapeHtml(ctaHref)}">${escapeHtml(
-        safeText(settings.ctaLabel, "Book Now")
-      )}</a>
+            ${searchMarkup}
+            ${ctaMarkup}
           </div>
         </div>
+        ${
+          mobileMenuMode === "drawer"
+            ? `
+          <details class="lp-mobile-menu">
+            <summary class="lp-mobile-menu-toggle" aria-label="Open menu">
+              <span class="lp-mobile-menu-toggle-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+              </span>
+              <span>Menu</span>
+            </summary>
+            <div class="lp-mobile-menu-panel">
+              ${navItems ? `<nav class="lp-nav lp-mobile-nav">${navItems}</nav>` : ""}
+              <div class="lp-mobile-tools">
+                ${searchMarkup}
+                ${ctaMarkup}
+              </div>
+            </div>
+          </details>
+        `
+            : ""
+        }
       </div>
     `;
   }

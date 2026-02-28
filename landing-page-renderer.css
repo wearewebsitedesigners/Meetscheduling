@@ -295,6 +295,17 @@
   background-position: center;
 }
 
+.lp-section[data-lp-type="imageBanner"] {
+  padding-inline: 0;
+}
+
+.lp-section[data-lp-type="imageBanner"] .lp-image-banner-shell {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding-inline: 0;
+}
+
 .lp-banner-height-md {
   min-height: 320px;
 }

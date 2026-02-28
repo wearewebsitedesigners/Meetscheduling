@@ -702,7 +702,7 @@
       : "image";
     const showImageBrand = brandDisplay === "image" && Boolean(logoUrl);
     const showTextBrand = brandDisplay === "text" || !showImageBrand;
-    const styleVariant = ["style1", "style2", "style3", "style4"].includes(
+    const styleVariant = ["style1", "style2", "style3", "style4", "style5"].includes(
       safeText(settings.styleVariant, "", 16)
     )
       ? safeText(settings.styleVariant, "style1", 16)
@@ -749,17 +749,19 @@
           }
         </div>
         <div class="lp-header-actions">
-          ${navItems ? `<nav class="lp-nav">${navItems}</nav>` : ""}
-          ${
-            settings.showSearch
-              ? `<input class="lp-search-input" type="search" placeholder="${escapeHtml(
-                  safeText(settings.searchPlaceholder, "Search services...")
-                )}" />`
-              : ""
-          }
-          <a class="lp-btn lp-btn-primary" href="${escapeHtml(ctaHref)}">${escapeHtml(
-      safeText(settings.ctaLabel, "Book Now")
-    )}</a>
+          ${navItems ? `<nav class="lp-nav lp-header-nav">${navItems}</nav>` : '<span class="lp-header-nav"></span>'}
+          <div class="lp-header-tools">
+            ${
+              settings.showSearch
+                ? `<input class="lp-search-input" type="search" placeholder="${escapeHtml(
+                    safeText(settings.searchPlaceholder, "Search services...")
+                  )}" />`
+                : ""
+            }
+            <a class="lp-btn lp-btn-primary" href="${escapeHtml(ctaHref)}">${escapeHtml(
+        safeText(settings.ctaLabel, "Book Now")
+      )}</a>
+          </div>
         </div>
       </div>
     `;

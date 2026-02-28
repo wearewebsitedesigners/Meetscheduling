@@ -791,7 +791,7 @@ function normalizeSectionSettings(type, settings, fallbackSettings) {
       brandDisplay: ["image", "text"].includes(safeText(source.brandDisplay, "", 12))
         ? safeText(source.brandDisplay, "image", 12)
         : safeText(fallback.brandDisplay, "image", 12),
-      styleVariant: ["style1", "style2", "style3", "style4"].includes(safeText(source.styleVariant, "", 16))
+      styleVariant: ["style1", "style2", "style3", "style4", "style5"].includes(safeText(source.styleVariant, "", 16))
         ? safeText(source.styleVariant, "style1", 16)
         : safeText(fallback.styleVariant, "style1", 16),
       logoWidth: clamp(source.logoWidth, 28, 240, clamp(fallback.logoWidth, 28, 240, 46)),

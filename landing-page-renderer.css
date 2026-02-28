@@ -75,8 +75,8 @@
   height: var(--lp-logo-height);
   border-radius: 14px;
   object-fit: cover;
-  border: 1px solid var(--lp-border);
-  background: #fff;
+  border: none;
+  background: transparent;
   flex: 0 0 auto;
 }
 
@@ -95,6 +95,18 @@
 }
 
 .lp-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.lp-header-nav {
+  min-width: 0;
+}
+
+.lp-header-tools {
   display: inline-flex;
   align-items: center;
   gap: 12px;
@@ -167,6 +179,37 @@
 
 .lp-header-variant-style4 .lp-search-input {
   min-width: min(360px, 100%);
+}
+
+.lp-header-variant-style5 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 14px;
+}
+
+.lp-header-variant-style5 .lp-brand-wrap {
+  grid-column: 2;
+  justify-self: center;
+}
+
+.lp-header-variant-style5 .lp-header-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.lp-header-variant-style5 .lp-header-nav {
+  grid-column: 1;
+  justify-self: start;
+}
+
+.lp-header-variant-style5 .lp-header-tools {
+  grid-column: 3;
+  justify-self: end;
 }
 
 .lp-nav {
@@ -368,8 +411,9 @@
   box-shadow: var(--lp-shadow);
   overflow: hidden;
   background: var(--lp-banner-bg), linear-gradient(120deg, var(--lp-primary-soft), rgba(255, 255, 255, 0.75));
-  background-size: cover;
+  background-size: 100% 100%, cover;
   background-position: center;
+  background-repeat: no-repeat;
 }
 
 .lp-section[data-lp-type="imageBanner"] {
@@ -1225,6 +1269,25 @@
 
   .lp-contact-grid {
     grid-template-columns: 1fr;
+  }
+
+  .lp-header-variant-style5 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .lp-header-variant-style5 .lp-header-actions {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .lp-header-variant-style5 .lp-header-nav,
+  .lp-header-variant-style5 .lp-header-tools {
+    justify-content: center;
   }
 }
 

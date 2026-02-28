@@ -1574,13 +1574,14 @@
         </div>
       `;
     } else if (section.type === "header") {
+      const headerBrandDisplay = safeText(settings.brandDisplay, "image");
       html += `
         <div class="lpe-row-grid">
           <label class="lpe-field">
             <span>Brand mode</span>
             <select data-bind-path="${settingsPath}.brandDisplay">
-              <option value="image" ${safeText(settings.brandDisplay, "image") === "image" ? "selected" : ""}>Image</option>
-              <option value="text" ${safeText(settings.brandDisplay, "image") === "text" ? "selected" : ""}>Text</option>
+              <option value="image" ${headerBrandDisplay === "image" ? "selected" : ""}>Image</option>
+              <option value="text" ${headerBrandDisplay === "text" ? "selected" : ""}>Text</option>
             </select>
           </label>
           <label class="lpe-field">
@@ -1589,18 +1590,25 @@
               <option value="style1" ${safeText(settings.styleVariant, "style1") === "style1" ? "selected" : ""}>Style 1 · Classic</option>
               <option value="style2" ${safeText(settings.styleVariant, "style1") === "style2" ? "selected" : ""}>Style 2 · Boxed</option>
               <option value="style3" ${safeText(settings.styleVariant, "style1") === "style3" ? "selected" : ""}>Style 3 · Pill Nav</option>
-              <option value="style4" ${safeText(settings.styleVariant, "style1") === "style4" ? "selected" : ""}>Style 4 · Centered</option>
+              <option value="style4" ${safeText(settings.styleVariant, "style1") === "style4" ? "selected" : ""}>Style 4 · Center logo + menu below</option>
+              <option value="style5" ${safeText(settings.styleVariant, "style1") === "style5" ? "selected" : ""}>Style 5 · Center logo + inline menu/search</option>
             </select>
           </label>
         </div>
         ${baseTextField("Brand name", `${settingsPath}.brandName`, settings.brandName, 120)}
-        ${baseTextField("Logo URL", `${settingsPath}.logoUrl`, settings.logoUrl, 2000)}
+        ${
+          headerBrandDisplay === "image"
+            ? baseTextField("Logo URL", `${settingsPath}.logoUrl`, settings.logoUrl, 2000)
+            : '<p class="lpe-disclosure-hint">Text mode uses brand name only.</p>'
+        }
         <div class="lpe-row-grid">
           <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.sticky" data-bind-type="boolean" ${
             settings.sticky ? "checked" : ""
           } /> Sticky header</label>
         </div>
-        <div class="lpe-row-grid">
+        ${
+          headerBrandDisplay === "image"
+            ? `<div class="lpe-row-grid">
           <label class="lpe-field">
             <span>Logo width (${Math.round(safeNumber(settings.logoWidth, 46))}px)</span>
             <input type="range" min="28" max="240" data-bind-path="${settingsPath}.logoWidth" data-bind-type="number" value="${Number(
@@ -1614,6 +1622,9 @@
             )}" />
           </label>
         </div>
+        <p class="lpe-disclosure-hint">If no logo is uploaded, brand name is shown automatically.</p>`
+            : ""
+        }
         <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showSearch" data-bind-type="boolean" ${
           settings.showSearch ? "checked" : ""
         } /> Show search</label>

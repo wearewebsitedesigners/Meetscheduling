@@ -2051,14 +2051,20 @@ body.is-panel-resizing {
 }
 
 .lpe-section-row {
-  min-height: 26px;
-  padding: 0 4px;
+  min-height: 34px;
+  padding: 2px 5px;
   border-radius: 6px;
   border-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
 }
 
 .lpe-section-main {
-  gap: 4px;
+  gap: 6px;
+  min-width: 0;
+  max-width: calc(100% - 98px);
 }
 
 .lpe-section-row:hover {
@@ -2071,8 +2077,8 @@ body.is-panel-resizing {
 }
 
 .lpe-section-name {
-  font-size: 0.78rem;
-  font-weight: 500;
+  font-size: 0.82rem;
+  font-weight: 550;
 }
 
 .lpe-section-row.is-active {
@@ -2086,26 +2092,54 @@ body.is-panel-resizing {
 }
 
 .lpe-section-grip {
-  font-size: 0.86rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  min-width: 14px;
   color: #a2acbb;
 }
 
 .lpe-section-actions {
-  gap: 0;
+  gap: 3px;
 }
 
 .lpe-sections-list .lpe-icon-btn {
-  min-width: 20px;
-  width: 20px;
-  min-height: 20px;
+  min-width: 28px;
+  width: 28px;
+  min-height: 28px;
   border-radius: 6px;
-  border: 1px solid transparent;
-  background: transparent;
+  border: 1px solid #d4dfef;
+  background: #ffffff;
+  color: #59759c;
+}
+
+.lpe-sections-list .lpe-icon-btn:hover {
+  border-color: #a9bfdf;
+  background: #f2f7ff;
+}
+
+.lpe-sections-list .lpe-icon-btn.lpe-icon-btn-danger {
+  color: #b54242;
+}
+
+.lpe-sections-list .lpe-icon-btn.lpe-icon-btn-danger:hover {
+  border-color: #e4b0b0;
+  background: #fff2f2;
+  color: #992c2c;
 }
 
 .lpe-sections-list .lpe-icon-svg {
+  width: 16px;
+  height: 16px;
+}
+
+.lpe-grip-svg {
   width: 14px;
   height: 14px;
+  fill: currentColor;
+  stroke: none;
+  pointer-events: none;
 }
 
 .lpe-btn-add {

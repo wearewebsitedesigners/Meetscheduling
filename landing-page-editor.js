@@ -925,7 +925,7 @@
   function sectionIcon(name) {
     const icons = {
       grip:
-        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3h0M11 3h0M5 8h0M11 8h0M5 13h0M11 13h0"/></svg>',
+        '<svg class="lpe-grip-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5" cy="3" r="1.1"/><circle cx="11" cy="3" r="1.1"/><circle cx="5" cy="8" r="1.1"/><circle cx="11" cy="8" r="1.1"/><circle cx="5" cy="13" r="1.1"/><circle cx="11" cy="13" r="1.1"/></svg>',
       eye:
         '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8s2.4-4.5 7-4.5S15 8 15 8s-2.4 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2.3"/></svg>',
       eyeOff:
@@ -934,8 +934,8 @@
         '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="3" width="8" height="10" rx="1.5"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1H8"/></svg>',
       x:
         '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>',
-      menu:
-        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="13" cy="8" r="1"/></svg>',
+      trash:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11"/><path d="M6 2.5h4"/><rect x="4" y="4.5" width="8" height="9" rx="1.2"/><path d="M6.4 6.7v4.8M9.6 6.7v4.8"/></svg>',
     };
     return icons[name] || "";
   }
@@ -1031,15 +1031,14 @@
               >${sectionIcon("copy")}</button>
               <button
                 type="button"
-                class="lpe-icon-btn"
-                data-action="toggle-row-menu"
+                class="lpe-icon-btn lpe-icon-btn-danger"
+                data-action="delete-section"
                 data-section-id="${escapeHtml(section.id)}"
-                aria-label="Open section actions"
-              >${sectionIcon("menu")}</button>
+                aria-label="Delete section"
+              >${sectionIcon("trash")}</button>
               <div class="lpe-context-menu ${state.openRowMenuSectionId === section.id ? "is-open" : ""}" data-row-menu="${escapeHtml(
                 section.id
               )}">
-                <button type="button" data-action="rename-section" data-section-id="${escapeHtml(section.id)}">Rename</button>
                 <button type="button" data-action="duplicate-section" data-section-id="${escapeHtml(section.id)}">Duplicate</button>
                 <button type="button" data-action="delete-section" data-section-id="${escapeHtml(section.id)}">Delete</button>
               </div>
@@ -2577,9 +2576,7 @@
       const sectionId = actionEl.getAttribute("data-section-id");
       if (!action || !sectionId) return;
 
-      if (action !== "toggle-row-menu") {
-        state.openRowMenuSectionId = "";
-      }
+      state.openRowMenuSectionId = "";
 
       if (action === "select-section") {
         state.selectedSectionId = sectionId;
@@ -2589,12 +2586,6 @@
         renderSectionsList();
         renderSectionControls();
         renderPreview();
-        return;
-      }
-
-      if (action === "toggle-row-menu") {
-        state.openRowMenuSectionId = state.openRowMenuSectionId === sectionId ? "" : sectionId;
-        renderSectionsList();
         return;
       }
 
@@ -2616,17 +2607,6 @@
         sectionList().splice(index + 1, 0, clone);
         state.selectedSectionId = clone.id;
         openRightPanel("element");
-        renderAll();
-        queueAutosave();
-        return;
-      }
-
-      if (action === "rename-section") {
-        const section = sectionList()[index];
-        const currentName = safeText(section.customLabel, section.type);
-        const nextName = window.prompt("Section name", currentName);
-        if (!nextName || !nextName.trim()) return;
-        section.customLabel = nextName.trim().slice(0, 80);
         renderAll();
         queueAutosave();
         return;

@@ -11,6 +11,10 @@
     "image/webp",
     "image/gif",
   ]);
+  const LEFT_PANEL_DEFAULT_WIDTH = 280;
+  const RIGHT_PANEL_DEFAULT_WIDTH = 180;
+  const RIGHT_PANEL_MIN_WIDTH = 150;
+  const RIGHT_PANEL_MAX_WIDTH = 260;
 
   const els = {
     shell: document.querySelector(".lpe-shell"),
@@ -271,8 +275,8 @@
     focusMemory: null,
     leftPanelCollapsed: false,
     rightPanelCollapsed: true,
-    leftPanelWidth: 280,
-    rightPanelWidth: 360,
+    leftPanelWidth: LEFT_PANEL_DEFAULT_WIDTH,
+    rightPanelWidth: RIGHT_PANEL_DEFAULT_WIDTH,
     isDirty: false,
     saveStatusType: "saved",
     saveTimer: null,
@@ -2124,8 +2128,9 @@
     } else if (state.focusMemory) {
       state.leftPanelCollapsed = Boolean(state.focusMemory.leftPanelCollapsed);
       state.rightPanelCollapsed = Boolean(state.focusMemory.rightPanelCollapsed);
-      state.leftPanelWidth = Number(state.focusMemory.leftPanelWidth) || 280;
-      state.rightPanelWidth = Number(state.focusMemory.rightPanelWidth) || 360;
+      state.leftPanelWidth = Number(state.focusMemory.leftPanelWidth) || LEFT_PANEL_DEFAULT_WIDTH;
+      state.rightPanelWidth =
+        Number(state.focusMemory.rightPanelWidth) || RIGHT_PANEL_DEFAULT_WIDTH;
       state.focusMemory = null;
     }
 
@@ -2194,7 +2199,9 @@
     }
     if (side === "right") {
       state.rightPanelCollapsed = !state.rightPanelCollapsed;
-      if (!state.rightPanelCollapsed && state.rightPanelWidth < 300) state.rightPanelWidth = 360;
+      if (!state.rightPanelCollapsed && state.rightPanelWidth < RIGHT_PANEL_MIN_WIDTH) {
+        state.rightPanelWidth = RIGHT_PANEL_DEFAULT_WIDTH;
+      }
     }
     applyPanelLayout();
   }
@@ -2277,7 +2284,10 @@
             state.leftPanelWidth = Math.max(240, Math.min(520, startLeft + deltaX));
           } else {
             state.rightPanelCollapsed = false;
-            state.rightPanelWidth = Math.max(300, Math.min(520, startRight - deltaX));
+            state.rightPanelWidth = Math.max(
+              RIGHT_PANEL_MIN_WIDTH,
+              Math.min(RIGHT_PANEL_MAX_WIDTH, startRight - deltaX)
+            );
           }
           applyPanelLayout();
         };

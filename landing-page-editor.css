@@ -2016,7 +2016,7 @@ body.is-panel-resizing {
 /* Compact sidebars like Shopify editor */
 .lpe-layout {
   --lpe-left-width: 280px;
-  --lpe-right-width: 320px;
+  --lpe-right-width: 180px;
 }
 
 .lpe-left-panel .lpe-sections-card {
@@ -2068,6 +2068,7 @@ body.is-panel-resizing {
   flex: 1 1 auto;
   min-width: 0;
   max-width: none;
+  overflow: hidden;
 }
 
 .lpe-section-row:hover {
@@ -2084,8 +2085,11 @@ body.is-panel-resizing {
   font-weight: 550;
   min-height: 28px;
   line-height: 1.05;
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .lpe-section-row.is-active {
@@ -2113,6 +2117,7 @@ body.is-panel-resizing {
   gap: 3px;
   margin-left: auto;
   align-items: center;
+  flex: 0 0 auto;
 }
 
 .lpe-sections-list .lpe-icon-btn {
@@ -2249,8 +2254,8 @@ body.is-panel-resizing {
 
 @media (max-width: 1360px) {
   .lpe-layout {
-    --lpe-left-width: 260px;
-    --lpe-right-width: 300px;
+    --lpe-left-width: 280px;
+    --lpe-right-width: 150px;
   }
 }
 

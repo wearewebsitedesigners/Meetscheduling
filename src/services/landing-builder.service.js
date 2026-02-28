@@ -31,6 +31,10 @@ const SECTION_DEFINITIONS = Object.freeze({
     defaultSettings: {
       brandName: "MeetScheduling",
       logoUrl: "/assets/scheduling-logo.svg",
+      brandDisplay: "image",
+      styleVariant: "style1",
+      logoWidth: 46,
+      logoHeight: 46,
       navLinks: [
         { label: "Home", href: "#top" },
         { label: "Services", href: "#services" },
@@ -784,6 +788,14 @@ function normalizeSectionSettings(type, settings, fallbackSettings) {
     return {
       brandName: safeText(source.brandName, safeText(fallback.brandName, "MeetScheduling", 120), 120),
       logoUrl: safeText(source.logoUrl, safeText(fallback.logoUrl, "", 2000), 2000),
+      brandDisplay: ["image", "text"].includes(safeText(source.brandDisplay, "", 12))
+        ? safeText(source.brandDisplay, "image", 12)
+        : safeText(fallback.brandDisplay, "image", 12),
+      styleVariant: ["style1", "style2", "style3", "style4"].includes(safeText(source.styleVariant, "", 16))
+        ? safeText(source.styleVariant, "style1", 16)
+        : safeText(fallback.styleVariant, "style1", 16),
+      logoWidth: clamp(source.logoWidth, 28, 240, clamp(fallback.logoWidth, 28, 240, 46)),
+      logoHeight: clamp(source.logoHeight, 28, 140, clamp(fallback.logoHeight, 28, 140, 46)),
       navLinks: normalizeNavLinks(source.navLinks, fallback.navLinks),
       showSearch: safeBoolean(source.showSearch, safeBoolean(fallback.showSearch, true)),
       searchPlaceholder: safeText(

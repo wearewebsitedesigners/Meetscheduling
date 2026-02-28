@@ -46,12 +46,21 @@
 }
 
 .lp-header-shell {
+  --lp-logo-width: 46px;
+  --lp-logo-height: 46px;
   padding-top: clamp(12px, 2vw, 20px);
   padding-bottom: clamp(12px, 2vw, 20px);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.lp-header-shell.is-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  backdrop-filter: blur(10px);
 }
 
 .lp-brand-wrap {
@@ -62,12 +71,13 @@
 }
 
 .lp-brand-logo {
-  width: 46px;
-  height: 46px;
+  width: var(--lp-logo-width);
+  height: var(--lp-logo-height);
   border-radius: 14px;
   object-fit: cover;
   border: 1px solid var(--lp-border);
   background: #fff;
+  flex: 0 0 auto;
 }
 
 .lp-brand-logo-fallback {
@@ -90,6 +100,73 @@
   gap: 12px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.lp-header-variant-style2 {
+  border: 1px solid var(--lp-border);
+  border-radius: calc(var(--lp-radius) + 4px);
+  background: var(--lp-surface);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+  padding-left: clamp(12px, 2.2vw, 20px);
+  padding-right: clamp(12px, 2.2vw, 20px);
+}
+
+.lp-header-variant-style2 .lp-nav-link {
+  border-color: var(--lp-border);
+  background: var(--lp-surface);
+}
+
+.lp-header-variant-style2 .lp-btn-primary {
+  border-radius: 999px;
+  padding-inline: 20px;
+}
+
+.lp-header-variant-style3 .lp-brand-wrap {
+  gap: 10px;
+}
+
+.lp-header-variant-style3 .lp-nav {
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--lp-primary-soft);
+}
+
+.lp-header-variant-style3 .lp-nav-link {
+  min-height: 32px;
+  border-radius: 999px;
+  padding-inline: 10px;
+}
+
+.lp-header-variant-style3 .lp-nav-link:hover {
+  background: #fff;
+  border-color: transparent;
+}
+
+.lp-header-variant-style3 .lp-btn-primary {
+  background: transparent;
+  color: var(--lp-primary);
+  border-color: var(--lp-primary);
+}
+
+.lp-header-variant-style4 {
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.lp-header-variant-style4 .lp-brand-wrap {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-header-variant-style4 .lp-header-actions {
+  width: 100%;
+  justify-content: center;
+}
+
+.lp-header-variant-style4 .lp-search-input {
+  min-width: min(360px, 100%);
 }
 
 .lp-nav {

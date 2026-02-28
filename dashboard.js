@@ -791,7 +791,7 @@ function applyDashboardTheme(nextTheme) {
 
   const labelEl = themeToggleBtn.querySelector(".theme-toggle-label");
   if (labelEl instanceof HTMLElement) {
-    labelEl.textContent = isDark ? "Dark" : "Light";
+    labelEl.textContent = isDark ? "Light" : "Dark";
   }
 }
 
@@ -3996,6 +3996,16 @@ function onViewClick(event) {
       }
       break;
     }
+    case "save-availability": {
+      syncAvailabilityToApi()
+        .then(() => {
+          showToast("Availability saved");
+        })
+        .catch((error) => {
+          showToast(error?.message || "Availability save failed");
+        });
+      break;
+    }
     case "toggle-day": {
       const dayIndex = Number(button.dataset.dayIndex);
       const day = state.availability.weeklyHours[dayIndex];
@@ -6328,6 +6338,8 @@ function renderHeader() {
       ? getAdminPageMeta().context
       : state.activeSection === "account"
         ? getAccountPageMeta().context
+        : state.activeSection === "availability"
+          ? "Back to workspace"
         : "";
     pageContextEl.textContent = context;
   }
@@ -9189,8 +9201,88 @@ function renderSchedulesTab() {
     });
   };
 
+  const renderDraftEditor = () =>
+    draft.open
+      ? `
+            <div class="date-specific-editor">
+              <label>
+                Date
+                <input type="date" value="${escapeHtml(
+                  draft.date
+                )}" data-action="date-specific-draft" data-field="date" />
+              </label>
+              <label>
+                Start
+                ${renderCompactTimePicker({
+                  value: draft.start,
+                  pickerKey: "date-specific-start",
+                  field: "start",
+                  scope: "date-specific",
+                })}
+              </label>
+              <label>
+                End
+                ${renderCompactTimePicker({
+                  value: draft.end,
+                  pickerKey: "date-specific-end",
+                  field: "end",
+                  scope: "date-specific",
+                })}
+              </label>
+              <div class="date-specific-editor-actions">
+                <button class="mini-btn" type="button" data-action="cancel-date-specific">Cancel</button>
+                <button class="pill-btn" type="button" data-action="save-date-specific">Save</button>
+              </div>
+            </div>
+          `
+      : "";
+
+  const renderDateSpecificList = () =>
+    state.availability.dateSpecific.length
+      ? `
+            <ul class="date-hours-list">
+              ${state.availability.dateSpecific
+                .slice()
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map(
+                  (row) => `
+                    <li>
+                      <div class="date-hours-left">
+                        <span class="date-hours-chip">${escapeHtml(
+                          formatUiDate(row.date)
+                        )}</span>
+                        <span class="date-hours-time">${escapeHtml(
+                          `${formatUiTime(row.start)} - ${formatUiTime(row.end)}`
+                        )}</span>
+                      </div>
+                      <button class="mini-btn icon-only ghost-danger" type="button" data-action="remove-date-specific" data-id="${escapeHtml(
+                        row.id
+                      )}" title="Remove date-specific hours">
+                        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+                      </button>
+                    </li>
+                  `
+                )
+                .join("")}
+            </ul>
+          `
+      : draft.open
+        ? ""
+        : `
+            <div class="special-dates-empty">
+              <div class="special-empty-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M19 3h-1V1h-2v2H8V1H6v2H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/>
+                  <path fill="currentColor" d="M9.41 15 8 13.59 10.59 11 8 8.41 9.41 7 12 9.59 14.59 7 16 8.41 13.41 11 16 13.59 14.59 15 12 12.41 9.41 15z"/>
+                </svg>
+              </div>
+              <p>No date-specific hours set yet.</p>
+              <button class="special-empty-link" type="button" data-action="add-date-specific">Add overrides</button>
+            </div>
+          `;
+
   return `
-    <section class="availability-card calendly-style availability-schedules-shell">
+    <section class="availability-card availability-modern-shell">
       <div class="availability-grid availability-grid-split">
         <section class="availability-block weekly-block">
           <div class="block-header weekly-header">
@@ -9292,77 +9384,31 @@ function renderSchedulesTab() {
               <path fill="currentColor" d="M19 3h-1V1h-2v2H8V1H6v2H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/>
             </svg>
             <div class="header-text-group">
-              <h3>Date-specific hours</h3>
-              <p>Adjust hours for specific days</p>
+              <h3>Special Dates</h3>
             </div>
-            <button class="ghost-btn add-hours-btn" type="button" data-action="add-date-specific">+ Hours</button>
+            <button class="ghost-btn add-hours-btn icon-plus-btn" type="button" data-action="add-date-specific" title="Add special date">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            </button>
           </div>
+          <p class="specific-copy">Adjust your hours for specific days, such as holidays or time off.</p>
 
-          ${draft.open
-      ? `
-                <div class="date-specific-editor">
-                  <label>
-                    Date
-                    <input type="date" value="${escapeHtml(
-        draft.date
-      )}" data-action="date-specific-draft" data-field="date" />
-                  </label>
-                  <label>
-                    Start
-                    ${renderCompactTimePicker({
-        value: draft.start,
-        pickerKey: "date-specific-start",
-        field: "start",
-        scope: "date-specific",
-      })}
-                  </label>
-                  <label>
-                    End
-                    ${renderCompactTimePicker({
-        value: draft.end,
-        pickerKey: "date-specific-end",
-        field: "end",
-        scope: "date-specific",
-      })}
-                  </label>
-                  <div class="date-specific-editor-actions">
-                    <button class="mini-btn" type="button" data-action="cancel-date-specific">Cancel</button>
-                    <button class="pill-btn" type="button" data-action="save-date-specific">Save</button>
-                  </div>
-                </div>
-              `
-      : ""
-    }
+          ${renderDraftEditor()}
 
-          <ul class="date-hours-list">
-            ${state.availability.dateSpecific.length
-      ? state.availability.dateSpecific
-        .slice()
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map(
-          (row) => `
-                  <li>
-                    <div class="date-hours-left">
-                      <span class="date-hours-chip">${escapeHtml(
-            formatUiDate(row.date)
-          )}</span>
-                      <span class="date-hours-time">${escapeHtml(
-            `${formatUiTime(row.start)} - ${formatUiTime(row.end)}`
-          )}</span>
-                    </div>
-                    <button class="mini-btn icon-only ghost-danger" type="button" data-action="remove-date-specific" data-id="${escapeHtml(
-            row.id
-          )}" title="Remove date-specific hours">
-                      <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
-                    </button>
-                  </li>
-                `
-        )
-        .join("")
-      : '<li class="date-hours-empty">No date-specific hours set.</li>'
-    }
-          </ul>
+          ${renderDateSpecificList()}
         </section>
+      </div>
+      <div class="timezone-footer">
+        <label class="timezone-select-label timezone-select-inline" for="timezone-select">
+          <svg viewBox="0 0 24 24" class="timezone-globe"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm6.9 9h-3.2a15.1 15.1 0 0 0-1-5.1A8 8 0 0 1 18.9 11ZM12 4.1c.8 1.2 1.6 3.2 1.8 6H10.2c.2-2.8 1-4.8 1.8-6ZM9.3 5.9A15.1 15.1 0 0 0 8.3 11H5.1a8 8 0 0 1 4.2-5.1ZM5.1 13h3.2a15.1 15.1 0 0 0 1 5.1A8 8 0 0 1 5.1 13Zm5.1 0h3.6c-.2 2.8-1 4.8-1.8 6-.8-1.2-1.6-3.2-1.8-6Zm4.5 5.1a15.1 15.1 0 0 0 1-5.1h3.2a8 8 0 0 1-4.2 5.1Z"/></svg>
+          <select id="timezone-select" class="timezone-select" data-action="set-timezone">
+            ${TIMEZONES.map(
+              (tz) =>
+                `<option value="${escapeHtml(tz)}" ${tz === state.availability.timezone ? "selected" : ""}>${escapeHtml(tz)}</option>`
+            ).join("")}
+          </select>
+          <svg viewBox="0 0 24 24" class="chevron"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+        </label>
+        <button class="pill-btn availability-save-btn" type="button" data-action="save-availability">Save Changes</button>
       </div>
     </section>
   `;

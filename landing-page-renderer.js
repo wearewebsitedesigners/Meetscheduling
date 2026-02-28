@@ -697,6 +697,18 @@
   function renderHeader(section, mode, index) {
     const settings = section.settings || {};
     const logoUrl = safeUrl(settings.logoUrl);
+    const brandDisplay = ["image", "text"].includes(safeText(settings.brandDisplay, "", 12))
+      ? safeText(settings.brandDisplay, "image", 12)
+      : "image";
+    const showImageBrand = brandDisplay === "image" && Boolean(logoUrl);
+    const showTextBrand = brandDisplay === "text" || !showImageBrand;
+    const styleVariant = ["style1", "style2", "style3", "style4"].includes(
+      safeText(settings.styleVariant, "", 16)
+    )
+      ? safeText(settings.styleVariant, "style1", 16)
+      : "style1";
+    const logoWidth = clamp(settings.logoWidth, 28, 240, 46);
+    const logoHeight = clamp(settings.logoHeight, 28, 140, 46);
     const links = Array.isArray(settings.navLinks) ? settings.navLinks : [];
     const navItems = links
       .map((item, linkIndex) => {
@@ -715,20 +727,26 @@
       .join("");
     const ctaHref = safeUrl(settings.ctaHref) || "#services";
     return `
-      <div class="lp-shell lp-header-shell" id="top">
+      <div class="lp-shell lp-header-shell lp-header-variant-${escapeHtml(styleVariant)} ${
+      settings.sticky ? "is-sticky" : ""
+    }" id="top" style="--lp-logo-width:${logoWidth}px;--lp-logo-height:${logoHeight}px;">
         <div class="lp-brand-wrap">
           ${
-            logoUrl
+            showImageBrand
               ? `<img class="lp-brand-logo" src="${escapeHtml(logoUrl)}" alt="" />`
-              : '<span class="lp-brand-logo lp-brand-logo-fallback">MS</span>'
+              : ""
           }
-          ${editableTag(
-            mode,
-            `sections.${index}.settings.brandName`,
-            safeText(settings.brandName, "MeetScheduling"),
-            "lp-brand-name",
-            "span"
-          )}
+          ${
+            showTextBrand
+              ? editableTag(
+                  mode,
+                  `sections.${index}.settings.brandName`,
+                  safeText(settings.brandName, "MeetScheduling"),
+                  "lp-brand-name",
+                  "span"
+                )
+              : ""
+          }
         </div>
         <div class="lp-header-actions">
           ${navItems ? `<nav class="lp-nav">${navItems}</nav>` : ""}

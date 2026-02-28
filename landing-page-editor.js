@@ -77,6 +77,10 @@
     header: {
       brandName: "MeetScheduling",
       logoUrl: "/assets/scheduling-logo.svg",
+      brandDisplay: "image",
+      styleVariant: "style1",
+      logoWidth: 46,
+      logoHeight: 46,
       navLinks: [
         { label: "Home", href: "#top" },
         { label: "Services", href: "#services" },
@@ -287,6 +291,7 @@
     saveTimer: null,
     saveInFlight: false,
     saveQueued: false,
+    publishInFlight: false,
     changeVersion: 0,
     previewRenderFrame: 0,
   };
@@ -448,16 +453,49 @@
     return sectionList().findIndex((item) => String(item.id) === String(sectionId));
   }
 
+  function hasPublishedMatch() {
+    if (!state.draftConfig || !state.publishedConfig) return false;
+    try {
+      return JSON.stringify(state.draftConfig) === JSON.stringify(state.publishedConfig);
+    } catch {
+      return false;
+    }
+  }
+
+  function updatePublishButtonState() {
+    if (!els.publishBtn) return;
+    const isPublished = hasPublishedMatch() && !state.isDirty;
+    els.publishBtn.classList.toggle("is-published", isPublished);
+    els.publishBtn.textContent = state.publishInFlight ? "Publishing..." : isPublished ? "Published" : "Publish";
+    const disablePublish = state.saveInFlight || state.publishInFlight;
+    els.publishBtn.disabled = disablePublish;
+    els.publishBtn.setAttribute("aria-disabled", disablePublish ? "true" : "false");
+    els.publishBtn.setAttribute(
+      "aria-label",
+      state.publishInFlight
+        ? "Publishing"
+        : isPublished
+          ? "Published. Click to publish new changes"
+          : "Publish"
+    );
+  }
+
   function updateSaveActions() {
     const shouldDisableSave = !state.isDirty || state.saveInFlight;
     if (els.saveTopBtn) {
       els.saveTopBtn.disabled = shouldDisableSave;
       els.saveTopBtn.setAttribute("aria-disabled", shouldDisableSave ? "true" : "false");
+      if (state.saveInFlight) {
+        els.saveTopBtn.textContent = "Saving...";
+      } else {
+        els.saveTopBtn.textContent = state.isDirty ? "Save" : "Saved";
+      }
     }
     if (els.saveBtn) {
       els.saveBtn.disabled = shouldDisableSave;
       els.saveBtn.setAttribute("aria-disabled", shouldDisableSave ? "true" : "false");
     }
+    updatePublishButtonState();
   }
 
   function setDirty(value) {
@@ -1537,8 +1575,45 @@
       `;
     } else if (section.type === "header") {
       html += `
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Brand mode</span>
+            <select data-bind-path="${settingsPath}.brandDisplay">
+              <option value="image" ${safeText(settings.brandDisplay, "image") === "image" ? "selected" : ""}>Image</option>
+              <option value="text" ${safeText(settings.brandDisplay, "image") === "text" ? "selected" : ""}>Text</option>
+            </select>
+          </label>
+          <label class="lpe-field">
+            <span>Header style</span>
+            <select data-bind-path="${settingsPath}.styleVariant">
+              <option value="style1" ${safeText(settings.styleVariant, "style1") === "style1" ? "selected" : ""}>Style 1 · Classic</option>
+              <option value="style2" ${safeText(settings.styleVariant, "style1") === "style2" ? "selected" : ""}>Style 2 · Boxed</option>
+              <option value="style3" ${safeText(settings.styleVariant, "style1") === "style3" ? "selected" : ""}>Style 3 · Pill Nav</option>
+              <option value="style4" ${safeText(settings.styleVariant, "style1") === "style4" ? "selected" : ""}>Style 4 · Centered</option>
+            </select>
+          </label>
+        </div>
         ${baseTextField("Brand name", `${settingsPath}.brandName`, settings.brandName, 120)}
         ${baseTextField("Logo URL", `${settingsPath}.logoUrl`, settings.logoUrl, 2000)}
+        <div class="lpe-row-grid">
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.sticky" data-bind-type="boolean" ${
+            settings.sticky ? "checked" : ""
+          } /> Sticky header</label>
+        </div>
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Logo width (${Math.round(safeNumber(settings.logoWidth, 46))}px)</span>
+            <input type="range" min="28" max="240" data-bind-path="${settingsPath}.logoWidth" data-bind-type="number" value="${Number(
+              safeNumber(settings.logoWidth, 46)
+            )}" />
+          </label>
+          <label class="lpe-field">
+            <span>Logo height (${Math.round(safeNumber(settings.logoHeight, 46))}px)</span>
+            <input type="range" min="28" max="140" data-bind-path="${settingsPath}.logoHeight" data-bind-type="number" value="${Number(
+              safeNumber(settings.logoHeight, 46)
+            )}" />
+          </label>
+        </div>
         <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showSearch" data-bind-type="boolean" ${
           settings.showSearch ? "checked" : ""
         } /> Show search</label>
@@ -2551,7 +2626,10 @@
   }
 
   async function publishPage() {
+    if (state.publishInFlight) return;
     if (!window.confirm("Publish current draft to live page?")) return;
+    state.publishInFlight = true;
+    updateSaveActions();
     setSaveStatus("saving", "Publishing...");
     try {
       if (state.isDirty) {
@@ -2568,6 +2646,9 @@
     } catch (error) {
       setDirty(true);
       setSaveStatus("error", error.message || "Publish failed");
+    } finally {
+      state.publishInFlight = false;
+      updateSaveActions();
     }
   }
 

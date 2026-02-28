@@ -2891,6 +2891,23 @@ body.is-panel-resizing {
   box-shadow: none;
 }
 
+#lpe-publish-btn.is-published {
+  border-color: #166534;
+  background: #166534;
+  color: #ffffff;
+}
+
+#lpe-publish-btn.is-published:hover {
+  border-color: #14532d;
+  background: #14532d;
+}
+
+#lpe-publish-btn.is-published::before {
+  content: "✓";
+  font-weight: 800;
+  margin-right: 6px;
+}
+
 #lpe-layout.lpe-layout {
   --lpe-left-width: 272px;
   --lpe-right-width: 320px;

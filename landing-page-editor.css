@@ -3106,24 +3106,24 @@ body.is-panel-resizing {
 .lpe-center-panel {
   border: none;
   border-right: 1px solid #e2e8f0;
-  background: #dce4ee;
+  background: #ffffff;
 }
 
 .lpe-preview-frame {
-  background: #dce4ee;
-  padding: 16px 14px;
+  background: #ffffff;
+  padding: 0;
 }
 
 .lpe-preview-frame > div {
-  margin: 0 auto;
+  margin: 0;
   background: #ffffff;
-  border: 1px solid #d7e0ec;
-  border-radius: 14px;
-  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.15);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .lpe-preview-frame.is-desktop > div {
-  width: min(1160px, 100%);
+  width: 100%;
 }
 
 .lpe-preview-frame.is-mobile > div {

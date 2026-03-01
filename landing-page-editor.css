@@ -3461,11 +3461,19 @@ body.is-panel-resizing {
 
 /* Right settings panel: single-column workflow + clean range controls */
 #lpe-right-panel.lpe-slide-panel .lpe-right-tab-panel {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-right-tab-panel.is-active {
+  display: flex;
+}
+
+#lpe-right-panel.lpe-slide-panel .lpe-right-tab-panel[hidden] {
+  display: none !important;
 }
 
 #lpe-right-panel.lpe-slide-panel .lpe-controls {

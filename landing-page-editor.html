@@ -119,8 +119,8 @@
 
         <aside id="lpe-left-panel" class="lpe-left-panel">
           <section class="lpe-panel-card lpe-sections-card">
-            <div class="lpe-panel-head">
-              <h2>Home page</h2>
+            <div class="lpe-panel-head lpe-sections-toolbar">
+              <button id="lpe-add-section-btn" type="button" class="lpe-btn lpe-btn-add">+ Add Section</button>
               <div class="lpe-panel-head-actions">
                 <button
                   id="lpe-left-collapse"
@@ -133,14 +133,8 @@
                 </button>
               </div>
             </div>
-            <p class="lpe-card-subtitle">Page sections</p>
-            <label class="lpe-sections-filter-wrap" for="lpe-sections-filter">
-              <input id="lpe-sections-filter" type="search" placeholder="Find section..." autocomplete="off" aria-label="Find section" />
-            </label>
             <ul id="lpe-sections-list" class="lpe-sections-list"></ul>
           </section>
-
-          <button id="lpe-add-section-btn" type="button" class="lpe-btn lpe-btn-add">+ Add Section</button>
 
           <button id="lpe-open-theme-dialog" type="button" class="lpe-prebuilt-trigger lpe-panel-card">
             <span class="lpe-prebuilt-trigger-title">Prebuilt Themes</span>
@@ -230,13 +224,33 @@
     <dialog id="lpe-add-dialog" class="lpe-dialog">
       <form method="dialog" class="lpe-dialog-content">
         <header>
-          <h2>Add New Section</h2>
-          <p>Select a section to add to your landing page.</p>
+          <h2>Sections</h2>
+          <p>Choose theme assets to add into your landing page.</p>
         </header>
-        <div id="lpe-library-grid" class="lpe-library-grid"></div>
+        <div class="lpe-library-layout">
+          <aside class="lpe-library-sidebar" aria-label="Theme asset categories">
+            <h3>Theme assets</h3>
+            <div id="lpe-library-categories" class="lpe-library-categories"></div>
+          </aside>
+          <section class="lpe-library-main">
+            <div class="lpe-library-main-head">
+              <h3 id="lpe-library-main-title">All sections</h3>
+              <label class="lpe-library-search-wrap" for="lpe-library-search">
+                <input
+                  id="lpe-library-search"
+                  type="search"
+                  placeholder="Search assets..."
+                  autocomplete="off"
+                  aria-label="Search section assets"
+                />
+              </label>
+            </div>
+            <div id="lpe-library-grid" class="lpe-library-grid"></div>
+          </section>
+        </div>
         <footer class="lpe-dialog-actions">
           <button type="button" id="lpe-dialog-cancel" class="lpe-btn lpe-btn-secondary">Cancel</button>
-          <button type="button" id="lpe-dialog-select" class="lpe-btn lpe-btn-primary">Select Section</button>
+          <button type="button" id="lpe-dialog-select" class="lpe-btn lpe-btn-primary">Add Section</button>
         </footer>
       </form>
     </dialog>

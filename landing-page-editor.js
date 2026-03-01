@@ -60,6 +60,9 @@
     dialogCancel: document.getElementById("lpe-dialog-cancel"),
     dialogSelect: document.getElementById("lpe-dialog-select"),
     libraryGrid: document.getElementById("lpe-library-grid"),
+    libraryCategories: document.getElementById("lpe-library-categories"),
+    librarySearch: document.getElementById("lpe-library-search"),
+    libraryMainTitle: document.getElementById("lpe-library-main-title"),
     themeDialog: document.getElementById("lpe-theme-dialog"),
     themeDialogCancel: document.getElementById("lpe-theme-dialog-cancel"),
     themeDialogApply: document.getElementById("lpe-theme-dialog-apply"),
@@ -275,6 +278,8 @@
     selectedSectionId: "",
     openRowMenuSectionId: "",
     selectedLibraryType: "",
+    libraryCategory: "all",
+    librarySearchText: "",
     selectedThemeTemplateId: "",
     sectionsFilterText: "",
     rightTab: "element",
@@ -2831,46 +2836,163 @@
 
   function renderLibraryModal() {
     if (!els.libraryGrid) return;
-    const groups = {
+    const categoryLabels = {
+      all: "All sections",
       essentials: "Essentials",
-      salon: "Salon Specific",
+      salon: "Salon specific",
       info: "Information",
     };
+    const categoryOrder = ["all", "essentials", "salon", "info"];
+    const allItems = Array.isArray(state.sectionLibrary) ? state.sectionLibrary : [];
 
-    const grouped = Object.keys(groups).map((key) => ({
-      key,
-      label: groups[key],
-      items: state.sectionLibrary.filter((item) => item.category === key),
-    }));
+    const iconForAsset = (iconName) => {
+      const icons = {
+        minus: '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg>',
+        layout:
+          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.6"/><path d="M2 6.2h12"/></svg>',
+        image:
+          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.2" width="12" height="11.6" rx="1.4"/><circle cx="5.2" cy="5.3" r="1.1"/><path d="M3.6 11 7.2 7.7l2.2 2 1.5-1.4L12.7 11"/></svg>',
+        images:
+          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="3" width="7.4" height="9.4" rx="1.1"/><rect x="7" y="2.2" width="7.4" height="9.4" rx="1.1"/></svg>',
+        sparkles:
+          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 9.4 6l4.2 1.4-4.2 1.4L8 13 6.6 8.8 2.4 7.4 6.6 6z"/></svg>',
+        type: '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3h11"/><path d="M8 3v10"/></svg>',
+        scissors:
+          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4.2" cy="11.2" r="1.9"/><circle cx="4.2" cy="4.8" r="1.9"/><path d="m6 6.2 7.2-4M6 9.8l7.2 4"/></svg>',
+        grid:
+          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5.2" height="5.2" rx="0.8"/><rect x="8.8" y="2" width="5.2" height="5.2" rx="0.8"/><rect x="2" y="8.8" width="5.2" height="5.2" rx="0.8"/><rect x="8.8" y="8.8" width="5.2" height="5.2" rx="0.8"/></svg>',
+        "shopping-bag":
+          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5.5h10l-.8 8H3.8z"/><path d="M5.5 5.5V4.8a2.5 2.5 0 0 1 5 0v.7"/></svg>',
+        users:
+          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.3" cy="5.1" r="2"/><circle cx="10.8" cy="5.6" r="1.7"/><path d="M2.6 12.8a3.1 3.1 0 0 1 5.4-1.9"/><path d="M8.2 12.8a2.9 2.9 0 0 1 5.2-1.7"/></svg>',
+        quote: '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h3v5H1V8l2-4h3zM10 8h3v5H8V8l2-4h3z"/></svg>',
+        instagram:
+          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.3" y="2.3" width="11.4" height="11.4" rx="3"/><circle cx="8" cy="8" r="2.7"/><circle cx="11.4" cy="4.6" r="0.8"/></svg>',
+        map:
+          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14s4-3.9 4-7a4 4 0 1 0-8 0c0 3.1 4 7 4 7z"/><circle cx="8" cy="7" r="1.5"/></svg>',
+        help:
+          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M6.5 6a1.6 1.6 0 1 1 2.4 1.4c-.7.4-.9.7-.9 1.6"/><circle cx="8" cy="11.8" r="0.6"/></svg>',
+        mail:
+          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.4"/><path d="m2.8 4.2 5.2 4.3 5.2-4.3"/></svg>',
+      };
+      return icons[String(iconName || "").toLowerCase()] || icons.layout;
+    };
 
-    els.libraryGrid.innerHTML = grouped
-      .map(
-        (group) => `
-          <section class="lpe-library-group">
-            <h3>${escapeHtml(group.label)}</h3>
-            <div class="lpe-library-cards">
-              ${group.items
-                .map(
-                  (item) => `
-                    <article class="lpe-library-card ${
-                      state.selectedLibraryType === item.type ? "is-selected" : ""
-                    }" data-action="select-library" data-type="${escapeHtml(item.type)}">
-                      <h4>${escapeHtml(sectionLabelByType(item.type, item.label))}</h4>
-                      <p>${escapeHtml(item.description)}</p>
-                    </article>
-                  `
-                )
-                .join("")}
-            </div>
-          </section>
-        `
-      )
-      .join("");
+    const dynamicCategoryLabels = { ...categoryLabels };
+    const counts = { all: allItems.length };
+    allItems.forEach((item) => {
+      const key = safeText(item?.category, "other").toLowerCase() || "other";
+      if (!dynamicCategoryLabels[key]) {
+        dynamicCategoryLabels[key] = key.charAt(0).toUpperCase() + key.slice(1);
+      }
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    const extraKeys = Object.keys(counts).filter(
+      (key) => key !== "all" && !categoryOrder.includes(key)
+    );
+    const categoryKeys = [...categoryOrder, ...extraKeys].filter((key) => Number(counts[key] || 0) > 0);
+
+    if (!categoryKeys.includes(state.libraryCategory)) {
+      state.libraryCategory = "all";
+    }
+
+    const query = safeText(state.librarySearchText, "").toLowerCase();
+    const filteredItems = allItems.filter((item) => {
+      const categoryKey = safeText(item?.category, "other").toLowerCase() || "other";
+      const categoryMatches = state.libraryCategory === "all" || categoryKey === state.libraryCategory;
+      if (!categoryMatches) return false;
+      if (!query) return true;
+      const label = safeText(sectionLabelByType(item.type, item.label), "").toLowerCase();
+      const description = safeText(item.description, "").toLowerCase();
+      const type = safeText(item.type, "").toLowerCase();
+      return label.includes(query) || description.includes(query) || type.includes(query);
+    });
+
+    const visibleTypes = new Set(filteredItems.map((item) => String(item.type || "")));
+    if (state.selectedLibraryType && !visibleTypes.has(state.selectedLibraryType)) {
+      state.selectedLibraryType = "";
+    }
+
+    if (els.libraryMainTitle) {
+      const selectedLabel = dynamicCategoryLabels[state.libraryCategory] || "All sections";
+      els.libraryMainTitle.textContent = state.libraryCategory === "all" ? selectedLabel : `${selectedLabel} assets`;
+    }
+
+    if (els.libraryCategories) {
+      els.libraryCategories.innerHTML = categoryKeys
+        .map((key) => {
+          const active = key === state.libraryCategory;
+          const label = dynamicCategoryLabels[key] || key;
+          const count = Number(counts[key] || 0);
+          return `
+            <button
+              type="button"
+              class="lpe-library-category ${active ? "is-active" : ""}"
+              data-action="select-library-category"
+              data-category="${escapeHtml(key)}"
+            >
+              <span class="lpe-library-category-label">${escapeHtml(label)}</span>
+              <span class="lpe-library-category-count">${count} ${count === 1 ? "type" : "types"}</span>
+            </button>
+          `;
+        })
+        .join("");
+    }
+
+    if (!filteredItems.length) {
+      els.libraryGrid.innerHTML = '<p class="lp-empty">No section assets match your search.</p>';
+      if (els.dialogSelect) {
+        els.dialogSelect.disabled = true;
+      }
+      return;
+    }
+
+    els.libraryGrid.innerHTML = `
+      <div class="lpe-library-cards">
+        ${filteredItems
+          .map((item) => {
+            const categoryKey = safeText(item?.category, "other").toLowerCase() || "other";
+            const previewTone = /^[a-z0-9-]+$/.test(categoryKey) ? categoryKey : "all";
+            const selected = state.selectedLibraryType === item.type;
+            return `
+              <article
+                class="lpe-library-card lpe-library-asset-card ${selected ? "is-selected" : ""}"
+                data-action="select-library"
+                data-type="${escapeHtml(item.type)}"
+                role="button"
+                tabindex="0"
+                aria-pressed="${selected ? "true" : "false"}"
+              >
+                <div class="lpe-library-card-meta">
+                  <span class="lpe-library-card-icon">${iconForAsset(item.icon)}</span>
+                  <span class="lpe-library-card-chip">${escapeHtml(dynamicCategoryLabels[categoryKey] || "Section")}</span>
+                </div>
+                <div class="lpe-library-card-preview lpe-library-card-preview-${previewTone}">
+                  <span></span><span></span><span></span>
+                </div>
+                <h4>${escapeHtml(sectionLabelByType(item.type, item.label))}</h4>
+                <p>${escapeHtml(item.description)}</p>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    `;
+
+    if (els.dialogSelect) {
+      els.dialogSelect.disabled = !state.selectedLibraryType;
+    }
   }
 
   function openAddDialog() {
     if (!els.addDialog) return;
     state.selectedLibraryType = "";
+    state.libraryCategory = "all";
+    state.librarySearchText = "";
+    if (els.librarySearch) {
+      els.librarySearch.value = "";
+    }
     renderLibraryModal();
     els.addDialog.showModal();
   }
@@ -3280,6 +3402,39 @@
         const type = card.getAttribute("data-type");
         if (!type) return;
         state.selectedLibraryType = type;
+        renderLibraryModal();
+      });
+
+      els.libraryGrid.addEventListener("keydown", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+        const card = target.closest("[data-action='select-library']");
+        if (!(card instanceof HTMLElement)) return;
+        event.preventDefault();
+        const type = card.getAttribute("data-type");
+        if (!type) return;
+        state.selectedLibraryType = type;
+        renderLibraryModal();
+      });
+    }
+
+    if (els.libraryCategories) {
+      els.libraryCategories.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const categoryButton = target.closest("[data-action='select-library-category']");
+        if (!(categoryButton instanceof HTMLElement)) return;
+        const category = categoryButton.getAttribute("data-category");
+        if (!category) return;
+        state.libraryCategory = category;
+        renderLibraryModal();
+      });
+    }
+
+    if (els.librarySearch) {
+      els.librarySearch.addEventListener("input", () => {
+        state.librarySearchText = safeText(els.librarySearch.value, "");
         renderLibraryModal();
       });
     }

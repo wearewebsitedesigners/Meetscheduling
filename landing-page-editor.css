@@ -3831,7 +3831,21 @@ body.is-panel-resizing {
     width: 100%;
   }
 
-  .lpe-library-main .lpe-library-cards {
+.lpe-library-main .lpe-library-cards {
     grid-template-columns: 1fr;
   }
+}
+
+.lpe-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lpe-dialog-back-btn {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  white-space: nowrap;
 }

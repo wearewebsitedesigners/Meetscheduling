@@ -223,9 +223,14 @@
 
     <dialog id="lpe-add-dialog" class="lpe-dialog">
       <form method="dialog" class="lpe-dialog-content">
-        <header>
-          <h2>Sections</h2>
-          <p>Choose theme assets to add into your landing page.</p>
+        <header class="lpe-dialog-header">
+          <div>
+            <h2>Sections</h2>
+            <p>Choose theme assets to add into your landing page.</p>
+          </div>
+          <button type="button" id="lpe-dialog-back" class="lpe-btn lpe-btn-secondary lpe-dialog-back-btn" aria-label="Back to builder">
+            &larr; Back
+          </button>
         </header>
         <div class="lpe-library-layout">
           <aside class="lpe-library-sidebar" aria-label="Theme asset categories">

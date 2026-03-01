@@ -58,6 +58,7 @@
     addSectionBtn: document.getElementById("lpe-add-section-btn"),
     addDialog: document.getElementById("lpe-add-dialog"),
     dialogCancel: document.getElementById("lpe-dialog-cancel"),
+    dialogBack: document.getElementById("lpe-dialog-back"),
     dialogSelect: document.getElementById("lpe-dialog-select"),
     libraryGrid: document.getElementById("lpe-library-grid"),
     libraryCategories: document.getElementById("lpe-library-categories"),
@@ -2997,6 +2998,11 @@
     els.addDialog.showModal();
   }
 
+  function closeAddDialog() {
+    if (!els.addDialog || !els.addDialog.open) return;
+    els.addDialog.close();
+  }
+
   function bindTopbarEvents() {
     document.querySelectorAll(".lpe-device-toggle button[data-device]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -3389,7 +3395,21 @@
 
     if (els.dialogCancel) {
       els.dialogCancel.addEventListener("click", () => {
-        if (els.addDialog) els.addDialog.close();
+        closeAddDialog();
+      });
+    }
+
+    if (els.dialogBack) {
+      els.dialogBack.addEventListener("click", () => {
+        closeAddDialog();
+      });
+    }
+
+    if (els.addDialog) {
+      els.addDialog.addEventListener("click", (event) => {
+        if (event.target === els.addDialog) {
+          closeAddDialog();
+        }
       });
     }
 
@@ -3446,7 +3466,7 @@
           return;
         }
         addSection(state.selectedLibraryType);
-        if (els.addDialog) els.addDialog.close();
+        closeAddDialog();
       });
     }
 

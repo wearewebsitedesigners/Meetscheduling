@@ -22,6 +22,7 @@
   color: var(--lp-text);
   font-family: var(--lp-font);
   min-height: 100%;
+  overflow-x: hidden;
 }
 
 .lp-root *,
@@ -1389,6 +1390,7 @@
   .lp-header-shell {
     align-items: flex-start;
     flex-direction: column;
+    width: 100%;
   }
 
   .lp-header-shell.lp-desktop-menu-center:not(.lp-header-variant-style4):not(.lp-header-variant-style5) {
@@ -1407,6 +1409,32 @@
   .lp-header-shell.lp-mobile-menu-inline .lp-nav {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .lp-header-shell.lp-mobile-menu-inline .lp-header-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    gap: 12px;
+  }
+
+  .lp-header-shell.lp-mobile-menu-inline .lp-header-nav {
+    width: 100%;
+  }
+
+  .lp-header-shell.lp-mobile-menu-inline .lp-header-tools {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .lp-header-shell.lp-mobile-menu-inline .lp-search-input {
+    width: 100%;
+    min-width: 0;
   }
 
   .lp-services-grid {
@@ -1488,12 +1516,29 @@
 
 @media (max-width: 720px) {
   .lp-shell {
-    padding-left: 14px;
-    padding-right: 14px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .lp-header-shell.lp-mobile-menu-drawer .lp-mobile-nav {
     display: grid;
+  }
+
+  .lp-header-shell {
+    padding-left: 12px;
+    padding-right: 12px;
+    gap: 10px;
+  }
+
+  .lp-brand-wrap {
+    margin-left: 0;
+    max-width: 100%;
+  }
+
+  .lp-brand-name {
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.15;
   }
 
   .lp-search-input {
@@ -1502,6 +1547,33 @@
 
   .lp-header-actions {
     width: 100%;
+    gap: 10px;
+  }
+
+  .lp-header-nav {
+    width: 100%;
+  }
+
+  .lp-nav {
+    width: 100%;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .lp-nav-link {
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 0.94rem;
+  }
+
+  .lp-header-tools {
+    width: 100%;
+  }
+
+  .lp-header-tools .lp-btn-primary {
+    min-height: 44px;
+    padding-inline: 16px;
+    font-size: 0.96rem;
   }
 
   .lp-service-card {
@@ -1520,11 +1592,15 @@
 
   .lp-image-banner-shell {
     background-image: var(--lp-banner-bg-mobile, var(--lp-banner-bg));
+    background-size: contain, cover;
+    background-position: center top;
+    background-color: var(--lp-surface);
   }
 
+  .lp-banner-height-md,
   .lp-banner-height-lg,
   .lp-banner-height-xl {
-    min-height: 340px;
+    min-height: clamp(260px, 78vw, 420px);
   }
 
   .lp-marquee-track {
@@ -1544,6 +1620,26 @@
   }
 
   .lp-section {
-    padding: 0 8px;
+    padding: 0;
+  }
+
+  .lp-slide-media img,
+  .lp-spotlight-card img,
+  .lp-product-media img,
+  .lp-gallery-card img,
+  .lp-service-image-wrap img,
+  .lp-stylist-card img {
+    object-fit: contain;
+    background: var(--lp-surface);
+  }
+}
+
+@media (max-width: 560px) {
+  .lp-header-shell.lp-mobile-menu-inline .lp-header-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-header-shell.lp-mobile-menu-inline .lp-header-tools .lp-btn-primary {
+    width: 100%;
   }
 }

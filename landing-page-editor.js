@@ -2736,8 +2736,10 @@
     }
   }
 
-  function openRightPanel(tabName) {
-    if (state.focusMode) setFocusMode(false);
+  function openRightPanel(tabName, options = {}) {
+    const forceExitFocus = options && options.forceExitFocus === true;
+    if (state.focusMode && !forceExitFocus) return;
+    if (state.focusMode && forceExitFocus) setFocusMode(false);
     if (tabName) setRightTab(tabName);
     state.rightPanelCollapsed = false;
     applyPanelLayout();
@@ -2804,7 +2806,7 @@
         if (!tool) return;
         activateRailTool(tool);
         if (tool === "settings") {
-          openRightPanel("theme");
+          openRightPanel("theme", { forceExitFocus: true });
           return;
         }
         if (tool === "sections") {

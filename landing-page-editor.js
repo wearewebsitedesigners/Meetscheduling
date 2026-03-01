@@ -264,6 +264,251 @@
     },
   });
 
+  const SECTION_ASSET_VARIANTS = Object.freeze([
+    {
+      id: "header-nav-constrained",
+      type: "header",
+      category: "headerNavigation",
+      label: "Constrained navigation",
+      description: "Balanced navigation with logo, menu links, and CTA.",
+      icon: "layout",
+      singleton: true,
+      previewKind: "navigation",
+      settings: {
+        styleVariant: "style1",
+        desktopMenuMode: "center",
+        mobileMenuMode: "drawer",
+        showSearch: false,
+      },
+    },
+    {
+      id: "header-nav-full-width",
+      type: "header",
+      category: "headerNavigation",
+      label: "Full width navigation",
+      description: "Wide navigation row with links and CTA on desktop.",
+      icon: "layout",
+      singleton: true,
+      previewKind: "navigation",
+      settings: {
+        styleVariant: "style2",
+        desktopMenuMode: "inline",
+        mobileMenuMode: "drawer",
+        showSearch: false,
+      },
+    },
+    {
+      id: "header-nav-centered-logo",
+      type: "header",
+      category: "headerNavigation",
+      label: "With centered logo navigation",
+      description: "Centered logo with navigation structure similar to modern SaaS headers.",
+      icon: "layout",
+      singleton: true,
+      previewKind: "navigation",
+      settings: {
+        styleVariant: "style4",
+        desktopMenuMode: "center",
+        mobileMenuMode: "drawer",
+        showSearch: false,
+      },
+    },
+    {
+      id: "header-nav-right-aligned",
+      type: "header",
+      category: "headerNavigation",
+      label: "With right aligned navigation",
+      description: "Brand on left with menu and actions aligned to the right.",
+      icon: "layout",
+      singleton: true,
+      previewKind: "navigation",
+      settings: {
+        styleVariant: "style1",
+        desktopMenuMode: "inline",
+        mobileMenuMode: "drawer",
+        showSearch: false,
+      },
+    },
+    {
+      id: "header-nav-left-aligned",
+      type: "header",
+      category: "headerNavigation",
+      label: "With left aligned navigation",
+      description: "Navigation grouped close to brand for left-weighted layouts.",
+      icon: "layout",
+      singleton: true,
+      previewKind: "navigation",
+      settings: {
+        styleVariant: "style3",
+        desktopMenuMode: "inline",
+        mobileMenuMode: "drawer",
+        showSearch: false,
+      },
+    },
+    {
+      id: "cta-simple-left",
+      type: "hero",
+      category: "cta",
+      label: "Call to action simple to the left",
+      description: "Left-aligned copy with strong CTA and support link.",
+      icon: "sparkles",
+      singleton: false,
+      previewKind: "cta",
+      settings: {
+        align: "left",
+        badge: "Ready to get started?",
+        title: "Start your free trial today",
+        subtitle: "Join thousands of satisfied users who discovered the power of our platform.",
+        primaryButtonLabel: "Get started",
+        secondaryButtonLabel: "Learn more",
+      },
+    },
+    {
+      id: "cta-simple-justified",
+      type: "hero",
+      category: "cta",
+      label: "Call to action simple justified",
+      description: "Wide two-sided layout with CTA actions on the right.",
+      icon: "sparkles",
+      singleton: false,
+      previewKind: "cta",
+      settings: {
+        align: "left",
+        badge: "Ready to dive in?",
+        title: "Start your free trial today.",
+        subtitle: "Experience our platform with full access and no commitment trial.",
+        primaryButtonLabel: "Get started",
+        secondaryButtonLabel: "Learn more",
+      },
+    },
+    {
+      id: "cta-simple-centered",
+      type: "hero",
+      category: "cta",
+      label: "Call to action simple centered",
+      description: "Centered headline and dual CTA for conversion-focused sections.",
+      icon: "sparkles",
+      singleton: false,
+      previewKind: "cta",
+      settings: {
+        align: "center",
+        badge: "Ready to get started?",
+        title: "Start your free trial today",
+        subtitle: "Experience the difference for yourself with our risk-free trial.",
+        primaryButtonLabel: "Get started",
+        secondaryButtonLabel: "Learn more",
+      },
+    },
+    {
+      id: "cta-centered-panel",
+      type: "hero",
+      category: "cta",
+      label: "Call to action centered within a panel",
+      description: "Framed centered CTA block suitable for featured announcements.",
+      icon: "sparkles",
+      singleton: false,
+      previewKind: "cta",
+      settings: {
+        align: "center",
+        badge: "Transform your workflow",
+        title: "Ready to transform your workflow?",
+        subtitle: "Join thousands of teams who already revolutionized their process.",
+        primaryButtonLabel: "Get started",
+        secondaryButtonLabel: "Learn more",
+      },
+    },
+    {
+      id: "cta-split-image-right",
+      type: "imageBanner",
+      category: "cta",
+      label: "Call to action split with image right",
+      description: "Text-first CTA with visual split treatment and right media area.",
+      icon: "image",
+      singleton: false,
+      previewKind: "ctaImage",
+      settings: {
+        align: "left",
+        pretitle: "Transform Your Business",
+        title: "Elevate Your Workflow Today",
+        subtitle: "Platform features that integrate seamlessly with your existing workflow.",
+        buttonLabel: "Start free trial",
+        overlayOpacity: 10,
+      },
+    },
+    {
+      id: "cta-split-image",
+      type: "imageBanner",
+      category: "cta",
+      label: "Call to action split with image",
+      description: "Image-led split composition with supporting CTA copy.",
+      icon: "image",
+      singleton: false,
+      previewKind: "ctaImage",
+      settings: {
+        align: "right",
+        pretitle: "Transform Your Business",
+        title: "Elevate Your Workflow Today",
+        subtitle: "Join thousands of users with our comprehensive suite of tools.",
+        buttonLabel: "Start free trial",
+        overlayOpacity: 8,
+      },
+    },
+    {
+      id: "cta-two-columns-photo",
+      type: "imageBanner",
+      category: "cta",
+      label: "Call to action two columns with photo",
+      description: "Two-column CTA with image and feature highlights.",
+      icon: "image",
+      singleton: false,
+      previewKind: "ctaImage",
+      settings: {
+        align: "center",
+        pretitle: "Join our team",
+        title: "Become part of our team",
+        subtitle: "Exceptional perks and a supportive workplace designed to foster growth.",
+        buttonLabel: "Explore opportunities",
+        overlayOpacity: 12,
+      },
+    },
+    {
+      id: "cta-two-columns-photo-right",
+      type: "imageBanner",
+      category: "cta",
+      label: "Call to action two columns with photo right",
+      description: "Two-column CTA with right photo, left text and action links.",
+      icon: "image",
+      singleton: false,
+      previewKind: "ctaImage",
+      settings: {
+        align: "left",
+        pretitle: "Grow with us",
+        title: "Join our growing team",
+        subtitle: "Collaborative culture, strong benefits, and fast growth opportunities.",
+        buttonLabel: "Open positions",
+        overlayOpacity: 12,
+      },
+    },
+    {
+      id: "cta-with-app-screenshot",
+      type: "imageBanner",
+      category: "cta",
+      label: "Call to action with app screenshot",
+      description: "Product-focused CTA with screenshot-style visual emphasis.",
+      icon: "image",
+      singleton: false,
+      previewKind: "ctaImage",
+      settings: {
+        align: "left",
+        pretitle: "Advanced Technology",
+        title: "Transform Business with Easytools",
+        subtitle: "Simplify complex workflows and drive measurable results quickly.",
+        buttonLabel: "Get started",
+        overlayOpacity: 14,
+      },
+    },
+  ]);
+
   const state = {
     pageId: "",
     page: null,
@@ -445,6 +690,102 @@
     const normalizedType = String(type || "");
     if (normalizedType === "servicesMenu") return "Services";
     return String(fallbackLabel || normalizedType);
+  }
+
+  function sectionAssetIcon(iconName) {
+    const icons = {
+      minus: '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg>',
+      layout:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.6"/><path d="M2 6.2h12"/></svg>',
+      image:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.2" width="12" height="11.6" rx="1.4"/><circle cx="5.2" cy="5.3" r="1.1"/><path d="M3.6 11 7.2 7.7l2.2 2 1.5-1.4L12.7 11"/></svg>',
+      images:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="3" width="7.4" height="9.4" rx="1.1"/><rect x="7" y="2.2" width="7.4" height="9.4" rx="1.1"/></svg>',
+      sparkles:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 9.4 6l4.2 1.4-4.2 1.4L8 13 6.6 8.8 2.4 7.4 6.6 6z"/></svg>',
+      type: '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3h11"/><path d="M8 3v10"/></svg>',
+      scissors:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4.2" cy="11.2" r="1.9"/><circle cx="4.2" cy="4.8" r="1.9"/><path d="m6 6.2 7.2-4M6 9.8l7.2 4"/></svg>',
+      grid:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5.2" height="5.2" rx="0.8"/><rect x="8.8" y="2" width="5.2" height="5.2" rx="0.8"/><rect x="2" y="8.8" width="5.2" height="5.2" rx="0.8"/><rect x="8.8" y="8.8" width="5.2" height="5.2" rx="0.8"/></svg>',
+      "shopping-bag":
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5.5h10l-.8 8H3.8z"/><path d="M5.5 5.5V4.8a2.5 2.5 0 0 1 5 0v.7"/></svg>',
+      users:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.3" cy="5.1" r="2"/><circle cx="10.8" cy="5.6" r="1.7"/><path d="M2.6 12.8a3.1 3.1 0 0 1 5.4-1.9"/><path d="M8.2 12.8a2.9 2.9 0 0 1 5.2-1.7"/></svg>',
+      quote: '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h3v5H1V8l2-4h3zM10 8h3v5H8V8l2-4h3z"/></svg>',
+      instagram:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.3" y="2.3" width="11.4" height="11.4" rx="3"/><circle cx="8" cy="8" r="2.7"/><circle cx="11.4" cy="4.6" r="0.8"/></svg>',
+      map:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14s4-3.9 4-7a4 4 0 1 0-8 0c0 3.1 4 7 4 7z"/><circle cx="8" cy="7" r="1.5"/></svg>',
+      help:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M6.5 6a1.6 1.6 0 1 1 2.4 1.4c-.7.4-.9.7-.9 1.6"/><circle cx="8" cy="11.8" r="0.6"/></svg>',
+      mail:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.4"/><path d="m2.8 4.2 5.2 4.3 5.2-4.3"/></svg>',
+    };
+    return icons[String(iconName || "").toLowerCase()] || icons.layout;
+  }
+
+  function sectionAssetPreviewMarkup(asset) {
+    const previewKind = safeText(asset?.previewKind, "default", 24);
+    if (previewKind === "navigation") {
+      return `
+        <div class="lpe-library-card-preview lpe-library-card-preview-nav">
+          <div class="lpe-library-preview-nav-top"></div>
+          <div class="lpe-library-preview-nav-row">
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      `;
+    }
+    if (previewKind === "cta" || previewKind === "ctaImage") {
+      return `
+        <div class="lpe-library-card-preview lpe-library-card-preview-cta ${
+          previewKind === "ctaImage" ? "is-image" : ""
+        }">
+          <div class="lpe-library-preview-cta-line"></div>
+          <div class="lpe-library-preview-cta-line short"></div>
+          <div class="lpe-library-preview-cta-actions">
+            <span></span><span></span>
+          </div>
+        </div>
+      `;
+    }
+    const previewTone = /^[a-z0-9-]+$/.test(String(asset?.category || "")) ? String(asset.category) : "all";
+    return `
+      <div class="lpe-library-card-preview lpe-library-card-preview-${escapeHtml(previewTone)}">
+        <span></span><span></span><span></span>
+      </div>
+    `;
+  }
+
+  function libraryAssets() {
+    const baseAssets = (Array.isArray(state.sectionLibrary) ? state.sectionLibrary : []).map((item) => ({
+      assetId: `type:${String(item.type || "")}`,
+      type: String(item.type || ""),
+      category: safeText(item.category, "other", 40).toLowerCase() || "other",
+      label: sectionLabelByType(item.type, item.label || item.type),
+      description: safeText(item.description, "", 240),
+      icon: safeText(item.icon, "layout", 40),
+      singleton: Boolean(item.singleton),
+      previewKind: "default",
+      settings: null,
+      customLabel: "",
+    }));
+
+    const variantAssets = SECTION_ASSET_VARIANTS.map((item) => ({
+      assetId: `variant:${String(item.id || "")}`,
+      type: String(item.type || ""),
+      category: safeText(item.category, "other", 40).toLowerCase() || "other",
+      label: safeText(item.label, String(item.type || ""), 120),
+      description: safeText(item.description, "", 240),
+      icon: safeText(item.icon, "layout", 40),
+      singleton: Boolean(item.singleton),
+      previewKind: safeText(item.previewKind, "default", 24),
+      settings: deepClone(item.settings || {}),
+      customLabel: safeText(item.label, "", 120),
+    }));
+
+    return [...variantAssets, ...baseAssets].filter((item) => Boolean(item.type));
   }
 
   function getSectionById(sectionId) {
@@ -2819,20 +3160,46 @@
     queueAutosave();
   }
 
-  function addSection(type) {
+  function addSection(type, options) {
     const entry = state.sectionLibrary.find((item) => item.type === type);
-    if (!entry) return;
-    const existsSingleton = entry.singleton && sectionList().some((section) => section.type === type);
+    const settingsOverride = options && options.settings && typeof options.settings === "object"
+      ? deepClone(options.settings)
+      : null;
+    const isSingleton = options && typeof options.singleton === "boolean"
+      ? options.singleton
+      : Boolean(entry && entry.singleton);
+    const existsSingleton = isSingleton && sectionList().some((section) => section.type === type);
     if (existsSingleton) {
       alert("This section type can only be added once.");
-      return;
+      return false;
     }
     const next = createSection(type);
+    if (settingsOverride) {
+      next.settings = {
+        ...next.settings,
+        ...settingsOverride,
+      };
+    }
+    const customLabel = options ? safeText(options.customLabel, "", 120) : "";
+    if (customLabel) {
+      next.customLabel = customLabel;
+    }
     sectionList().push(next);
     state.selectedSectionId = next.id;
     openRightPanel("element");
     renderAll();
     queueAutosave();
+    return true;
+  }
+
+  function addSectionFromLibraryAsset(assetId) {
+    const entry = libraryAssets().find((item) => String(item.assetId) === String(assetId));
+    if (!entry) return false;
+    return addSection(entry.type, {
+      singleton: entry.singleton,
+      settings: entry.settings || null,
+      customLabel: entry.customLabel || "",
+    });
   }
 
   function renderLibraryModal() {
@@ -2840,44 +3207,13 @@
     const categoryLabels = {
       all: "All sections",
       essentials: "Essentials",
+      headernavigation: "Header Navigation",
+      cta: "CTA",
       salon: "Salon specific",
       info: "Information",
     };
-    const categoryOrder = ["all", "essentials", "salon", "info"];
-    const allItems = Array.isArray(state.sectionLibrary) ? state.sectionLibrary : [];
-
-    const iconForAsset = (iconName) => {
-      const icons = {
-        minus: '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg>',
-        layout:
-          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.6"/><path d="M2 6.2h12"/></svg>',
-        image:
-          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.2" width="12" height="11.6" rx="1.4"/><circle cx="5.2" cy="5.3" r="1.1"/><path d="M3.6 11 7.2 7.7l2.2 2 1.5-1.4L12.7 11"/></svg>',
-        images:
-          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="3" width="7.4" height="9.4" rx="1.1"/><rect x="7" y="2.2" width="7.4" height="9.4" rx="1.1"/></svg>',
-        sparkles:
-          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 9.4 6l4.2 1.4-4.2 1.4L8 13 6.6 8.8 2.4 7.4 6.6 6z"/></svg>',
-        type: '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3h11"/><path d="M8 3v10"/></svg>',
-        scissors:
-          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4.2" cy="11.2" r="1.9"/><circle cx="4.2" cy="4.8" r="1.9"/><path d="m6 6.2 7.2-4M6 9.8l7.2 4"/></svg>',
-        grid:
-          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5.2" height="5.2" rx="0.8"/><rect x="8.8" y="2" width="5.2" height="5.2" rx="0.8"/><rect x="2" y="8.8" width="5.2" height="5.2" rx="0.8"/><rect x="8.8" y="8.8" width="5.2" height="5.2" rx="0.8"/></svg>',
-        "shopping-bag":
-          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5.5h10l-.8 8H3.8z"/><path d="M5.5 5.5V4.8a2.5 2.5 0 0 1 5 0v.7"/></svg>',
-        users:
-          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.3" cy="5.1" r="2"/><circle cx="10.8" cy="5.6" r="1.7"/><path d="M2.6 12.8a3.1 3.1 0 0 1 5.4-1.9"/><path d="M8.2 12.8a2.9 2.9 0 0 1 5.2-1.7"/></svg>',
-        quote: '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h3v5H1V8l2-4h3zM10 8h3v5H8V8l2-4h3z"/></svg>',
-        instagram:
-          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.3" y="2.3" width="11.4" height="11.4" rx="3"/><circle cx="8" cy="8" r="2.7"/><circle cx="11.4" cy="4.6" r="0.8"/></svg>',
-        map:
-          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14s4-3.9 4-7a4 4 0 1 0-8 0c0 3.1 4 7 4 7z"/><circle cx="8" cy="7" r="1.5"/></svg>',
-        help:
-          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M6.5 6a1.6 1.6 0 1 1 2.4 1.4c-.7.4-.9.7-.9 1.6"/><circle cx="8" cy="11.8" r="0.6"/></svg>',
-        mail:
-          '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.4"/><path d="m2.8 4.2 5.2 4.3 5.2-4.3"/></svg>',
-      };
-      return icons[String(iconName || "").toLowerCase()] || icons.layout;
-    };
+    const categoryOrder = ["all", "headernavigation", "cta", "essentials", "salon", "info"];
+    const allItems = libraryAssets();
 
     const dynamicCategoryLabels = { ...categoryLabels };
     const counts = { all: allItems.length };
@@ -2904,14 +3240,15 @@
       const categoryMatches = state.libraryCategory === "all" || categoryKey === state.libraryCategory;
       if (!categoryMatches) return false;
       if (!query) return true;
-      const label = safeText(sectionLabelByType(item.type, item.label), "").toLowerCase();
+      const label = safeText(item.label, "").toLowerCase();
       const description = safeText(item.description, "").toLowerCase();
       const type = safeText(item.type, "").toLowerCase();
-      return label.includes(query) || description.includes(query) || type.includes(query);
+      const id = safeText(item.assetId, "").toLowerCase();
+      return label.includes(query) || description.includes(query) || type.includes(query) || id.includes(query);
     });
 
-    const visibleTypes = new Set(filteredItems.map((item) => String(item.type || "")));
-    if (state.selectedLibraryType && !visibleTypes.has(state.selectedLibraryType)) {
+    const visibleAssetIds = new Set(filteredItems.map((item) => String(item.assetId || "")));
+    if (state.selectedLibraryType && !visibleAssetIds.has(state.selectedLibraryType)) {
       state.selectedLibraryType = "";
     }
 
@@ -2953,26 +3290,25 @@
       <div class="lpe-library-cards">
         ${filteredItems
           .map((item) => {
-            const categoryKey = safeText(item?.category, "other").toLowerCase() || "other";
-            const previewTone = /^[a-z0-9-]+$/.test(categoryKey) ? categoryKey : "all";
-            const selected = state.selectedLibraryType === item.type;
+            const selected = state.selectedLibraryType === item.assetId;
+            const sectionTypeLabel = sectionLabelByType(item.type, item.label);
             return `
               <article
                 class="lpe-library-card lpe-library-asset-card ${selected ? "is-selected" : ""}"
                 data-action="select-library"
-                data-type="${escapeHtml(item.type)}"
+                data-asset-id="${escapeHtml(item.assetId)}"
                 role="button"
                 tabindex="0"
                 aria-pressed="${selected ? "true" : "false"}"
               >
                 <div class="lpe-library-card-meta">
-                  <span class="lpe-library-card-icon">${iconForAsset(item.icon)}</span>
-                  <span class="lpe-library-card-chip">${escapeHtml(dynamicCategoryLabels[categoryKey] || "Section")}</span>
+                  <span class="lpe-library-card-icon">${sectionAssetIcon(item.icon)}</span>
+                  <span class="lpe-library-card-chip">${escapeHtml(
+                    dynamicCategoryLabels[safeText(item.category, "other").toLowerCase()] || "Section"
+                  )}</span>
                 </div>
-                <div class="lpe-library-card-preview lpe-library-card-preview-${previewTone}">
-                  <span></span><span></span><span></span>
-                </div>
-                <h4>${escapeHtml(sectionLabelByType(item.type, item.label))}</h4>
+                ${sectionAssetPreviewMarkup(item)}
+                <h4>${escapeHtml(sectionTypeLabel)}</h4>
                 <p>${escapeHtml(item.description)}</p>
               </article>
             `;
@@ -3419,9 +3755,9 @@
         if (!(target instanceof HTMLElement)) return;
         const card = target.closest("[data-action='select-library']");
         if (!card) return;
-        const type = card.getAttribute("data-type");
-        if (!type) return;
-        state.selectedLibraryType = type;
+        const assetId = card.getAttribute("data-asset-id");
+        if (!assetId) return;
+        state.selectedLibraryType = assetId;
         renderLibraryModal();
       });
 
@@ -3432,9 +3768,9 @@
         const card = target.closest("[data-action='select-library']");
         if (!(card instanceof HTMLElement)) return;
         event.preventDefault();
-        const type = card.getAttribute("data-type");
-        if (!type) return;
-        state.selectedLibraryType = type;
+        const assetId = card.getAttribute("data-asset-id");
+        if (!assetId) return;
+        state.selectedLibraryType = assetId;
         renderLibraryModal();
       });
     }
@@ -3465,7 +3801,7 @@
           alert("Select a section first.");
           return;
         }
-        addSection(state.selectedLibraryType);
+        addSectionFromLibraryAsset(state.selectedLibraryType);
         closeAddDialog();
       });
     }

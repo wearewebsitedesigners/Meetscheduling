@@ -33,6 +33,8 @@ const SECTION_DEFINITIONS = Object.freeze({
       logoUrl: "/assets/scheduling-logo.svg",
       brandDisplay: "image",
       styleVariant: "style1",
+      desktopMenuMode: "center",
+      mobileMenuMode: "drawer",
       logoWidth: 46,
       logoHeight: 46,
       navLinks: [
@@ -794,6 +796,12 @@ function normalizeSectionSettings(type, settings, fallbackSettings) {
       styleVariant: ["style1", "style2", "style3", "style4", "style5"].includes(safeText(source.styleVariant, "", 16))
         ? safeText(source.styleVariant, "style1", 16)
         : safeText(fallback.styleVariant, "style1", 16),
+      desktopMenuMode: ["inline", "center"].includes(safeText(source.desktopMenuMode, "", 16))
+        ? safeText(source.desktopMenuMode, "center", 16)
+        : safeText(fallback.desktopMenuMode, "center", 16),
+      mobileMenuMode: ["drawer", "inline"].includes(safeText(source.mobileMenuMode, "", 16))
+        ? safeText(source.mobileMenuMode, "drawer", 16)
+        : safeText(fallback.mobileMenuMode, "drawer", 16),
       logoWidth: clamp(source.logoWidth, 28, 240, clamp(fallback.logoWidth, 28, 240, 46)),
       logoHeight: clamp(source.logoHeight, 28, 140, clamp(fallback.logoHeight, 28, 140, 46)),
       navLinks: normalizeNavLinks(source.navLinks, fallback.navLinks),

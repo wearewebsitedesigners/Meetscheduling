@@ -1,0 +1,3925 @@
+(function landingPageEditorController() {
+  const renderer = window.LandingPageRenderer;
+  if (!renderer) return;
+
+  const AUTH_TOKEN_KEY = "meetscheduling_auth_token";
+  const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+  const ALLOWED_UPLOAD_TYPES = new Set([
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+  ]);
+  const LEFT_PANEL_DEFAULT_WIDTH = 320;
+  const LEFT_PANEL_MIN_WIDTH = 280;
+  const LEFT_PANEL_MAX_WIDTH = 460;
+  const RIGHT_PANEL_DEFAULT_WIDTH = 420;
+  const RIGHT_PANEL_MIN_WIDTH = 320;
+  const RIGHT_PANEL_MAX_WIDTH = 560;
+  const RAIL_COLLAPSED_WIDTH = 34;
+  const RAIL_EXPANDED_WIDTH = 104;
+  const TOPBAR_FOCUS_ICON = `<svg class="lpe-topbar-icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M16 3h3a2 2 0 0 1 2 2v3"></path><path d="M8 21H5a2 2 0 0 1-2-2v-3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path></svg>`;
+
+  const els = {
+    shell: document.querySelector(".lpe-shell"),
+    pageTitle: document.getElementById("lpe-page-title"),
+    pageMeta: document.getElementById("lpe-page-meta"),
+    saveStatus: document.getElementById("lpe-save-status"),
+    topSaveState: document.getElementById("lpe-top-save-state"),
+    focusBtn: document.getElementById("lpe-focus-btn"),
+    previewBtn: document.getElementById("lpe-preview-btn"),
+    copyLinkBtn: document.getElementById("lpe-copy-link-btn"),
+    publishBtn: document.getElementById("lpe-publish-btn"),
+    saveTopBtn: document.getElementById("lpe-save-top-btn"),
+    layout: document.getElementById("lpe-layout"),
+    utilityRail: document.getElementById("lpe-utility-rail"),
+    railToggle: document.getElementById("lpe-rail-toggle"),
+    leftPanel: document.getElementById("lpe-left-panel"),
+    rightPanel: document.getElementById("lpe-right-panel"),
+    leftCollapseBtn: document.getElementById("lpe-left-collapse"),
+    rightCollapseBtn: document.getElementById("lpe-right-collapse"),
+    leftResizer: document.getElementById("lpe-resizer-left"),
+    rightResizer: document.getElementById("lpe-resizer-right"),
+    sectionsFilter: document.getElementById("lpe-sections-filter"),
+    sectionsList: document.getElementById("lpe-sections-list"),
+    previewFrame: document.getElementById("lpe-preview-frame"),
+    previewRoot: document.getElementById("lpe-preview-root"),
+    openThemeDialogBtn: document.getElementById("lpe-open-theme-dialog"),
+    prebuiltTriggerMeta: document.getElementById("lpe-prebuilt-trigger-meta"),
+    themeControls: document.getElementById("lpe-theme-controls"),
+    sectionControls: document.getElementById("lpe-section-controls"),
+    historyList: document.getElementById("lpe-history-list"),
+    rightTabButtons: Array.from(document.querySelectorAll("[data-right-tab-btn]")),
+    rightTabPanels: Array.from(document.querySelectorAll("[data-right-tab-panel]")),
+    googleSnippet: document.getElementById("lpe-google-snippet"),
+    ogPreview: document.getElementById("lpe-og-preview"),
+    twitterPreview: document.getElementById("lpe-twitter-preview"),
+    addSectionBtn: document.getElementById("lpe-add-section-btn"),
+    addDialog: document.getElementById("lpe-add-dialog"),
+    dialogCancel: document.getElementById("lpe-dialog-cancel"),
+    dialogBack: document.getElementById("lpe-dialog-back"),
+    dialogSelect: document.getElementById("lpe-dialog-select"),
+    libraryGrid: document.getElementById("lpe-library-grid"),
+    libraryCategories: document.getElementById("lpe-library-categories"),
+    librarySearch: document.getElementById("lpe-library-search"),
+    libraryMainTitle: document.getElementById("lpe-library-main-title"),
+    themeDialog: document.getElementById("lpe-theme-dialog"),
+    themeDialogCancel: document.getElementById("lpe-theme-dialog-cancel"),
+    themeDialogApply: document.getElementById("lpe-theme-dialog-apply"),
+    themeGrid: document.getElementById("lpe-theme-grid"),
+  };
+
+  const SECTION_DEFAULTS = Object.freeze({
+    marquee: {
+      items: ["FREE SHIPPING ON ORDERS OVER $100", "BOOK NOW, PAY LATER", "PREMIUM HUMAN HAIR"],
+      speed: 28,
+      uppercase: true,
+    },
+    header: {
+      brandName: "MeetScheduling",
+      logoUrl: "/assets/scheduling-logo.svg",
+      brandDisplay: "image",
+      styleVariant: "style1",
+      desktopMenuMode: "center",
+      mobileMenuMode: "drawer",
+      logoWidth: 46,
+      logoHeight: 46,
+      navLinks: [
+        { label: "Home", href: "#top" },
+        { label: "Services", href: "#services" },
+        { label: "Reviews", href: "#reviews" },
+        { label: "Contact", href: "#contact" },
+      ],
+      showSearch: true,
+      searchPlaceholder: "Search services...",
+      ctaLabel: "Book Now",
+      ctaHref: "#services",
+      sticky: false,
+    },
+    imageBanner: {
+      pretitle: "Luxury Collection",
+      title: "Raw hair that feels naturally yours",
+      subtitle: "Crafted for premium installs, everyday confidence, and long-term wear.",
+      backgroundImageUrl: "",
+      mobileImageUrl: "",
+      align: "left",
+      buttonLabel: "Shop Collection",
+      buttonHref: "#services",
+      overlayOpacity: 22,
+      height: "lg",
+    },
+    slideShow: {
+      title: "Featured looks",
+      subtitle: "Swipe through this season's signature installs.",
+      autoplay: true,
+      intervalSeconds: 6,
+      slides: [
+        {
+          imageUrl: "",
+          title: "Natural Hair Install",
+          subtitle: "Breathable lace with realistic finish.",
+          buttonLabel: "Book now",
+          buttonHref: "#services",
+        },
+      ],
+    },
+    hero: {
+      badge: "Premium salon experience",
+      title: "Where beauty meets precision",
+      subtitle: "Create unforgettable beauty experiences with services clients can book instantly.",
+      primaryButtonLabel: "Book consultation",
+      primaryButtonHref: "#services",
+      secondaryButtonLabel: "View services",
+      secondaryButtonHref: "#services",
+      backgroundImageUrl: "",
+      align: "left",
+    },
+    text: {
+      title: "About our studio",
+      body: "We blend modern techniques with personalized care to deliver custom looks for every client.",
+      align: "left",
+    },
+    imageShowcase: {
+      title: "Gallery",
+      subtitle: "A glimpse of our latest transformations",
+      columnsDesktop: 3,
+      columnsMobile: 1,
+      images: [{ url: "", alt: "Style showcase 1" }],
+    },
+    servicesMenu: {
+      title: "Services",
+      subtitle: "Indulge in our curated selection of professional beauty treatments.",
+      viewMode: "tabs",
+      showSearch: true,
+      showPhotos: true,
+      showDuration: true,
+      showPrice: true,
+      cardRadius: 14,
+      columnsDesktop: 2,
+      columnsMobile: 1,
+      categoryIds: [],
+      showViewAll: true,
+      viewAllLabel: "View All Services",
+      bookButtonLabel: "Book",
+      bookButtonStyle: "solid",
+    },
+    spotlightGrid: {
+      title: "Shop by style",
+      subtitle: "Browse our best-selling looks and signature textures.",
+      columnsDesktop: 3,
+      cards: [
+        {
+          title: "Glueless units",
+          description: "Install-ready wigs for everyday wear.",
+          imageUrl: "",
+          buttonLabel: "Explore",
+          buttonHref: "#services",
+        },
+        {
+          title: "Lace front wigs",
+          description: "Natural hairline with premium volume.",
+          imageUrl: "",
+          buttonLabel: "Explore",
+          buttonHref: "#services",
+        },
+      ],
+    },
+    productGrid: {
+      title: "Featured services",
+      subtitle: "Most booked appointments from your catalog.",
+      columnsDesktop: 4,
+      limit: 8,
+      showDescription: true,
+      showDuration: true,
+      showPrice: true,
+      buttonLabel: "Book",
+    },
+    stylists: {
+      title: "Meet the Stylists",
+      subtitle: "Experts who bring your vision to life",
+      members: [{ name: "Lead Stylist", role: "Color Specialist", imageUrl: "", bio: "" }],
+    },
+    reviewsMarquee: {
+      title: "Loved by clients",
+      subtitle: "Real stories from happy customers",
+      style: "cards",
+      speed: 35,
+      pauseOnHover: true,
+      showStars: true,
+      rows: 1,
+    },
+    customerReviewBlock: {
+      title: "What our clients say",
+      subtitle: "Trusted by customers across the world.",
+      columnsDesktop: 3,
+      showStars: true,
+    },
+    instagramGrid: {
+      title: "@hairluxury",
+      subtitle: "Follow us for installs, transformations, and care tips.",
+      handle: "@hairluxury",
+      columnsDesktop: 5,
+      images: [
+        { url: "", link: "" },
+        { url: "", link: "" },
+        { url: "", link: "" },
+        { url: "", link: "" },
+        { url: "", link: "" },
+      ],
+    },
+    contactMap: {
+      title: "Visit us",
+      subtitle: "Walk-ins welcome during business hours",
+      address: "123 Beauty Street, Your City",
+      phone: "+1 (555) 000-1234",
+      email: "hello@yourstudio.com",
+      mapEmbedUrl: "",
+      showForm: true,
+    },
+    faq: {
+      title: "Frequently asked questions",
+      items: [
+        {
+          question: "How far in advance should I book?",
+          answer: "We recommend booking at least 2-3 days in advance for peak times.",
+        },
+      ],
+    },
+    newsletterSignup: {
+      title: "Newsletter sign up",
+      subtitle: "Get new arrivals, wig care tips, and exclusive offers first.",
+      placeholder: "Enter your email",
+      buttonLabel: "Submit",
+      note: "By subscribing, you agree to receive marketing emails.",
+      backgroundImageUrl: "",
+    },
+    footer: {
+      copyright: "© MeetScheduling",
+      tagline: "Built with MeetScheduling",
+      links: [
+        { label: "Privacy", href: "/privacy" },
+        { label: "Terms", href: "/terms" },
+      ],
+    },
+  });
+
+  const SECTION_ASSET_VARIANTS = Object.freeze([
+    {
+      id: "header-nav-constrained",
+      type: "header",
+      category: "headerNavigation",
+      label: "Constrained navigation",
+      description: "Balanced navigation with logo, menu links, and CTA.",
+      icon: "layout",
+      singleton: true,
+      previewKind: "navigation",
+      previewImage: "/assets/previews/header-nav-constrained.svg",
+      settings: {
+        styleVariant: "style1",
+        desktopMenuMode: "center",
+        mobileMenuMode: "drawer",
+        showSearch: false,
+      },
+    },
+    {
+      id: "header-nav-full-width",
+      type: "header",
+      category: "headerNavigation",
+      label: "Full width navigation",
+      description: "Wide navigation row with links and CTA on desktop.",
+      icon: "layout",
+      singleton: true,
+      previewKind: "navigation",
+      previewImage: "/assets/previews/header-nav-full-width.svg",
+      settings: {
+        styleVariant: "style2",
+        desktopMenuMode: "inline",
+        mobileMenuMode: "drawer",
+        showSearch: false,
+      },
+    },
+    {
+      id: "header-nav-centered-logo",
+      type: "header",
+      category: "headerNavigation",
+      label: "With centered logo navigation",
+      description: "Centered logo with navigation structure similar to modern SaaS headers.",
+      icon: "layout",
+      singleton: true,
+      previewKind: "navigation",
+      previewImage: "/assets/previews/header-nav-centered-logo.svg",
+      settings: {
+        styleVariant: "style4",
+        desktopMenuMode: "center",
+        mobileMenuMode: "drawer",
+        showSearch: false,
+      },
+    },
+    {
+      id: "header-nav-right-aligned",
+      type: "header",
+      category: "headerNavigation",
+      label: "With right aligned navigation",
+      description: "Brand on left with menu and actions aligned to the right.",
+      icon: "layout",
+      singleton: true,
+      previewKind: "navigation",
+      previewImage: "/assets/previews/header-nav-right-aligned.svg",
+      settings: {
+        styleVariant: "style1",
+        desktopMenuMode: "inline",
+        mobileMenuMode: "drawer",
+        showSearch: false,
+      },
+    },
+    {
+      id: "header-nav-left-aligned",
+      type: "header",
+      category: "headerNavigation",
+      label: "With left aligned navigation",
+      description: "Navigation grouped close to brand for left-weighted layouts.",
+      icon: "layout",
+      singleton: true,
+      previewKind: "navigation",
+      previewImage: "/assets/previews/header-nav-left-aligned.svg",
+      settings: {
+        styleVariant: "style3",
+        desktopMenuMode: "inline",
+        mobileMenuMode: "drawer",
+        showSearch: false,
+      },
+    },
+    {
+      id: "cta-simple-left",
+      type: "hero",
+      category: "cta",
+      label: "Call to action simple to the left",
+      description: "Left-aligned copy with strong CTA and support link.",
+      icon: "sparkles",
+      singleton: false,
+      previewKind: "cta",
+      settings: {
+        align: "left",
+        badge: "Ready to get started?",
+        title: "Start your free trial today",
+        subtitle: "Join thousands of satisfied users who discovered the power of our platform.",
+        primaryButtonLabel: "Get started",
+        secondaryButtonLabel: "Learn more",
+      },
+    },
+    {
+      id: "cta-simple-justified",
+      type: "hero",
+      category: "cta",
+      label: "Call to action simple justified",
+      description: "Wide two-sided layout with CTA actions on the right.",
+      icon: "sparkles",
+      singleton: false,
+      previewKind: "cta",
+      settings: {
+        align: "left",
+        badge: "Ready to dive in?",
+        title: "Start your free trial today.",
+        subtitle: "Experience our platform with full access and no commitment trial.",
+        primaryButtonLabel: "Get started",
+        secondaryButtonLabel: "Learn more",
+      },
+    },
+    {
+      id: "cta-simple-centered",
+      type: "hero",
+      category: "cta",
+      label: "Call to action simple centered",
+      description: "Centered headline and dual CTA for conversion-focused sections.",
+      icon: "sparkles",
+      singleton: false,
+      previewKind: "cta",
+      settings: {
+        align: "center",
+        badge: "Ready to get started?",
+        title: "Start your free trial today",
+        subtitle: "Experience the difference for yourself with our risk-free trial.",
+        primaryButtonLabel: "Get started",
+        secondaryButtonLabel: "Learn more",
+      },
+    },
+    {
+      id: "cta-centered-panel",
+      type: "hero",
+      category: "cta",
+      label: "Call to action centered within a panel",
+      description: "Framed centered CTA block suitable for featured announcements.",
+      icon: "sparkles",
+      singleton: false,
+      previewKind: "cta",
+      settings: {
+        align: "center",
+        badge: "Transform your workflow",
+        title: "Ready to transform your workflow?",
+        subtitle: "Join thousands of teams who already revolutionized their process.",
+        primaryButtonLabel: "Get started",
+        secondaryButtonLabel: "Learn more",
+      },
+    },
+    {
+      id: "cta-split-image-right",
+      type: "imageBanner",
+      category: "cta",
+      label: "Call to action split with image right",
+      description: "Text-first CTA with visual split treatment and right media area.",
+      icon: "image",
+      singleton: false,
+      previewKind: "ctaImage",
+      settings: {
+        align: "left",
+        pretitle: "Transform Your Business",
+        title: "Elevate Your Workflow Today",
+        subtitle: "Platform features that integrate seamlessly with your existing workflow.",
+        buttonLabel: "Start free trial",
+        overlayOpacity: 10,
+      },
+    },
+    {
+      id: "cta-split-image",
+      type: "imageBanner",
+      category: "cta",
+      label: "Call to action split with image",
+      description: "Image-led split composition with supporting CTA copy.",
+      icon: "image",
+      singleton: false,
+      previewKind: "ctaImage",
+      settings: {
+        align: "right",
+        pretitle: "Transform Your Business",
+        title: "Elevate Your Workflow Today",
+        subtitle: "Join thousands of users with our comprehensive suite of tools.",
+        buttonLabel: "Start free trial",
+        overlayOpacity: 8,
+      },
+    },
+    {
+      id: "cta-two-columns-photo",
+      type: "imageBanner",
+      category: "cta",
+      label: "Call to action two columns with photo",
+      description: "Two-column CTA with image and feature highlights.",
+      icon: "image",
+      singleton: false,
+      previewKind: "ctaImage",
+      settings: {
+        align: "center",
+        pretitle: "Join our team",
+        title: "Become part of our team",
+        subtitle: "Exceptional perks and a supportive workplace designed to foster growth.",
+        buttonLabel: "Explore opportunities",
+        overlayOpacity: 12,
+      },
+    },
+    {
+      id: "cta-two-columns-photo-right",
+      type: "imageBanner",
+      category: "cta",
+      label: "Call to action two columns with photo right",
+      description: "Two-column CTA with right photo, left text and action links.",
+      icon: "image",
+      singleton: false,
+      previewKind: "ctaImage",
+      settings: {
+        align: "left",
+        pretitle: "Grow with us",
+        title: "Join our growing team",
+        subtitle: "Collaborative culture, strong benefits, and fast growth opportunities.",
+        buttonLabel: "Open positions",
+        overlayOpacity: 12,
+      },
+    },
+    {
+      id: "cta-with-app-screenshot",
+      type: "imageBanner",
+      category: "cta",
+      label: "Call to action with app screenshot",
+      description: "Product-focused CTA with screenshot-style visual emphasis.",
+      icon: "image",
+      singleton: false,
+      previewKind: "ctaImage",
+      settings: {
+        align: "left",
+        pretitle: "Advanced Technology",
+        title: "Transform Business with Easytools",
+        subtitle: "Simplify complex workflows and drive measurable results quickly.",
+        buttonLabel: "Get started",
+        overlayOpacity: 14,
+      },
+    },
+  ]);
+
+  const state = {
+    pageId: "",
+    page: null,
+    draftConfig: null,
+    publishedConfig: null,
+    categories: [],
+    services: [],
+    reviews: [],
+    eventTypes: [],
+    history: [],
+    sectionLibrary: [],
+    presets: [],
+    selectedSectionId: "",
+    openRowMenuSectionId: "",
+    selectedLibraryType: "",
+    libraryCategory: "all",
+    librarySearchText: "",
+    selectedThemeTemplateId: "",
+    sectionsFilterText: "",
+    rightTab: "element",
+    device: "desktop",
+    railExpanded: false,
+    focusMode: false,
+    focusMemory: null,
+    leftPanelCollapsed: false,
+    rightPanelCollapsed: true,
+    leftPanelWidth: LEFT_PANEL_DEFAULT_WIDTH,
+    rightPanelWidth: RIGHT_PANEL_DEFAULT_WIDTH,
+    isDirty: false,
+    saveStatusType: "saved",
+    saveTimer: null,
+    saveInFlight: false,
+    saveQueued: false,
+    publishInFlight: false,
+    changeVersion: 0,
+    previewRenderFrame: 0,
+  };
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function deepClone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function safeText(value, fallback, max) {
+    if (value === undefined || value === null) return fallback || "";
+    const text = String(value).trim();
+    if (!text) return "";
+    if (!max) return text;
+    return text.slice(0, max);
+  }
+
+  function safeNumber(value, fallback) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return Number(fallback);
+    return parsed;
+  }
+
+  function token() {
+    return String(localStorage.getItem(AUTH_TOKEN_KEY) || "").trim();
+  }
+
+  function clearSession() {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem("meetscheduling_auth_user");
+  }
+
+  async function apiRequest(path, options) {
+    const authToken = token();
+    if (!authToken) {
+      window.location.replace("/login");
+      throw new Error("Session expired. Please log in again.");
+    }
+
+    const headers = new Headers(options && options.headers ? options.headers : {});
+    headers.set("Authorization", `Bearer ${authToken}`);
+    if (!headers.has("Content-Type") && options && options.body) {
+      headers.set("Content-Type", "application/json");
+    }
+
+    const response = await fetch(path, {
+      ...(options || {}),
+      headers,
+    });
+
+    const text = await response.text();
+    let payload = {};
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        payload = {};
+      }
+    }
+
+    if (response.status === 401) {
+      clearSession();
+      window.location.replace("/login");
+      throw new Error("Session expired. Please log in again.");
+    }
+
+    if (!response.ok) {
+      throw new Error(payload.error || payload.message || "Request failed");
+    }
+
+    return payload;
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(String(reader.result || ""));
+      };
+      reader.onerror = () => {
+        reject(new Error("Could not read selected image."));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function getUploadInputByPath(path) {
+    if (!path) return null;
+    const candidates = Array.from(document.querySelectorAll("input[type='file'][data-upload-input='true']"));
+    return candidates.find((input) => input.getAttribute("data-path") === path) || null;
+  }
+
+  async function handleImageUpload(path, inputEl) {
+    const file = inputEl?.files && inputEl.files[0] ? inputEl.files[0] : null;
+    if (!file || !path) return;
+
+    if (!ALLOWED_UPLOAD_TYPES.has(String(file.type || "").toLowerCase())) {
+      setSaveStatus("error", "Use PNG, JPG, WEBP, or GIF.");
+      inputEl.value = "";
+      return;
+    }
+    if (Number(file.size || 0) > MAX_UPLOAD_BYTES) {
+      setSaveStatus("error", "Image too large. Max 5MB.");
+      inputEl.value = "";
+      return;
+    }
+
+    setSaveStatus("saving", "Uploading image...");
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const payload = await apiRequest("/api/uploads/images", {
+        method: "POST",
+        body: JSON.stringify({
+          dataUrl,
+          fileName: file.name || "upload-image",
+        }),
+      });
+      const uploadedUrl = safeText(payload.url, "");
+      if (!uploadedUrl) throw new Error("Image upload failed.");
+
+      setPathValue(path, uploadedUrl, "string");
+      renderAll();
+      queueAutosave();
+      setSaveStatus("saved", "Image uploaded");
+    } catch (error) {
+      setSaveStatus("error", error.message || "Image upload failed");
+    } finally {
+      inputEl.value = "";
+    }
+  }
+
+  function sectionList() {
+    return Array.isArray(state.draftConfig?.sections) ? state.draftConfig.sections : [];
+  }
+
+  function sectionLabelByType(type, fallbackLabel) {
+    const normalizedType = String(type || "");
+    if (normalizedType === "servicesMenu") return "Services";
+    return String(fallbackLabel || normalizedType);
+  }
+
+  function sectionAssetIcon(iconName) {
+    const icons = {
+      minus: '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg>',
+      layout:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.6"/><path d="M2 6.2h12"/></svg>',
+      image:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.2" width="12" height="11.6" rx="1.4"/><circle cx="5.2" cy="5.3" r="1.1"/><path d="M3.6 11 7.2 7.7l2.2 2 1.5-1.4L12.7 11"/></svg>',
+      images:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="3" width="7.4" height="9.4" rx="1.1"/><rect x="7" y="2.2" width="7.4" height="9.4" rx="1.1"/></svg>',
+      sparkles:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 9.4 6l4.2 1.4-4.2 1.4L8 13 6.6 8.8 2.4 7.4 6.6 6z"/></svg>',
+      type: '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3h11"/><path d="M8 3v10"/></svg>',
+      scissors:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4.2" cy="11.2" r="1.9"/><circle cx="4.2" cy="4.8" r="1.9"/><path d="m6 6.2 7.2-4M6 9.8l7.2 4"/></svg>',
+      grid:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5.2" height="5.2" rx="0.8"/><rect x="8.8" y="2" width="5.2" height="5.2" rx="0.8"/><rect x="2" y="8.8" width="5.2" height="5.2" rx="0.8"/><rect x="8.8" y="8.8" width="5.2" height="5.2" rx="0.8"/></svg>',
+      "shopping-bag":
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5.5h10l-.8 8H3.8z"/><path d="M5.5 5.5V4.8a2.5 2.5 0 0 1 5 0v.7"/></svg>',
+      users:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.3" cy="5.1" r="2"/><circle cx="10.8" cy="5.6" r="1.7"/><path d="M2.6 12.8a3.1 3.1 0 0 1 5.4-1.9"/><path d="M8.2 12.8a2.9 2.9 0 0 1 5.2-1.7"/></svg>',
+      quote: '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h3v5H1V8l2-4h3zM10 8h3v5H8V8l2-4h3z"/></svg>',
+      instagram:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.3" y="2.3" width="11.4" height="11.4" rx="3"/><circle cx="8" cy="8" r="2.7"/><circle cx="11.4" cy="4.6" r="0.8"/></svg>',
+      map:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14s4-3.9 4-7a4 4 0 1 0-8 0c0 3.1 4 7 4 7z"/><circle cx="8" cy="7" r="1.5"/></svg>',
+      help:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M6.5 6a1.6 1.6 0 1 1 2.4 1.4c-.7.4-.9.7-.9 1.6"/><circle cx="8" cy="11.8" r="0.6"/></svg>',
+      mail:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.4"/><path d="m2.8 4.2 5.2 4.3 5.2-4.3"/></svg>',
+    };
+    return icons[String(iconName || "").toLowerCase()] || icons.layout;
+  }
+
+  function navigationPreviewVariant(asset) {
+    const assetId = safeText(asset?.assetId, "", 80);
+    if (assetId === "variant:header-nav-full-width") return "full-width";
+    if (assetId === "variant:header-nav-centered-logo") return "centered-logo";
+    if (assetId === "variant:header-nav-right-aligned") return "right-aligned";
+    if (assetId === "variant:header-nav-left-aligned") return "left-aligned";
+    return "constrained";
+  }
+
+  function safePreviewImagePath(value) {
+    const path = safeText(value, "", 200);
+    if (!path) return "";
+    return /^\/assets\/[a-z0-9/_-]+\.(svg|png|jpg|jpeg|webp)$/i.test(path) ? path : "";
+  }
+
+  function sectionAssetPreviewMarkup(asset) {
+    const previewKind = safeText(asset?.previewKind, "default", 24);
+    if (previewKind === "navigation") {
+      const previewImage = safePreviewImagePath(asset?.previewImage);
+      if (previewImage) {
+        return `
+          <div class="lpe-library-card-preview lpe-library-card-preview-image">
+            <img src="${escapeHtml(previewImage)}" alt="${escapeHtml(
+          safeText(asset?.label, "Header preview", 120) || "Header preview"
+        )}" loading="lazy" />
+          </div>
+        `;
+      }
+      const navVariant = navigationPreviewVariant(asset);
+      return `
+        <div class="lpe-library-card-preview lpe-library-card-preview-nav lpe-library-card-preview-nav-${navVariant}">
+          <div class="lpe-library-preview-nav-shell">
+            <span class="lpe-library-preview-nav-brand"></span>
+            <div class="lpe-library-preview-nav-menu lpe-library-preview-nav-menu-primary">
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <div class="lpe-library-preview-nav-menu lpe-library-preview-nav-menu-secondary">
+              <span></span><span></span>
+            </div>
+            <span class="lpe-library-preview-nav-search"></span>
+            <span class="lpe-library-preview-nav-cta"></span>
+          </div>
+        </div>
+      `;
+    }
+    if (previewKind === "cta" || previewKind === "ctaImage") {
+      return `
+        <div class="lpe-library-card-preview lpe-library-card-preview-cta ${
+          previewKind === "ctaImage" ? "is-image" : ""
+        }">
+          <div class="lpe-library-preview-cta-line"></div>
+          <div class="lpe-library-preview-cta-line short"></div>
+          <div class="lpe-library-preview-cta-actions">
+            <span></span><span></span>
+          </div>
+        </div>
+      `;
+    }
+    const previewTone = /^[a-z0-9-]+$/.test(String(asset?.category || "")) ? String(asset.category) : "all";
+    return `
+      <div class="lpe-library-card-preview lpe-library-card-preview-${escapeHtml(previewTone)}">
+        <span></span><span></span><span></span>
+      </div>
+    `;
+  }
+
+  function libraryAssets() {
+    const baseAssets = (Array.isArray(state.sectionLibrary) ? state.sectionLibrary : []).map((item) => ({
+      assetId: `type:${String(item.type || "")}`,
+      type: String(item.type || ""),
+      category: safeText(item.category, "other", 40).toLowerCase() || "other",
+      label: sectionLabelByType(item.type, item.label || item.type),
+      description: safeText(item.description, "", 240),
+      icon: safeText(item.icon, "layout", 40),
+      singleton: Boolean(item.singleton),
+      previewKind: "default",
+      settings: null,
+      customLabel: "",
+    }));
+
+    const variantAssets = SECTION_ASSET_VARIANTS.map((item) => ({
+      assetId: `variant:${String(item.id || "")}`,
+      type: String(item.type || ""),
+      category: safeText(item.category, "other", 40).toLowerCase() || "other",
+      label: safeText(item.label, String(item.type || ""), 120),
+      description: safeText(item.description, "", 240),
+      icon: safeText(item.icon, "layout", 40),
+      singleton: Boolean(item.singleton),
+      previewKind: safeText(item.previewKind, "default", 24),
+      previewImage: safePreviewImagePath(item.previewImage),
+      settings: deepClone(item.settings || {}),
+      customLabel: safeText(item.label, "", 120),
+    }));
+
+    return [...variantAssets, ...baseAssets].filter((item) => Boolean(item.type));
+  }
+
+  function getSectionById(sectionId) {
+    return sectionList().find((item) => String(item.id) === String(sectionId)) || null;
+  }
+
+  function selectedSection() {
+    return getSectionById(state.selectedSectionId);
+  }
+
+  function findSectionIndexById(sectionId) {
+    return sectionList().findIndex((item) => String(item.id) === String(sectionId));
+  }
+
+  function hasPublishedMatch() {
+    if (!state.draftConfig || !state.publishedConfig) return false;
+    try {
+      return JSON.stringify(state.draftConfig) === JSON.stringify(state.publishedConfig);
+    } catch {
+      return false;
+    }
+  }
+
+  function updatePublishButtonState() {
+    if (!els.publishBtn) return;
+    const isPublished = hasPublishedMatch() && !state.isDirty;
+    els.publishBtn.classList.toggle("is-published", isPublished);
+    els.publishBtn.textContent = state.publishInFlight ? "Publishing..." : isPublished ? "Published" : "Publish";
+    const disablePublish = state.saveInFlight || state.publishInFlight;
+    els.publishBtn.disabled = disablePublish;
+    els.publishBtn.setAttribute("aria-disabled", disablePublish ? "true" : "false");
+    els.publishBtn.setAttribute(
+      "aria-label",
+      state.publishInFlight
+        ? "Publishing"
+        : isPublished
+          ? "Published. Click to publish new changes"
+          : "Publish"
+    );
+  }
+
+  function updateSaveActions() {
+    const shouldDisableSave = !state.isDirty || state.saveInFlight;
+    if (els.saveTopBtn) {
+      els.saveTopBtn.disabled = shouldDisableSave;
+      els.saveTopBtn.setAttribute("aria-disabled", shouldDisableSave ? "true" : "false");
+      if (state.saveInFlight) {
+        els.saveTopBtn.textContent = "Saving...";
+      } else {
+        els.saveTopBtn.textContent = state.isDirty ? "Save" : "Saved";
+      }
+    }
+    updatePublishButtonState();
+  }
+
+  function setDirty(value) {
+    state.isDirty = Boolean(value);
+    updateSaveActions();
+  }
+
+  function applySaveStatus(node, type, text) {
+    if (!node) return;
+    node.classList.remove("is-saving", "is-error", "is-dirty", "is-saved");
+    node.classList.add(
+      type === "error" ? "is-error" : type === "saving" ? "is-saving" : type === "dirty" ? "is-dirty" : "is-saved"
+    );
+    node.textContent = text;
+  }
+
+  function setSaveStatus(type, customText) {
+    state.saveStatusType = type;
+    let text = customText || "Saved";
+    if (!customText) {
+      if (type === "saving") text = "Saving...";
+      if (type === "error") text = "Save failed";
+      if (type === "dirty") text = "Unsaved changes";
+      if (type === "saved") text = "Saved";
+    }
+    applySaveStatus(els.saveStatus, type, text);
+    applySaveStatus(els.topSaveState, type, text);
+    updateSaveActions();
+  }
+
+  function ensureSelection() {
+    const sections = sectionList();
+    if (!sections.length) {
+      state.selectedSectionId = "";
+      return;
+    }
+    if (!state.selectedSectionId || !sections.some((item) => item.id === state.selectedSectionId)) {
+      state.selectedSectionId = sections[0].id;
+    }
+  }
+
+  function parsePageIdFromPath() {
+    const match = window.location.pathname.match(/\/dashboard\/landing-page\/([^/]+)\/editor/);
+    if (!match) return "";
+    return decodeURIComponent(match[1]);
+  }
+
+  function formatDateTime(value) {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "Unknown";
+    return parsed.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  function pageShareUrl() {
+    if (!state.page) return "";
+    return `${window.location.origin}${state.page.shareUrl || `/${state.page.slug}`}`;
+  }
+
+  function createSection(type) {
+    const defaults = deepClone(SECTION_DEFAULTS[type] || {});
+    return {
+      id: `${type}-${Math.random().toString(36).slice(2, 8)}`,
+      type,
+      enabled: true,
+      settings: defaults,
+    };
+  }
+
+  function normalizePayload(payload) {
+    state.page = payload.page || state.page;
+    state.draftConfig = deepClone(payload.draftConfig || state.draftConfig || { theme: {}, sections: [] });
+    state.publishedConfig = deepClone(payload.publishedConfig || state.publishedConfig || { theme: {}, sections: [] });
+    state.categories = Array.isArray(payload.categories) ? payload.categories : state.categories;
+    state.services = Array.isArray(payload.services) ? payload.services : state.services;
+    state.reviews = Array.isArray(payload.reviews) ? payload.reviews : state.reviews;
+    state.eventTypes = Array.isArray(payload.eventTypes) ? payload.eventTypes : state.eventTypes;
+    state.history = Array.isArray(payload.history) ? payload.history : state.history;
+    state.sectionLibrary = Array.isArray(payload.sectionLibrary) ? payload.sectionLibrary : state.sectionLibrary;
+    state.presets = Array.isArray(payload.presets) ? payload.presets : state.presets;
+    ensureSelection();
+  }
+
+  function defaultPresetThemes() {
+    return [
+      {
+        id: "hairluxury",
+        name: "Hairluxury Signature",
+        description: "Shopify-inspired luxury storefront styling.",
+        theme: {
+          primary: "#7f5933",
+          secondary: "#e5cc83",
+          background: "#f7f3ee",
+          surface: "#ffffff",
+          text: "#1f1a16",
+          muted: "#67594d",
+          border: "#d8cbbb",
+          font: "DM Sans",
+          radius: 10,
+          sectionPadding: 48,
+          buttonStyle: "solid",
+          shadowStyle: "minimal",
+          animationsEnabled: true,
+          animationStyle: "subtle",
+        },
+      },
+      {
+        id: "luxe",
+        name: "Luxe Glow",
+        description: "Elegant gradients with premium spacing.",
+        theme: {
+          primary: "#7c3aed",
+          secondary: "#d946ef",
+          background: "#f6f5fb",
+          surface: "#ffffff",
+          text: "#171a2b",
+          muted: "#5f6377",
+          border: "#e4ddf8",
+          font: "DM Sans",
+          radius: 14,
+          sectionPadding: 52,
+          buttonStyle: "gradient",
+          shadowStyle: "soft",
+          animationsEnabled: true,
+          animationStyle: "subtle",
+        },
+      },
+      {
+        id: "minimal",
+        name: "Minimal Studio",
+        description: "Clean style with subtle blue accents.",
+        theme: {
+          primary: "#1a73e8",
+          secondary: "#0f766e",
+          background: "#f4f7fb",
+          surface: "#ffffff",
+          text: "#111827",
+          muted: "#5b6475",
+          border: "#d8e1ef",
+          font: "Inter",
+          radius: 12,
+          sectionPadding: 48,
+          buttonStyle: "solid",
+          shadowStyle: "minimal",
+          animationsEnabled: true,
+          animationStyle: "subtle",
+        },
+      },
+      {
+        id: "vivid",
+        name: "Vivid Editorial",
+        description: "Bold contrast and energetic highlights.",
+        theme: {
+          primary: "#ef4444",
+          secondary: "#f59e0b",
+          background: "#f8fafc",
+          surface: "#ffffff",
+          text: "#0f172a",
+          muted: "#55607a",
+          border: "#d7dfed",
+          font: "Sora",
+          radius: 16,
+          sectionPadding: 56,
+          buttonStyle: "outline",
+          shadowStyle: "medium",
+          animationsEnabled: true,
+          animationStyle: "medium",
+        },
+      },
+    ];
+  }
+
+  function presetListWithTheme() {
+    const incoming = Array.isArray(state.presets) ? state.presets : [];
+    const withTheme = incoming.filter((item) => item && item.theme);
+    if (withTheme.length) return withTheme;
+    return defaultPresetThemes();
+  }
+
+  function templateDefinitions() {
+    return [
+      {
+        id: "hair-salon-complete",
+        name: "Hair Salon Complete",
+        description: "Full salon funnel with all major sections, ideal for premium services.",
+        presetId: "hairluxury",
+        sections: [
+          { type: "marquee", settings: { items: ["PREMIUM HAIR SERVICES", "BOOK INSTANTLY ONLINE", "NEW CLIENT OFFERS LIVE"], speed: 24 } },
+          { type: "header", settings: { brandName: "{{businessName}}", showSearch: true, searchPlaceholder: "Search services..." } },
+          { type: "imageBanner", settings: { pretitle: "Luxury Hair Experience", title: "{{businessName}} Beauty Studio", subtitle: "Install, color, and treatment services with expert stylists.", buttonLabel: "Book now", buttonHref: "#services" } },
+          { type: "servicesMenu", settings: { title: "Services", subtitle: "Choose your treatment and reserve your best slot.", showSearch: true, showPhotos: true, showDuration: true, showPrice: true, columnsDesktop: 2 } },
+          { type: "spotlightGrid" },
+          { type: "productGrid" },
+          { type: "stylists" },
+          { type: "reviewsMarquee", settings: { title: "Trusted by clients", style: "cards", speed: 32, showStars: true } },
+          { type: "customerReviewBlock" },
+          { type: "instagramGrid" },
+          { type: "contactMap" },
+          { type: "faq" },
+          { type: "newsletterSignup" },
+          { type: "footer", settings: { copyright: "© {{businessName}}" } },
+        ],
+      },
+      {
+        id: "booking-focused",
+        name: "Booking Focused",
+        description: "Clean conversion-first template for quick scheduling and service checkout.",
+        presetId: "minimal",
+        sections: [
+          { type: "header", settings: { brandName: "{{businessName}}", showSearch: false } },
+          { type: "hero", settings: { badge: "Fast Booking", title: "Book your next appointment in minutes", subtitle: "Pick service, choose slot, and confirm instantly." } },
+          { type: "servicesMenu", settings: { viewMode: "tabs", showSearch: true, showPhotos: true, columnsDesktop: 2 } },
+          { type: "reviewsMarquee", settings: { style: "cards", speed: 36 } },
+          { type: "contactMap" },
+          { type: "footer", settings: { copyright: "© {{businessName}}" } },
+        ],
+      },
+      {
+        id: "editorial-brand",
+        name: "Editorial Brand",
+        description: "Visual-first storytelling layout with gallery and social proof.",
+        presetId: "vivid",
+        sections: [
+          { type: "marquee", settings: { items: ["EDITORIAL LOOKS", "RUNWAY READY", "CUSTOM COLOR & INSTALL"], speed: 30, uppercase: false } },
+          { type: "header", settings: { brandName: "{{businessName}}" } },
+          { type: "slideShow" },
+          { type: "text", settings: { title: "Our style philosophy", body: "We design looks that fit your face, lifestyle, and long-term hair goals." } },
+          { type: "imageShowcase" },
+          { type: "servicesMenu", settings: { viewMode: "stacked", showSearch: false, columnsDesktop: 2 } },
+          { type: "customerReviewBlock" },
+          { type: "newsletterSignup" },
+          { type: "footer", settings: { copyright: "© {{businessName}}" } },
+        ],
+      },
+      {
+        id: "client-magnet",
+        name: "Client Magnet",
+        description: "High-conversion layout tuned for first-time visitors and rapid bookings.",
+        presetId: "minimal",
+        sections: [
+          { type: "marquee", settings: { items: ["LIMITED WEEKDAY OFFERS", "SAME-DAY APPOINTMENTS", "BOOK ONLINE IN 60 SECONDS"], speed: 26 } },
+          { type: "header", settings: { brandName: "{{businessName}}", showSearch: true } },
+          { type: "hero", settings: { badge: "Most Booked Services", title: "Get your dream look booked today", subtitle: "Fast online booking, transparent pricing, and expert stylists." } },
+          { type: "servicesMenu", settings: { viewMode: "tabs", showSearch: true, showPhotos: true, showDuration: true, showPrice: true, columnsDesktop: 2 } },
+          { type: "reviewsMarquee", settings: { title: "What clients say", speed: 30, showStars: true } },
+          { type: "faq" },
+          { type: "contactMap" },
+          { type: "footer", settings: { copyright: "© {{businessName}}" } },
+        ],
+      },
+      {
+        id: "signature-luxe",
+        name: "Signature Luxe",
+        description: "Premium storytelling design with bold visuals and strong brand personality.",
+        presetId: "hairluxury",
+        sections: [
+          { type: "marquee", settings: { items: ["SIGNATURE LUXURY INSTALLS", "VIP APPOINTMENTS", "PREMIUM HAIR ONLY"], speed: 28 } },
+          { type: "header", settings: { brandName: "{{businessName}}", showSearch: false } },
+          { type: "imageBanner", settings: { pretitle: "Signature Collection", title: "{{businessName}} Signature Experience", subtitle: "Luxury installs, custom color, and precision styling tailored to you.", buttonLabel: "Start booking", buttonHref: "#services" } },
+          { type: "imageShowcase" },
+          { type: "spotlightGrid" },
+          { type: "productGrid" },
+          { type: "stylists" },
+          { type: "customerReviewBlock" },
+          { type: "instagramGrid" },
+          { type: "newsletterSignup" },
+          { type: "footer", settings: { copyright: "© {{businessName}}" } },
+        ],
+      },
+    ];
+  }
+
+  function presetById(presetId) {
+    return presetListWithTheme().find((item) => String(item.id) === String(presetId));
+  }
+
+  function prebuiltTemplates() {
+    return templateDefinitions().map((template) => {
+      const preset = presetById(template.presetId);
+      return {
+        ...template,
+        theme: deepClone((preset && preset.theme) || {}),
+      };
+    });
+  }
+
+  function withTemplateVariables(value, businessName) {
+    if (typeof value === "string") {
+      return value.replaceAll("{{businessName}}", businessName);
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => withTemplateVariables(item, businessName));
+    }
+    if (value && typeof value === "object") {
+      const next = {};
+      Object.keys(value).forEach((key) => {
+        next[key] = withTemplateVariables(value[key], businessName);
+      });
+      return next;
+    }
+    return value;
+  }
+
+  function buildTemplateSection(spec, businessName) {
+    const definition = spec && typeof spec === "object" ? spec : { type: String(spec || "") };
+    const type = String(definition.type || "");
+    if (!type || !SECTION_DEFAULTS[type]) return null;
+    const section = createSection(type);
+    const overrideSettings = withTemplateVariables(deepClone(definition.settings || {}), businessName);
+    section.settings = {
+      ...section.settings,
+      ...overrideSettings,
+    };
+    if (type === "header" && !safeText(section.settings.brandName, "")) {
+      section.settings.brandName = businessName;
+    }
+    if (type === "footer" && !safeText(section.settings.copyright, "")) {
+      section.settings.copyright = `© ${businessName}`;
+    }
+    return section;
+  }
+
+  function templateTypeSignature(template) {
+    const sections = Array.isArray(template.sections) ? template.sections : [];
+    return sections
+      .map((item) => (item && typeof item === "object" ? String(item.type || "") : String(item || "")))
+      .filter(Boolean);
+  }
+
+  function isTemplateActive(template) {
+    const currentTypes = sectionList().map((item) => String(item.type || ""));
+    const templateTypes = templateTypeSignature(template);
+    if (currentTypes.length !== templateTypes.length) return false;
+    return templateTypes.every((type, index) => type === currentTypes[index]);
+  }
+
+  function applyPrebuiltTemplateById(templateId) {
+    const template = prebuiltTemplates().find((item) => String(item.id) === String(templateId));
+    if (!template || !state.draftConfig) return;
+
+    const businessName = safeText(state.page?.businessName || state.page?.title, "Your Studio");
+    const sections = (Array.isArray(template.sections) ? template.sections : [])
+      .map((spec) => buildTemplateSection(spec, businessName))
+      .filter(Boolean);
+    if (!sections.length) return;
+
+    state.draftConfig = {
+      ...(state.draftConfig || {}),
+      theme: {
+        ...(state.draftConfig.theme || {}),
+        ...(template.theme || {}),
+      },
+      sections,
+    };
+    state.selectedSectionId = sections[0] ? sections[0].id : "";
+    renderAll();
+    queueAutosave();
+    setSaveStatus("saving", `Applying ${template.name}...`);
+  }
+
+  function getActiveTemplateId() {
+    const activeTemplate = prebuiltTemplates().find((template) => isTemplateActive(template));
+    return activeTemplate ? String(activeTemplate.id) : "";
+  }
+
+  function renderThemeDialogTemplates() {
+    if (!els.themeGrid) return;
+    const templates = prebuiltTemplates();
+    if (!templates.length) {
+      els.themeGrid.innerHTML = '<p class="lp-empty">No prebuilt themes available.</p>';
+      if (els.themeDialogApply) {
+        els.themeDialogApply.disabled = true;
+      }
+      return;
+    }
+
+    if (
+      !state.selectedThemeTemplateId ||
+      !templates.some((template) => String(template.id) === String(state.selectedThemeTemplateId))
+    ) {
+      const activeTemplateId = getActiveTemplateId();
+      state.selectedThemeTemplateId = activeTemplateId || String(templates[0].id || "");
+    }
+
+    const selectedTemplate = templates.find(
+      (template) => String(template.id) === String(state.selectedThemeTemplateId)
+    );
+    if (els.themeDialogApply) {
+      els.themeDialogApply.disabled = !selectedTemplate;
+      els.themeDialogApply.textContent = selectedTemplate
+        ? `Apply ${selectedTemplate.name}`
+        : "Apply Theme";
+    }
+
+    els.themeGrid.innerHTML = templates
+      .map((template) => {
+        const templateId = String(template.id || "");
+        const selected = templateId === String(state.selectedThemeTemplateId);
+        const active = isTemplateActive(template);
+        const theme = template.theme || {};
+        const swatches = [
+          theme.primary || "#1a73e8",
+          theme.secondary || "#0f766e",
+          theme.background || "#f4f7fb",
+          theme.text || "#111827",
+        ];
+        const sectionCount = templateTypeSignature(template).length;
+        const previewStyle = [
+          `--preview-primary:${escapeHtml(String(theme.primary || "#1a73e8"))}`,
+          `--preview-secondary:${escapeHtml(String(theme.secondary || "#0f766e"))}`,
+          `--preview-bg:${escapeHtml(String(theme.background || "#f4f7fb"))}`,
+          `--preview-surface:${escapeHtml(String(theme.surface || "#ffffff"))}`,
+          `--preview-text:${escapeHtml(String(theme.text || "#111827"))}`,
+        ].join(";");
+        return `
+          <article class="lpe-theme-option ${selected ? "is-selected" : ""} ${active ? "is-active" : ""}" data-action="select-theme-template" data-template-id="${escapeHtml(
+            templateId
+          )}">
+            <div class="lpe-theme-preview" style="${previewStyle}" aria-hidden="true">
+              <span class="lpe-theme-preview-top"></span>
+              <span class="lpe-theme-preview-hero"></span>
+              <span class="lpe-theme-preview-body">
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+            </div>
+            <div class="lpe-preset-card-head">
+              <div>
+                <h3>${escapeHtml(template.name)}</h3>
+                <p>${escapeHtml(template.description)}</p>
+              </div>
+              <span class="lpe-preset-badge">${active ? "Active" : selected ? "Selected" : "Full design"}</span>
+            </div>
+            <p class="lpe-preset-meta">${escapeHtml(String(sectionCount))} sections included</p>
+            <div class="lpe-preset-swatches" aria-hidden="true">
+              ${swatches.map((color) => `<span style="background:${escapeHtml(String(color))};"></span>`).join("")}
+            </div>
+            <button type="button" class="lpe-btn lpe-btn-secondary lpe-theme-option-apply" data-action="quick-apply-theme-template" data-template-id="${escapeHtml(
+              templateId
+            )}">${active ? "Reapply theme" : "Apply this theme"}</button>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  function renderPresetThemes() {
+    const templates = prebuiltTemplates();
+    if (!templates.length) {
+      if (els.prebuiltTriggerMeta) {
+        els.prebuiltTriggerMeta.textContent = "No prebuilt themes available";
+      }
+      if (els.openThemeDialogBtn) {
+        els.openThemeDialogBtn.disabled = true;
+      }
+      return;
+    }
+
+    if (els.openThemeDialogBtn) {
+      els.openThemeDialogBtn.disabled = false;
+    }
+    const activeTemplateId = getActiveTemplateId();
+    const activeTemplate = templates.find(
+      (template) => String(template.id) === String(activeTemplateId)
+    );
+    if (els.prebuiltTriggerMeta) {
+      els.prebuiltTriggerMeta.textContent = activeTemplate
+        ? `Active: ${activeTemplate.name}`
+        : `Browse ${templates.length} theme templates`;
+    }
+    if (
+      !state.selectedThemeTemplateId ||
+      !templates.some((template) => String(template.id) === String(state.selectedThemeTemplateId))
+    ) {
+      state.selectedThemeTemplateId = activeTemplateId || String(templates[0].id || "");
+    }
+    renderThemeDialogTemplates();
+  }
+
+  function openThemeDialog() {
+    if (!els.themeDialog) return;
+    const templates = prebuiltTemplates();
+    if (!templates.length) {
+      alert("No prebuilt themes available yet.");
+      return;
+    }
+    const activeTemplateId = getActiveTemplateId();
+    state.selectedThemeTemplateId = activeTemplateId || String(templates[0].id || "");
+    renderThemeDialogTemplates();
+    els.themeDialog.showModal();
+  }
+
+  function applySelectedThemeTemplate() {
+    if (!state.selectedThemeTemplateId) {
+      alert("Select a theme first.");
+      return;
+    }
+    applyPrebuiltTemplateById(state.selectedThemeTemplateId);
+    if (els.themeDialog && els.themeDialog.open) {
+      els.themeDialog.close();
+    }
+  }
+
+  function setPathValue(path, rawValue, kind) {
+    if (!path) return;
+    let value = rawValue;
+    if (kind === "number") {
+      const parsed = Number(value);
+      value = Number.isFinite(parsed) ? parsed : 0;
+    } else if (kind === "boolean") {
+      value = Boolean(rawValue);
+    }
+
+    if (path.startsWith("page.")) {
+      const key = path.slice("page.".length);
+      if (state.page) state.page[key] = value;
+      return;
+    }
+
+    const parts = path.split(".");
+    let cursor = state.draftConfig;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const tokenPart = parts[index];
+      if (!Object.prototype.hasOwnProperty.call(cursor, tokenPart)) {
+        const nextPart = parts[index + 1];
+        cursor[tokenPart] = /^\d+$/.test(nextPart) ? [] : {};
+      }
+      cursor = cursor[tokenPart];
+      if (cursor === undefined || cursor === null) return;
+    }
+    cursor[parts[parts.length - 1]] = value;
+  }
+
+  function queueAutosave() {
+    state.changeVersion += 1;
+    setDirty(true);
+    setSaveStatus("dirty", "Unsaved changes");
+    if (state.saveTimer) clearTimeout(state.saveTimer);
+    state.saveTimer = setTimeout(() => {
+      saveDraft();
+    }, 700);
+  }
+
+  function waitForSaveIdle() {
+    if (!state.saveInFlight) return Promise.resolve();
+    return new Promise((resolve) => {
+      const tick = () => {
+        if (!state.saveInFlight) {
+          resolve();
+          return;
+        }
+        window.setTimeout(tick, 40);
+      };
+      tick();
+    });
+  }
+
+  async function saveDraft(forceNow) {
+    if (state.saveInFlight) {
+      state.saveQueued = true;
+      if (forceNow) {
+        await waitForSaveIdle();
+        return saveDraft(true);
+      }
+      return false;
+    }
+    if (!state.pageId || !state.draftConfig) return false;
+
+    state.saveInFlight = true;
+    const startedAtChangeVersion = state.changeVersion;
+    setSaveStatus("saving");
+    try {
+      const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/draft`, {
+        method: "PUT",
+        body: JSON.stringify({
+          title: state.page?.title,
+          slug: state.page?.slug,
+          config: state.draftConfig,
+        }),
+      });
+      const hasNewerChanges = state.changeVersion !== startedAtChangeVersion || state.saveQueued;
+      if (!hasNewerChanges) {
+        normalizePayload(payload);
+        setDirty(false);
+        setSaveStatus("saved", "Saved");
+        renderStaticSections();
+        renderPreview();
+      } else {
+        setDirty(true);
+        setSaveStatus("dirty", "Unsaved changes");
+      }
+      return true;
+    } catch (error) {
+      setDirty(true);
+      setSaveStatus("error", error.message || "Save failed");
+      return false;
+    } finally {
+      state.saveInFlight = false;
+      if (state.saveQueued) {
+        state.saveQueued = false;
+        saveDraft();
+      }
+      updateSaveActions();
+    }
+  }
+
+  function renderPageMeta() {
+    if (els.pageTitle) {
+      els.pageTitle.textContent = state.page?.title || "Landing Page Editor";
+    }
+    if (els.pageMeta) {
+      const slug = state.page?.slug ? `/${state.page.slug}` : "";
+      const updatedAt = state.page?.updatedAt ? formatDateTime(state.page.updatedAt) : "unknown";
+      els.pageMeta.textContent = `${slug} • last updated ${updatedAt}`;
+    }
+  }
+
+  function sectionIcon(name) {
+    const icons = {
+      grip:
+        '<svg class="lpe-grip-svg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5" cy="3" r="1.1"/><circle cx="11" cy="3" r="1.1"/><circle cx="5" cy="8" r="1.1"/><circle cx="11" cy="8" r="1.1"/><circle cx="5" cy="13" r="1.1"/><circle cx="11" cy="13" r="1.1"/></svg>',
+      eye:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8s2.4-4.5 7-4.5S15 8 15 8s-2.4 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2.3"/></svg>',
+      eyeOff:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8s2.4-4.5 7-4.5 7 4.5 7 4.5-2.4 4.5-7 4.5S1 8 1 8z"/><path d="M2 2l12 12"/></svg>',
+      copy:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="3" width="8" height="10" rx="1.5"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1H8"/></svg>',
+      x:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>',
+      trash:
+        '<svg class="lpe-icon-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11"/><path d="M6 2.5h4"/><rect x="4" y="4.5" width="8" height="9" rx="1.2"/><path d="M6.4 6.7v4.8M9.6 6.7v4.8"/></svg>',
+    };
+    return icons[name] || "";
+  }
+
+  function captureSectionRowPositions() {
+    const positions = new Map();
+    if (!els.sectionsList) return positions;
+    els.sectionsList.querySelectorAll(".lpe-section-row[data-section-id]").forEach((row) => {
+      const sectionId = row.getAttribute("data-section-id");
+      if (!sectionId) return;
+      positions.set(sectionId, row.getBoundingClientRect().top);
+    });
+    return positions;
+  }
+
+  function animateSectionRowPositions(previousPositions) {
+    if (!els.sectionsList || !previousPositions || !previousPositions.size) return;
+    const rows = Array.from(els.sectionsList.querySelectorAll(".lpe-section-row[data-section-id]"));
+    rows.forEach((row) => {
+      const sectionId = row.getAttribute("data-section-id");
+      if (!sectionId || !previousPositions.has(sectionId)) return;
+      const oldTop = previousPositions.get(sectionId);
+      const newTop = row.getBoundingClientRect().top;
+      const delta = oldTop - newTop;
+      if (!Number.isFinite(delta) || Math.abs(delta) < 1) return;
+      row.style.transition = "none";
+      row.style.transform = `translateY(${delta}px)`;
+      row.getBoundingClientRect();
+      row.style.transition = "";
+      row.style.transform = "";
+    });
+  }
+
+  function renderSectionsList() {
+    if (!els.sectionsList) return;
+    const previousPositions = captureSectionRowPositions();
+    const sections = sectionList();
+    const query = safeText(state.sectionsFilterText, "").toLowerCase();
+    const labelByType = new Map(
+      (Array.isArray(state.sectionLibrary) ? state.sectionLibrary : []).map((item) => [
+        String(item.type || ""),
+        sectionLabelByType(item.type, item.label || item.type || ""),
+      ])
+    );
+    const headerTypes = new Set(["marquee", "header"]);
+    let hasHeaderGroup = false;
+    let hasTemplateGroup = false;
+    const rows = [];
+
+    sections.forEach((section, index) => {
+      const customSectionLabel = safeText(section.customLabel, "");
+      const sectionTitle = customSectionLabel || labelByType.get(String(section.type)) || section.type;
+      const matches =
+        !query ||
+        sectionTitle.toLowerCase().includes(query) ||
+        String(section.type || "")
+          .toLowerCase()
+          .includes(query);
+      if (!matches) return;
+
+      const inHeaderGroup = headerTypes.has(String(section.type || ""));
+      if (inHeaderGroup && !hasHeaderGroup) {
+        hasHeaderGroup = true;
+        rows.push('<li class="lpe-section-group">Header Group</li>');
+      }
+      if (!inHeaderGroup && !hasTemplateGroup) {
+        hasTemplateGroup = true;
+        rows.push('<li class="lpe-section-group">Template</li>');
+      }
+
+      rows.push(`
+          <li class="lpe-section-row ${section.id === state.selectedSectionId ? "is-active" : ""} ${
+            section.enabled === false ? "is-hidden" : ""
+          }" draggable="true" data-index="${index}" data-section-id="${escapeHtml(section.id)}">
+            <div class="lpe-section-main">
+              <span class="lpe-section-grip" aria-hidden="true">${sectionIcon("grip")}</span>
+              <button type="button" class="lpe-section-name" data-action="select-section" data-section-id="${escapeHtml(
+                section.id
+              )}">${escapeHtml(sectionTitle)}</button>
+            </div>
+            <div class="lpe-section-actions">
+              <button type="button" class="lpe-icon-btn ${
+                section.enabled === false ? "is-visibility-off" : "is-visibility-on"
+              }" data-action="toggle-section" data-section-id="${escapeHtml(section.id)}" aria-label="${
+                section.enabled === false ? "Show section" : "Hide section"
+              }">${section.enabled === false ? sectionIcon("eyeOff") : sectionIcon("eye")}</button>
+              <button
+                type="button"
+                class="lpe-icon-btn"
+                data-action="duplicate-section"
+                data-section-id="${escapeHtml(section.id)}"
+                aria-label="Duplicate section"
+              >${sectionIcon("copy")}</button>
+              <button
+                type="button"
+                class="lpe-icon-btn lpe-icon-btn-danger"
+                data-action="delete-section"
+                data-section-id="${escapeHtml(section.id)}"
+                aria-label="Delete section"
+              >${sectionIcon("trash")}</button>
+              <div class="lpe-context-menu ${state.openRowMenuSectionId === section.id ? "is-open" : ""}" data-row-menu="${escapeHtml(
+                section.id
+              )}">
+                <button type="button" data-action="duplicate-section" data-section-id="${escapeHtml(section.id)}">Duplicate</button>
+                <button type="button" data-action="delete-section" data-section-id="${escapeHtml(section.id)}">Delete</button>
+              </div>
+            </div>
+          </li>
+        `);
+    });
+
+    if (!rows.length) {
+      els.sectionsList.innerHTML = '<li class="lpe-empty-list">No sections match your search.</li>';
+      return;
+    }
+
+    els.sectionsList.innerHTML = rows.join("");
+    animateSectionRowPositions(previousPositions);
+  }
+
+  function themeField(label, path, value, type, extraAttrs) {
+    const inputType = safeText(type, "text");
+    return `
+      <label class="lpe-field">
+        <span>${escapeHtml(label)}</span>
+        <input type="${escapeHtml(inputType)}" data-bind-path="${escapeHtml(path)}" ${
+      inputType === "checkbox" ? "" : `value="${escapeHtml(String(value ?? ""))}"`
+    } ${extraAttrs || ""} ${inputType === "checkbox" && value ? "checked" : ""} />
+      </label>
+    `;
+  }
+
+  function renderThemeControls() {
+    if (!els.themeControls) return;
+    const theme = state.draftConfig?.theme || {};
+    const seo = theme.seo && typeof theme.seo === "object" ? theme.seo : {};
+    const metaTitle = safeText(seo.metaTitle, state.page?.title || "", 180);
+    const metaDescription = safeText(
+      seo.metaDescription,
+      "Describe your services to attract the right customers.",
+      300
+    );
+    const ogTitle = safeText(seo.ogTitle, metaTitle, 180);
+    const ogDescription = safeText(seo.ogDescription, metaDescription, 300);
+    const ogImageUrl = safeText(seo.ogImageUrl, "", 2400);
+    const twitterTitle = safeText(seo.twitterTitle, ogTitle, 180);
+    const twitterDescription = safeText(seo.twitterDescription, ogDescription, 300);
+    const twitterImageUrl = safeText(seo.twitterImageUrl, ogImageUrl, 2400);
+    const twitterCard = safeText(seo.twitterCard, "summary_large_image", 40);
+    const metaTitleCount = String(metaTitle.length);
+    const metaDescriptionCount = String(metaDescription.length);
+
+    els.themeControls.innerHTML = `
+      <details class="lpe-control-group" open>
+        <summary>Brand & Identity</summary>
+        <div class="lpe-control-group-body">
+          ${themeField("Page title", "page.title", state.page?.title || "", "text", 'maxlength="160"')}
+          ${themeField("Page slug", "page.slug", state.page?.slug || "", "text", 'maxlength="80"')}
+          <div class="lpe-row-grid">
+            ${themeField("Primary", "theme.primary", theme.primary || "#7c3aed", "color")}
+            ${themeField("Secondary", "theme.secondary", theme.secondary || "#d946ef", "color")}
+          </div>
+          <div class="lpe-row-grid">
+            ${themeField("Background", "theme.background", theme.background || "#f6f5fb", "color")}
+            ${themeField("Surface", "theme.surface", theme.surface || "#ffffff", "color")}
+          </div>
+          <div class="lpe-row-grid">
+            ${themeField("Text", "theme.text", theme.text || "#171a2b", "color")}
+            ${themeField("Muted", "theme.muted", theme.muted || "#5f6377", "color")}
+          </div>
+          <label class="lpe-field">
+            <span>Font</span>
+            <select data-bind-path="theme.font">
+              <option value="Inter" ${theme.font === "Inter" ? "selected" : ""}>Inter</option>
+              <option value="DM Sans" ${theme.font === "DM Sans" ? "selected" : ""}>DM Sans</option>
+              <option value="Sora" ${theme.font === "Sora" ? "selected" : ""}>Sora</option>
+              <option value="System" ${theme.font === "System" ? "selected" : ""}>System</option>
+            </select>
+          </label>
+        </div>
+      </details>
+
+      <details class="lpe-control-group" open>
+        <summary>Layout & Motion</summary>
+        <div class="lpe-control-group-body">
+          <div class="lpe-row-grid">
+            <label class="lpe-field">
+              <span>Radius (${safeNumber(theme.radius, 14)})</span>
+              <input type="range" min="0" max="28" value="${Number(
+                safeNumber(theme.radius, 14)
+              )}" data-bind-path="theme.radius" data-bind-type="number" />
+            </label>
+            <label class="lpe-field">
+              <span>Section Padding (${safeNumber(theme.sectionPadding, 52)})</span>
+              <input type="range" min="20" max="120" value="${Number(
+                safeNumber(theme.sectionPadding, 52)
+              )}" data-bind-path="theme.sectionPadding" data-bind-type="number" />
+            </label>
+          </div>
+          <div class="lpe-row-grid">
+            <label class="lpe-field">
+              <span>Button style</span>
+              <select data-bind-path="theme.buttonStyle">
+                <option value="solid" ${theme.buttonStyle === "solid" ? "selected" : ""}>Solid</option>
+                <option value="outline" ${theme.buttonStyle === "outline" ? "selected" : ""}>Outline</option>
+                <option value="gradient" ${theme.buttonStyle === "gradient" ? "selected" : ""}>Gradient</option>
+              </select>
+            </label>
+            <label class="lpe-field">
+              <span>Shadow</span>
+              <select data-bind-path="theme.shadowStyle">
+                <option value="none" ${theme.shadowStyle === "none" ? "selected" : ""}>None</option>
+                <option value="minimal" ${theme.shadowStyle === "minimal" ? "selected" : ""}>Minimal</option>
+                <option value="soft" ${theme.shadowStyle === "soft" ? "selected" : ""}>Soft</option>
+                <option value="medium" ${theme.shadowStyle === "medium" ? "selected" : ""}>Medium</option>
+              </select>
+            </label>
+          </div>
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="theme.animationsEnabled" data-bind-type="boolean" ${
+            theme.animationsEnabled === false ? "" : "checked"
+          } /> Enable animations</label>
+          <label class="lpe-field">
+            <span>Animation style</span>
+            <select data-bind-path="theme.animationStyle">
+              <option value="subtle" ${theme.animationStyle === "subtle" ? "selected" : ""}>Subtle</option>
+              <option value="medium" ${theme.animationStyle === "medium" ? "selected" : ""}>Medium</option>
+              <option value="bold" ${theme.animationStyle === "bold" ? "selected" : ""}>Bold</option>
+            </select>
+          </label>
+        </div>
+      </details>
+
+      <details class="lpe-control-group" open>
+        <summary>SEO & Social</summary>
+        <div class="lpe-control-group-body">
+          <label class="lpe-field">
+            <span class="lpe-field-inline">
+              <span>Meta title</span>
+              <span class="lpe-counter ${metaTitle.length > 60 ? "is-over" : ""}" data-seo-counter="metaTitle">${escapeHtml(
+                metaTitleCount
+              )}/60</span>
+            </span>
+            <input type="text" data-bind-path="theme.seo.metaTitle" value="${escapeHtml(metaTitle)}" maxlength="120" />
+          </label>
+          <label class="lpe-field">
+            <span class="lpe-field-inline">
+              <span>Meta description</span>
+              <span class="lpe-counter ${metaDescription.length > 160 ? "is-over" : ""}" data-seo-counter="metaDescription">${escapeHtml(
+                metaDescriptionCount
+              )}/160</span>
+            </span>
+            <textarea data-bind-path="theme.seo.metaDescription" maxlength="300">${escapeHtml(metaDescription)}</textarea>
+          </label>
+          ${baseTextField("OG title", "theme.seo.ogTitle", ogTitle, 180)}
+          ${baseTextareaField("OG description", "theme.seo.ogDescription", ogDescription, 300)}
+          ${baseTextField("OG image URL", "theme.seo.ogImageUrl", ogImageUrl, 2400)}
+          <label class="lpe-field">
+            <span>Twitter card</span>
+            <select data-bind-path="theme.seo.twitterCard">
+              <option value="summary" ${twitterCard === "summary" ? "selected" : ""}>summary</option>
+              <option value="summary_large_image" ${
+                twitterCard === "summary_large_image" ? "selected" : ""
+              }>summary_large_image</option>
+            </select>
+          </label>
+          ${baseTextField("Twitter title", "theme.seo.twitterTitle", twitterTitle, 180)}
+          ${baseTextareaField("Twitter description", "theme.seo.twitterDescription", twitterDescription, 300)}
+          ${baseTextField("Twitter image URL", "theme.seo.twitterImageUrl", twitterImageUrl, 2400)}
+        </div>
+      </details>
+    `;
+    enhanceImageUploadControls(els.themeControls);
+    enhanceRangeControls(els.themeControls);
+    refreshSeoPreviews();
+  }
+
+  function readControlValue(path, fallback = "") {
+    if (!els.themeControls) return fallback;
+    const escapedPath =
+      typeof CSS !== "undefined" && typeof CSS.escape === "function"
+        ? CSS.escape(path)
+        : String(path).replace(/"/g, '\\"');
+    const control = els.themeControls.querySelector(`[data-bind-path="${escapedPath}"]`);
+    if (!(control instanceof HTMLElement)) return fallback;
+    if (control instanceof HTMLInputElement && control.type === "checkbox") {
+      return control.checked;
+    }
+    if (
+      control instanceof HTMLInputElement ||
+      control instanceof HTMLTextAreaElement ||
+      control instanceof HTMLSelectElement
+    ) {
+      return control.value;
+    }
+    return fallback;
+  }
+
+  function refreshSeoPreviews() {
+    const slug = safeText(String(readControlValue("page.slug", state.page?.slug || "")), state.page?.slug || "", 120);
+    const previewUrl = `${window.location.origin}/${slug}`;
+    const metaTitle = safeText(
+      String(readControlValue("theme.seo.metaTitle", state.page?.title || "")),
+      state.page?.title || "",
+      180
+    );
+    const metaDescription = safeText(
+      String(
+        readControlValue(
+          "theme.seo.metaDescription",
+          "Describe your services to attract the right customers."
+        )
+      ),
+      "Describe your services to attract the right customers.",
+      300
+    );
+    const ogTitle = safeText(String(readControlValue("theme.seo.ogTitle", metaTitle)), metaTitle, 180);
+    const ogDescription = safeText(String(readControlValue("theme.seo.ogDescription", metaDescription)), metaDescription, 300);
+    const ogImageUrl = safeText(String(readControlValue("theme.seo.ogImageUrl", "")), "", 2400);
+    const twitterTitle = safeText(String(readControlValue("theme.seo.twitterTitle", ogTitle)), ogTitle, 180);
+    const twitterDescription = safeText(
+      String(readControlValue("theme.seo.twitterDescription", ogDescription)),
+      ogDescription,
+      300
+    );
+    const twitterImageUrl = safeText(String(readControlValue("theme.seo.twitterImageUrl", ogImageUrl)), ogImageUrl, 2400);
+    const twitterCard = safeText(
+      String(readControlValue("theme.seo.twitterCard", "summary_large_image")),
+      "summary_large_image",
+      40
+    );
+
+    const metaTitleCounter = els.themeControls
+      ? els.themeControls.querySelector('[data-seo-counter="metaTitle"]')
+      : null;
+    const metaDescriptionCounter = els.themeControls
+      ? els.themeControls.querySelector('[data-seo-counter="metaDescription"]')
+      : null;
+
+    if (metaTitleCounter) {
+      metaTitleCounter.textContent = `${metaTitle.length}/60`;
+      metaTitleCounter.classList.toggle("is-over", metaTitle.length > 60);
+    }
+    if (metaDescriptionCounter) {
+      metaDescriptionCounter.textContent = `${metaDescription.length}/160`;
+      metaDescriptionCounter.classList.toggle("is-over", metaDescription.length > 160);
+    }
+
+    if (els.googleSnippet) {
+      els.googleSnippet.innerHTML = `
+        <p class="lpe-snippet-url">${escapeHtml(previewUrl)}</p>
+        <p class="lpe-snippet-title">${escapeHtml(metaTitle || state.page?.title || "Your page title")}</p>
+        <p class="lpe-snippet-description">${escapeHtml(metaDescription || "Your meta description will appear here.")}</p>
+      `;
+    }
+
+    if (els.ogPreview) {
+      els.ogPreview.innerHTML = `
+        <div class="lpe-social-card-image"${
+          ogImageUrl ? ` style="background-image:url('${escapeHtml(ogImageUrl)}')"` : ""
+        }></div>
+        <div class="lpe-social-card-body">
+          <p class="lpe-social-card-kicker">Open Graph</p>
+          <p class="lpe-social-card-title">${escapeHtml(ogTitle || "OG title preview")}</p>
+          <p class="lpe-social-card-description">${escapeHtml(ogDescription || "OG description preview")}</p>
+        </div>
+      `;
+    }
+
+    if (els.twitterPreview) {
+      els.twitterPreview.innerHTML = `
+        <div class="lpe-social-card-image"${
+          twitterImageUrl ? ` style="background-image:url('${escapeHtml(twitterImageUrl)}')"` : ""
+        }></div>
+        <div class="lpe-social-card-body">
+          <p class="lpe-social-card-kicker">Twitter (${escapeHtml(twitterCard)})</p>
+          <p class="lpe-social-card-title">${escapeHtml(twitterTitle || "Twitter title preview")}</p>
+          <p class="lpe-social-card-description">${escapeHtml(
+            twitterDescription || "Twitter description preview"
+          )}</p>
+        </div>
+      `;
+    }
+  }
+
+  function baseTextField(label, path, value, max) {
+    return `
+      <label class="lpe-field">
+        <span>${escapeHtml(label)}</span>
+        <input type="text" data-bind-path="${escapeHtml(path)}" value="${escapeHtml(String(value ?? ""))}" ${
+      max ? `maxlength="${Number(max)}"` : ""
+    } />
+      </label>
+    `;
+  }
+
+  function baseTextareaField(label, path, value, max) {
+    return `
+      <label class="lpe-field">
+        <span>${escapeHtml(label)}</span>
+        <textarea data-bind-path="${escapeHtml(path)}" ${
+      max ? `maxlength="${Number(max)}"` : ""
+    }>${escapeHtml(String(value ?? ""))}</textarea>
+      </label>
+    `;
+  }
+
+  function sectionControlsHtml(section, sectionIndex) {
+    if (!section) {
+      return '<p class="lp-empty">Select a section from the left panel to edit its settings.</p>';
+    }
+
+    const settingsPath = `sections.${sectionIndex}.settings`;
+    const settings = section.settings || {};
+
+    let html = `
+      <label class="lpe-checkbox"><input type="checkbox" data-bind-path="sections.${sectionIndex}.enabled" data-bind-type="boolean" ${
+      section.enabled === false ? "" : "checked"
+    } /> Section visible</label>
+    `;
+
+    if (section.type === "marquee") {
+      html += `
+        <label class="lpe-field">
+          <span>Speed (${safeNumber(settings.speed, 28)}s)</span>
+          <input type="range" min="10" max="80" data-bind-path="${settingsPath}.speed" data-bind-type="number" value="${Number(
+            safeNumber(settings.speed, 28)
+          )}" />
+        </label>
+        <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.uppercase" data-bind-type="boolean" ${
+          settings.uppercase ? "checked" : ""
+        } /> Uppercase text</label>
+        <div class="lpe-list-stack">
+          ${(Array.isArray(settings.items) ? settings.items : []).map((item, itemIndex) => `
+            <article class="lpe-list-item">
+              ${baseTextField("Text", `${settingsPath}.items.${itemIndex}`, item, 120)}
+              <button type="button" class="lpe-btn lpe-btn-secondary" data-action="remove-array-item" data-path="${settingsPath}.items" data-index="${itemIndex}">Remove item</button>
+            </article>
+          `).join("")}
+          <button type="button" class="lpe-btn lpe-btn-secondary" data-action="add-array-item" data-path="${settingsPath}.items" data-template="marqueeItem">+ Add marquee text</button>
+        </div>
+      `;
+    } else if (section.type === "header") {
+      const headerBrandDisplay = safeText(settings.brandDisplay, "image");
+      html += `
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Brand mode</span>
+            <select data-bind-path="${settingsPath}.brandDisplay">
+              <option value="image" ${headerBrandDisplay === "image" ? "selected" : ""}>Image</option>
+              <option value="text" ${headerBrandDisplay === "text" ? "selected" : ""}>Text</option>
+            </select>
+          </label>
+          <label class="lpe-field">
+            <span>Header style</span>
+            <select data-bind-path="${settingsPath}.styleVariant">
+              <option value="style1" ${safeText(settings.styleVariant, "style1") === "style1" ? "selected" : ""}>Style 1 · Classic</option>
+              <option value="style2" ${safeText(settings.styleVariant, "style1") === "style2" ? "selected" : ""}>Style 2 · Boxed</option>
+              <option value="style3" ${safeText(settings.styleVariant, "style1") === "style3" ? "selected" : ""}>Style 3 · Pill Nav</option>
+              <option value="style4" ${safeText(settings.styleVariant, "style1") === "style4" ? "selected" : ""}>Style 4 · Center logo + menu below</option>
+              <option value="style5" ${safeText(settings.styleVariant, "style1") === "style5" ? "selected" : ""}>Style 5 · Center logo + inline menu/search</option>
+            </select>
+          </label>
+        </div>
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Desktop menu</span>
+            <select data-bind-path="${settingsPath}.desktopMenuMode">
+              <option value="inline" ${safeText(settings.desktopMenuMode, "center") === "inline" ? "selected" : ""}>Inline menu</option>
+              <option value="center" ${safeText(settings.desktopMenuMode, "center") === "center" ? "selected" : ""}>Centered menu</option>
+            </select>
+          </label>
+          <label class="lpe-field">
+            <span>Mobile menu</span>
+            <select data-bind-path="${settingsPath}.mobileMenuMode">
+              <option value="drawer" ${safeText(settings.mobileMenuMode, "drawer") === "drawer" ? "selected" : ""}>Hamburger drawer</option>
+              <option value="inline" ${safeText(settings.mobileMenuMode, "drawer") === "inline" ? "selected" : ""}>Inline links</option>
+            </select>
+          </label>
+        </div>
+        <p class="lpe-disclosure-hint">Use Mobile menu: Hamburger drawer for a cleaner mobile header layout.</p>
+        ${baseTextField("Brand name", `${settingsPath}.brandName`, settings.brandName, 120)}
+        ${
+          headerBrandDisplay === "image"
+            ? baseTextField("Logo URL", `${settingsPath}.logoUrl`, settings.logoUrl, 2000)
+            : '<p class="lpe-disclosure-hint">Text mode uses brand name only.</p>'
+        }
+        <div class="lpe-row-grid">
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.sticky" data-bind-type="boolean" ${
+            settings.sticky ? "checked" : ""
+          } /> Sticky header</label>
+        </div>
+        ${
+          headerBrandDisplay === "image"
+            ? `<div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Logo width (${Math.round(safeNumber(settings.logoWidth, 46))}px)</span>
+            <input type="range" min="28" max="240" data-bind-path="${settingsPath}.logoWidth" data-bind-type="number" value="${Number(
+              safeNumber(settings.logoWidth, 46)
+            )}" />
+          </label>
+          <label class="lpe-field">
+            <span>Logo height (${Math.round(safeNumber(settings.logoHeight, 46))}px)</span>
+            <input type="range" min="28" max="140" data-bind-path="${settingsPath}.logoHeight" data-bind-type="number" value="${Number(
+              safeNumber(settings.logoHeight, 46)
+            )}" />
+          </label>
+        </div>
+        <p class="lpe-disclosure-hint">If no logo is uploaded, brand name is shown automatically.</p>`
+            : ""
+        }
+        <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showSearch" data-bind-type="boolean" ${
+          settings.showSearch ? "checked" : ""
+        } /> Show search</label>
+        ${baseTextField("Search placeholder", `${settingsPath}.searchPlaceholder`, settings.searchPlaceholder, 80)}
+        <div class="lpe-row-grid">
+          ${baseTextField("CTA label", `${settingsPath}.ctaLabel`, settings.ctaLabel, 60)}
+          ${baseTextField("CTA href", `${settingsPath}.ctaHref`, settings.ctaHref, 200)}
+        </div>
+      `;
+    } else if (section.type === "imageBanner") {
+      html += `
+        ${baseTextField("Pretitle", `${settingsPath}.pretitle`, settings.pretitle, 80)}
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 220)}
+        ${baseTextareaField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 700)}
+        ${baseTextField("Desktop image URL", `${settingsPath}.backgroundImageUrl`, settings.backgroundImageUrl, 2000)}
+        ${baseTextField("Mobile image URL", `${settingsPath}.mobileImageUrl`, settings.mobileImageUrl, 2000)}
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Alignment</span>
+            <select data-bind-path="${settingsPath}.align">
+              <option value="left" ${settings.align === "left" ? "selected" : ""}>Left</option>
+              <option value="center" ${settings.align === "center" ? "selected" : ""}>Center</option>
+              <option value="right" ${settings.align === "right" ? "selected" : ""}>Right</option>
+            </select>
+          </label>
+          <label class="lpe-field">
+            <span>Height</span>
+            <select data-bind-path="${settingsPath}.height">
+              <option value="md" ${settings.height === "md" ? "selected" : ""}>Medium</option>
+              <option value="lg" ${settings.height === "lg" ? "selected" : ""}>Large</option>
+              <option value="xl" ${settings.height === "xl" ? "selected" : ""}>Extra large</option>
+            </select>
+          </label>
+        </div>
+        <div class="lpe-row-grid">
+          ${baseTextField("Button label", `${settingsPath}.buttonLabel`, settings.buttonLabel, 60)}
+          ${baseTextField("Button href", `${settingsPath}.buttonHref`, settings.buttonHref, 240)}
+        </div>
+        <label class="lpe-field">
+          <span>Overlay opacity (${safeNumber(settings.overlayOpacity, 22)}%)</span>
+          <input type="range" min="0" max="80" data-bind-path="${settingsPath}.overlayOpacity" data-bind-type="number" value="${Number(
+            safeNumber(settings.overlayOpacity, 22)
+          )}" />
+        </label>
+      `;
+    } else if (section.type === "slideShow") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <div class="lpe-row-grid">
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.autoplay" data-bind-type="boolean" ${
+            settings.autoplay ? "checked" : ""
+          } /> Autoplay</label>
+          <label class="lpe-field">
+            <span>Interval (${safeNumber(settings.intervalSeconds, 6)}s)</span>
+            <input type="range" min="3" max="12" data-bind-path="${settingsPath}.intervalSeconds" data-bind-type="number" value="${Number(
+              safeNumber(settings.intervalSeconds, 6)
+            )}" />
+          </label>
+        </div>
+        <div class="lpe-list-stack">
+          ${(Array.isArray(settings.slides) ? settings.slides : []).map((slide, slideIndex) => `
+            <article class="lpe-list-item">
+              ${baseTextField("Slide image URL", `${settingsPath}.slides.${slideIndex}.imageUrl`, slide.imageUrl, 2000)}
+              ${baseTextField("Slide title", `${settingsPath}.slides.${slideIndex}.title`, slide.title, 140)}
+              ${baseTextField("Slide subtitle", `${settingsPath}.slides.${slideIndex}.subtitle`, slide.subtitle, 400)}
+              <div class="lpe-row-grid">
+                ${baseTextField("Button label", `${settingsPath}.slides.${slideIndex}.buttonLabel`, slide.buttonLabel, 60)}
+                ${baseTextField("Button href", `${settingsPath}.slides.${slideIndex}.buttonHref`, slide.buttonHref, 240)}
+              </div>
+              <button type="button" class="lpe-btn lpe-btn-secondary" data-action="remove-array-item" data-path="${settingsPath}.slides" data-index="${slideIndex}">Remove slide</button>
+            </article>
+          `).join("")}
+          <button type="button" class="lpe-btn lpe-btn-secondary" data-action="add-array-item" data-path="${settingsPath}.slides" data-template="slide">+ Add slide</button>
+        </div>
+      `;
+    } else if (section.type === "hero") {
+      html += `
+        ${baseTextField("Badge", `${settingsPath}.badge`, settings.badge, 80)}
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 200)}
+        ${baseTextareaField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 800)}
+        <div class="lpe-row-grid">
+          ${baseTextField("Primary label", `${settingsPath}.primaryButtonLabel`, settings.primaryButtonLabel, 60)}
+          ${baseTextField("Primary href", `${settingsPath}.primaryButtonHref`, settings.primaryButtonHref, 200)}
+        </div>
+        <div class="lpe-row-grid">
+          ${baseTextField("Secondary label", `${settingsPath}.secondaryButtonLabel`, settings.secondaryButtonLabel, 60)}
+          ${baseTextField("Secondary href", `${settingsPath}.secondaryButtonHref`, settings.secondaryButtonHref, 200)}
+        </div>
+        ${baseTextField("Background image URL", `${settingsPath}.backgroundImageUrl`, settings.backgroundImageUrl, 2000)}
+      `;
+    } else if (section.type === "text") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 180)}
+        ${baseTextareaField("Body", `${settingsPath}.body`, settings.body, 4000)}
+      `;
+    } else if (section.type === "imageShowcase") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Desktop columns</span>
+            <input type="number" min="1" max="4" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
+        safeNumber(settings.columnsDesktop, 3)
+      )}" />
+          </label>
+          <label class="lpe-field">
+            <span>Mobile columns</span>
+            <input type="number" min="1" max="2" data-bind-path="${settingsPath}.columnsMobile" data-bind-type="number" value="${Number(
+        safeNumber(settings.columnsMobile, 1)
+      )}" />
+          </label>
+        </div>
+        <div class="lpe-list-stack">
+          ${(Array.isArray(settings.images) ? settings.images : []).map((item, imageIndex) => `
+            <article class="lpe-list-item">
+              ${baseTextField("Image URL", `${settingsPath}.images.${imageIndex}.url`, item.url, 2000)}
+              ${baseTextField("Alt", `${settingsPath}.images.${imageIndex}.alt`, item.alt, 180)}
+              <div class="lpe-inline-actions">
+                <button type="button" class="lpe-btn lpe-btn-secondary" data-action="remove-array-item" data-path="${settingsPath}.images" data-index="${imageIndex}">Remove image</button>
+              </div>
+            </article>
+          `).join("")}
+          <button type="button" class="lpe-btn lpe-btn-secondary" data-action="add-image-item" data-path="${settingsPath}.images">+ Add image</button>
+        </div>
+      `;
+    } else if (section.type === "servicesMenu") {
+      const categories = Array.isArray(state.categories) ? state.categories : [];
+      const selectedIds = Array.isArray(settings.categoryIds) ? settings.categoryIds.map(String) : [];
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>View mode</span>
+            <select data-bind-path="${settingsPath}.viewMode">
+              <option value="tabs" ${settings.viewMode === "tabs" ? "selected" : ""}>Tabbed view</option>
+              <option value="stacked" ${settings.viewMode === "stacked" ? "selected" : ""}>Stacked list</option>
+            </select>
+          </label>
+          <label class="lpe-field">
+            <span>Book button style</span>
+            <select data-bind-path="${settingsPath}.bookButtonStyle">
+              <option value="solid" ${settings.bookButtonStyle === "solid" ? "selected" : ""}>Solid</option>
+              <option value="outline" ${settings.bookButtonStyle === "outline" ? "selected" : ""}>Outline</option>
+              <option value="gradient" ${settings.bookButtonStyle === "gradient" ? "selected" : ""}>Gradient</option>
+            </select>
+          </label>
+        </div>
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Desktop columns</span>
+            <input type="number" min="1" max="3" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
+        safeNumber(settings.columnsDesktop, 2)
+      )}" />
+          </label>
+          <label class="lpe-field">
+            <span>Card radius</span>
+            <input type="range" min="0" max="30" data-bind-path="${settingsPath}.cardRadius" data-bind-type="number" value="${Number(
+        safeNumber(settings.cardRadius, 14)
+      )}" />
+          </label>
+        </div>
+        <div class="lpe-row-grid">
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showSearch" data-bind-type="boolean" ${
+        settings.showSearch ? "checked" : ""
+      } /> Search</label>
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showPhotos" data-bind-type="boolean" ${
+        settings.showPhotos ? "checked" : ""
+      } /> Service photo</label>
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showDuration" data-bind-type="boolean" ${
+        settings.showDuration ? "checked" : ""
+      } /> Duration</label>
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showPrice" data-bind-type="boolean" ${
+        settings.showPrice ? "checked" : ""
+      } /> Price</label>
+        </div>
+        ${baseTextField("Book button label", `${settingsPath}.bookButtonLabel`, settings.bookButtonLabel, 50)}
+        <div class="lpe-field">
+          <span class="lpe-field-label">Active categories</span>
+          <div class="lpe-list-stack">
+            ${categories.map((category) => `
+              <label class="lpe-checkbox">
+                <input type="checkbox" data-action="toggle-category-id" data-section-index="${sectionIndex}" data-category-id="${escapeHtml(
+        category.id
+      )}" ${selectedIds.includes(String(category.id)) ? "checked" : ""} />
+                ${escapeHtml(category.name)}
+              </label>
+            `).join("")}
+          </div>
+          <div class="lpe-inline-actions">
+            <button type="button" class="lpe-btn lpe-btn-secondary" data-action="create-category">+ Add category</button>
+          </div>
+        </div>
+        <div class="lpe-field">
+          <span class="lpe-field-label">Services</span>
+          <div class="lpe-list-stack">
+            ${state.services.slice(0, 10).map((service) => `
+              <article class="lpe-list-item">
+                <strong>${escapeHtml(service.name)}</strong>
+                <p>${escapeHtml(service.categoryName || "Uncategorized")} • ${escapeHtml(renderer.formatDuration(service.durationMinutes))} • ${escapeHtml(
+        renderer.formatPrice(service.priceCents)
+      )}</p>
+                <div class="lpe-inline-actions">
+                  <button type="button" class="lpe-icon-btn" data-action="edit-service" data-service-id="${escapeHtml(
+                    service.id
+                  )}" aria-label="Edit service">&#9998;</button>
+                  <button type="button" class="lpe-icon-btn" data-action="delete-service" data-service-id="${escapeHtml(
+                    service.id
+                  )}" aria-label="Delete service">&#10005;</button>
+                </div>
+              </article>
+            `).join("")}
+          </div>
+          <div class="lpe-inline-actions">
+            <button type="button" class="lpe-btn lpe-btn-secondary" data-action="create-service">+ Add service</button>
+          </div>
+        </div>
+      `;
+    } else if (section.type === "spotlightGrid") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <label class="lpe-field">
+          <span>Desktop columns</span>
+          <input type="number" min="1" max="4" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
+            safeNumber(settings.columnsDesktop, 3)
+          )}" />
+        </label>
+        <div class="lpe-list-stack">
+          ${(Array.isArray(settings.cards) ? settings.cards : []).map((card, cardIndex) => `
+            <article class="lpe-list-item">
+              ${baseTextField("Card title", `${settingsPath}.cards.${cardIndex}.title`, card.title, 120)}
+              ${baseTextField("Card description", `${settingsPath}.cards.${cardIndex}.description`, card.description, 300)}
+              ${baseTextField("Card image URL", `${settingsPath}.cards.${cardIndex}.imageUrl`, card.imageUrl, 2000)}
+              <div class="lpe-row-grid">
+                ${baseTextField("Button label", `${settingsPath}.cards.${cardIndex}.buttonLabel`, card.buttonLabel, 60)}
+                ${baseTextField("Button href", `${settingsPath}.cards.${cardIndex}.buttonHref`, card.buttonHref, 240)}
+              </div>
+              <button type="button" class="lpe-btn lpe-btn-secondary" data-action="remove-array-item" data-path="${settingsPath}.cards" data-index="${cardIndex}">Remove card</button>
+            </article>
+          `).join("")}
+          <button type="button" class="lpe-btn lpe-btn-secondary" data-action="add-array-item" data-path="${settingsPath}.cards" data-template="spotlightCard">+ Add spotlight card</button>
+        </div>
+      `;
+    } else if (section.type === "productGrid") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Desktop columns</span>
+            <input type="number" min="1" max="4" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
+              safeNumber(settings.columnsDesktop, 4)
+            )}" />
+          </label>
+          <label class="lpe-field">
+            <span>Card limit</span>
+            <input type="number" min="1" max="24" data-bind-path="${settingsPath}.limit" data-bind-type="number" value="${Number(
+              safeNumber(settings.limit, 8)
+            )}" />
+          </label>
+        </div>
+        <div class="lpe-row-grid">
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showDescription" data-bind-type="boolean" ${
+            settings.showDescription ? "checked" : ""
+          } /> Description</label>
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showDuration" data-bind-type="boolean" ${
+            settings.showDuration ? "checked" : ""
+          } /> Duration</label>
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showPrice" data-bind-type="boolean" ${
+            settings.showPrice ? "checked" : ""
+          } /> Price</label>
+        </div>
+        ${baseTextField("Button label", `${settingsPath}.buttonLabel`, settings.buttonLabel, 60)}
+      `;
+    } else if (section.type === "reviewsMarquee") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Style</span>
+            <select data-bind-path="${settingsPath}.style">
+              <option value="cards" ${settings.style === "cards" ? "selected" : ""}>Cards</option>
+              <option value="marquee" ${settings.style === "marquee" ? "selected" : ""}>Marquee</option>
+              <option value="multi-row" ${settings.style === "multi-row" ? "selected" : ""}>Multi-row</option>
+            </select>
+          </label>
+          <label class="lpe-field">
+            <span>Speed (${safeNumber(settings.speed, 35)}s)</span>
+            <input type="range" min="10" max="80" data-bind-path="${settingsPath}.speed" data-bind-type="number" value="${Number(
+        safeNumber(settings.speed, 35)
+      )}" />
+          </label>
+        </div>
+        <div class="lpe-row-grid">
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.pauseOnHover" data-bind-type="boolean" ${
+        settings.pauseOnHover ? "checked" : ""
+      } /> Pause on hover</label>
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showStars" data-bind-type="boolean" ${
+        settings.showStars ? "checked" : ""
+      } /> Show stars</label>
+        </div>
+        <div class="lpe-field">
+          <span class="lpe-field-label">Reviews</span>
+          <div class="lpe-list-stack">
+            ${state.reviews.slice(0, 10).map((review) => `
+              <article class="lpe-list-item">
+                <strong>${escapeHtml(review.name)} (${escapeHtml(String(review.rating))}/5)</strong>
+                <p>${escapeHtml(review.text)}</p>
+                <div class="lpe-inline-actions">
+                  <button type="button" class="lpe-icon-btn" data-action="edit-review" data-review-id="${escapeHtml(
+                    review.id
+                  )}" aria-label="Edit review">&#9998;</button>
+                  <button type="button" class="lpe-icon-btn" data-action="delete-review" data-review-id="${escapeHtml(
+                    review.id
+                  )}" aria-label="Delete review">&#10005;</button>
+                </div>
+              </article>
+            `).join("")}
+          </div>
+          <div class="lpe-inline-actions">
+            <button type="button" class="lpe-btn lpe-btn-secondary" data-action="create-review">+ Add review</button>
+          </div>
+        </div>
+      `;
+    } else if (section.type === "customerReviewBlock") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <div class="lpe-row-grid">
+          <label class="lpe-field">
+            <span>Desktop columns</span>
+            <input type="number" min="1" max="3" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
+              safeNumber(settings.columnsDesktop, 3)
+            )}" />
+          </label>
+          <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showStars" data-bind-type="boolean" ${
+            settings.showStars ? "checked" : ""
+          } /> Show stars</label>
+        </div>
+      `;
+    } else if (section.type === "instagramGrid") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 300)}
+        <div class="lpe-row-grid">
+          ${baseTextField("Handle", `${settingsPath}.handle`, settings.handle, 80)}
+          <label class="lpe-field">
+            <span>Desktop columns</span>
+            <input type="number" min="2" max="6" data-bind-path="${settingsPath}.columnsDesktop" data-bind-type="number" value="${Number(
+              safeNumber(settings.columnsDesktop, 5)
+            )}" />
+          </label>
+        </div>
+        <div class="lpe-list-stack">
+          ${(Array.isArray(settings.images) ? settings.images : []).map((image, imageIndex) => `
+            <article class="lpe-list-item">
+              ${baseTextField("Image URL", `${settingsPath}.images.${imageIndex}.url`, image.url, 2000)}
+              ${baseTextField("Image link", `${settingsPath}.images.${imageIndex}.link`, image.link, 240)}
+              <button type="button" class="lpe-btn lpe-btn-secondary" data-action="remove-array-item" data-path="${settingsPath}.images" data-index="${imageIndex}">Remove image</button>
+            </article>
+          `).join("")}
+          <button type="button" class="lpe-btn lpe-btn-secondary" data-action="add-array-item" data-path="${settingsPath}.images" data-template="instagramItem">+ Add instagram image</button>
+        </div>
+      `;
+    } else if (section.type === "stylists") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+      `;
+    } else if (section.type === "contactMap") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        ${baseTextField("Address", `${settingsPath}.address`, settings.address, 300)}
+        <div class="lpe-row-grid">
+          ${baseTextField("Phone", `${settingsPath}.phone`, settings.phone, 80)}
+          ${baseTextField("Email", `${settingsPath}.email`, settings.email, 180)}
+        </div>
+        ${baseTextField("Map embed URL", `${settingsPath}.mapEmbedUrl`, settings.mapEmbedUrl, 2000)}
+        <label class="lpe-checkbox"><input type="checkbox" data-bind-path="${settingsPath}.showForm" data-bind-type="boolean" ${
+          settings.showForm ? "checked" : ""
+        } /> Show contact form</label>
+      `;
+    } else if (section.type === "faq") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        <div class="lpe-list-stack">
+          ${(Array.isArray(settings.items) ? settings.items : []).map((item, itemIndex) => `
+            <article class="lpe-list-item">
+              ${baseTextField("Question", `${settingsPath}.items.${itemIndex}.question`, item.question, 180)}
+              ${baseTextareaField("Answer", `${settingsPath}.items.${itemIndex}.answer`, item.answer, 1200)}
+              <button type="button" class="lpe-btn lpe-btn-secondary" data-action="remove-array-item" data-path="${settingsPath}.items" data-index="${itemIndex}">Remove item</button>
+            </article>
+          `).join("")}
+          <button type="button" class="lpe-btn lpe-btn-secondary" data-action="add-faq-item" data-path="${settingsPath}.items">+ Add FAQ item</button>
+        </div>
+      `;
+    } else if (section.type === "newsletterSignup") {
+      html += `
+        ${baseTextField("Title", `${settingsPath}.title`, settings.title, 140)}
+        ${baseTextField("Subtitle", `${settingsPath}.subtitle`, settings.subtitle, 400)}
+        <div class="lpe-row-grid">
+          ${baseTextField("Placeholder", `${settingsPath}.placeholder`, settings.placeholder, 120)}
+          ${baseTextField("Button label", `${settingsPath}.buttonLabel`, settings.buttonLabel, 60)}
+        </div>
+        ${baseTextareaField("Note", `${settingsPath}.note`, settings.note, 400)}
+        ${baseTextField("Background image URL", `${settingsPath}.backgroundImageUrl`, settings.backgroundImageUrl, 2000)}
+      `;
+    } else if (section.type === "footer") {
+      html += `
+        ${baseTextField("Copyright", `${settingsPath}.copyright`, settings.copyright, 180)}
+        ${baseTextField("Tagline", `${settingsPath}.tagline`, settings.tagline, 180)}
+      `;
+    }
+
+    return html;
+  }
+
+  function renderSectionControls() {
+    if (!els.sectionControls) return;
+    const selected = selectedSection();
+    const index = selected ? findSectionIndexById(selected.id) : -1;
+    els.sectionControls.innerHTML = sectionControlsHtml(selected, index);
+    enhanceImageUploadControls(els.sectionControls);
+    enhanceRangeControls(els.sectionControls);
+  }
+
+  function enhanceImageUploadControls(container) {
+    if (!container) return;
+    const fields = Array.from(container.querySelectorAll(".lpe-field"));
+    fields.forEach((field) => {
+      const labelNode = field.querySelector(":scope > span");
+      const textInput = field.querySelector("input[type='text'][data-bind-path]");
+      if (!(labelNode instanceof HTMLElement) || !(textInput instanceof HTMLInputElement)) return;
+      const labelText = String(labelNode.textContent || "").trim();
+      if (!/image url|logo url/i.test(labelText)) return;
+      if (field.querySelector("[data-action='choose-image-upload']")) return;
+
+      const path = textInput.getAttribute("data-bind-path");
+      if (!path) return;
+
+      const actions = document.createElement("div");
+      actions.className = "lpe-inline-actions lpe-upload-actions";
+
+      const uploadButton = document.createElement("button");
+      uploadButton.type = "button";
+      uploadButton.className = "lpe-btn lpe-btn-secondary";
+      uploadButton.textContent = "Upload image";
+      uploadButton.setAttribute("data-action", "choose-image-upload");
+      uploadButton.setAttribute("data-path", path);
+
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = "image/png,image/jpeg,image/webp,image/gif";
+      fileInput.hidden = true;
+      fileInput.setAttribute("data-upload-input", "true");
+      fileInput.setAttribute("data-path", path);
+
+      actions.appendChild(uploadButton);
+      actions.appendChild(fileInput);
+      field.appendChild(actions);
+
+      const currentValue = safeText(textInput.value, "");
+      if (currentValue && !field.querySelector(".lpe-upload-preview")) {
+        const preview = document.createElement("img");
+        preview.className = "lpe-upload-preview";
+        preview.src = currentValue;
+        preview.alt = `${labelText} preview`;
+        preview.loading = "lazy";
+        field.appendChild(preview);
+      }
+    });
+  }
+
+  function enhanceRangeControls(container) {
+    if (!container) return;
+    const rangeInputs = Array.from(container.querySelectorAll(".lpe-field input[type='range'][data-bind-path]"));
+
+    const parseMeta = (labelText) => {
+      const text = String(labelText || "").trim();
+      const match = text.match(/^(.*?)(?:\s*\(([^)]*)\))\s*$/);
+      if (!match) return { label: text, unit: "" };
+      const label = String(match[1] || "").trim() || text;
+      const token = String(match[2] || "").trim();
+      const unit = token.replace(/[-+]?\d*\.?\d+/g, "").trim();
+      return { label, unit };
+    };
+
+    const formatValue = (inputEl) => {
+      const raw = Number(inputEl.value);
+      if (!Number.isFinite(raw)) return String(inputEl.value || "");
+      const step = Number(inputEl.step);
+      const decimals =
+        Number.isFinite(step) && step > 0 && step < 1
+          ? Math.min(3, String(step).split(".")[1]?.length || 1)
+          : 0;
+      if (!decimals) return String(Math.round(raw));
+      return raw.toFixed(decimals).replace(/\.?0+$/, "");
+    };
+
+    const syncProgress = (inputEl) => {
+      const min = Number(inputEl.min);
+      const max = Number(inputEl.max);
+      const value = Number(inputEl.value);
+      if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min || !Number.isFinite(value)) {
+        inputEl.style.setProperty("--lpe-range-progress", "0%");
+        return;
+      }
+      const pct = ((value - min) / (max - min)) * 100;
+      const clamped = Math.min(100, Math.max(0, pct));
+      inputEl.style.setProperty("--lpe-range-progress", `${clamped}%`);
+    };
+
+    rangeInputs.forEach((inputEl) => {
+      if (!(inputEl instanceof HTMLInputElement)) return;
+      const field = inputEl.closest(".lpe-field");
+      if (!(field instanceof HTMLElement)) return;
+
+      const labelNode = field.querySelector(":scope > span, :scope > .lpe-field-label, :scope > label");
+      let unit = "";
+      if (labelNode instanceof HTMLElement) {
+        const meta = parseMeta(labelNode.textContent || "");
+        unit = meta.unit;
+        if (meta.label) labelNode.textContent = meta.label;
+      }
+
+      let valueChip = field.querySelector(":scope .lpe-range-value");
+      let valueTextNode = valueChip ? valueChip.querySelector(".lpe-range-value-text") : null;
+      let unitNode = valueChip ? valueChip.querySelector(".lpe-range-value-unit") : null;
+
+      if (!(valueChip instanceof HTMLElement)) {
+        const row = document.createElement("div");
+        row.className = "lpe-range-row";
+        row.appendChild(inputEl);
+
+        valueChip = document.createElement("output");
+        valueChip.className = "lpe-range-value";
+        valueChip.setAttribute("aria-live", "polite");
+
+        valueTextNode = document.createElement("span");
+        valueTextNode.className = "lpe-range-value-text";
+        valueChip.appendChild(valueTextNode);
+
+        unitNode = document.createElement("span");
+        unitNode.className = "lpe-range-value-unit";
+        valueChip.appendChild(unitNode);
+
+        row.appendChild(valueChip);
+        field.appendChild(row);
+      } else if (!valueChip.closest(".lpe-range-row")) {
+        const row = document.createElement("div");
+        row.className = "lpe-range-row";
+        inputEl.after(row);
+        row.appendChild(inputEl);
+        row.appendChild(valueChip);
+      }
+
+      inputEl.classList.add("lpe-range-input");
+      const applyValue = () => {
+        syncProgress(inputEl);
+        const formattedValue = formatValue(inputEl);
+        if (valueTextNode instanceof HTMLElement) valueTextNode.textContent = formattedValue;
+        if (unitNode instanceof HTMLElement) {
+          unitNode.textContent = unit || "";
+          unitNode.classList.toggle("is-empty", !unit);
+        }
+        if (valueChip instanceof HTMLOutputElement) {
+          valueChip.value = `${formattedValue}${unit || ""}`;
+        }
+      };
+
+      inputEl.addEventListener("input", applyValue);
+      inputEl.addEventListener("change", applyValue);
+      applyValue();
+    });
+  }
+
+  function renderHistory() {
+    if (!els.historyList) return;
+    if (!state.history.length) {
+      els.historyList.innerHTML = '<p class="lp-empty">No versions yet.</p>';
+      return;
+    }
+    els.historyList.innerHTML = state.history
+      .map(
+        (item) => `
+          <article class="lpe-history-item">
+            <strong>${escapeHtml(item.sourceStatus || "draft")} v${escapeHtml(String(item.versionNumber || 1))}</strong>
+            <time>${escapeHtml(formatDateTime(item.createdAt))}</time>
+            <button type="button" class="lpe-btn lpe-btn-secondary" data-action="restore-version" data-history-id="${escapeHtml(
+              item.id
+            )}">Restore</button>
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  function renderPreview() {
+    if (!els.previewRoot || !state.draftConfig || !state.page) return;
+    renderer.renderInto(
+      els.previewRoot,
+      {
+        page: state.page,
+        config: state.draftConfig,
+        categories: state.categories,
+        services: state.services,
+        reviews: state.reviews,
+      },
+      {
+        mode: "preview",
+        selectedSectionId: state.selectedSectionId,
+        onSelectSection(sectionId) {
+          state.selectedSectionId = sectionId;
+          openRightPanel("element", { forceExitFocus: true });
+          setRightTab("element");
+          activateRailTool("sections");
+          renderSectionsList();
+          renderSectionControls();
+        },
+        onInlineEdit(path, value) {
+          setPathValue(path, value, "string");
+          queueAutosave();
+          queuePreviewRender();
+        },
+      }
+    );
+  }
+
+  function queuePreviewRender() {
+    if (state.previewRenderFrame) return;
+    state.previewRenderFrame = window.requestAnimationFrame(() => {
+      state.previewRenderFrame = 0;
+      renderPreview();
+    });
+  }
+
+  function renderStaticSections() {
+    renderPageMeta();
+    renderSectionsList();
+    renderPresetThemes();
+    renderThemeControls();
+    renderSectionControls();
+    renderHistory();
+    setRightTab(state.rightTab);
+    updateSaveActions();
+  }
+
+  function renderAll() {
+    renderStaticSections();
+    renderPreview();
+  }
+
+  function setRightTab(tabName) {
+    const normalized = tabName === "theme" ? "theme" : "element";
+    state.rightTab = normalized;
+    activateRailTool(normalized === "theme" ? "settings" : "sections");
+    els.rightTabButtons.forEach((button) => {
+      const active = button.getAttribute("data-right-tab-btn") === normalized;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    els.rightTabPanels.forEach((panel) => {
+      const active = panel.getAttribute("data-right-tab-panel") === normalized;
+      panel.classList.toggle("is-active", active);
+      panel.hidden = !active;
+    });
+  }
+
+  function setRailExpanded(expanded) {
+    if (!els.utilityRail) return;
+    state.railExpanded = Boolean(expanded);
+    els.utilityRail.classList.toggle("is-expanded", state.railExpanded);
+    els.utilityRail.classList.toggle("is-collapsed", !state.railExpanded);
+    if (els.layout) {
+      const railWidth = state.railExpanded ? RAIL_EXPANDED_WIDTH : RAIL_COLLAPSED_WIDTH;
+      els.layout.style.setProperty("--lpe-rail-width", `${railWidth}px`);
+    }
+    if (els.railToggle) {
+      els.railToggle.setAttribute("aria-label", state.railExpanded ? "Collapse tools" : "Expand tools");
+      els.railToggle.setAttribute("data-tooltip", state.railExpanded ? "Collapse tools" : "Expand tools");
+    }
+  }
+
+  function setFocusMode(enabled) {
+    const next = Boolean(enabled);
+    state.focusMode = next;
+
+    if (next) {
+      state.focusMemory = {
+        leftPanelCollapsed: state.leftPanelCollapsed,
+        rightPanelCollapsed: state.rightPanelCollapsed,
+        leftPanelWidth: state.leftPanelWidth,
+        rightPanelWidth: state.rightPanelWidth,
+      };
+      state.leftPanelCollapsed = true;
+      state.rightPanelCollapsed = true;
+      setRailExpanded(false);
+    } else if (state.focusMemory) {
+      state.leftPanelCollapsed = Boolean(state.focusMemory.leftPanelCollapsed);
+      state.rightPanelCollapsed = Boolean(state.focusMemory.rightPanelCollapsed);
+      state.leftPanelWidth = Number(state.focusMemory.leftPanelWidth) || LEFT_PANEL_DEFAULT_WIDTH;
+      state.rightPanelWidth =
+        Number(state.focusMemory.rightPanelWidth) || RIGHT_PANEL_DEFAULT_WIDTH;
+      state.focusMemory = null;
+    }
+
+    if (els.shell) {
+      els.shell.classList.toggle("is-focus-mode", state.focusMode);
+    }
+    if (els.focusBtn) {
+      els.focusBtn.classList.toggle("is-active", state.focusMode);
+      els.focusBtn.innerHTML = TOPBAR_FOCUS_ICON;
+      els.focusBtn.setAttribute("title", state.focusMode ? "Exit focus mode" : "Focus mode");
+      els.focusBtn.setAttribute("aria-label", state.focusMode ? "Exit focus mode" : "Focus mode");
+      els.focusBtn.setAttribute("aria-pressed", state.focusMode ? "true" : "false");
+    }
+    applyPanelLayout();
+  }
+
+  function applyPanelLayout() {
+    if (!els.layout) return;
+    const leftWidth = state.leftPanelCollapsed
+      ? 0
+      : Math.round(Math.max(LEFT_PANEL_MIN_WIDTH, safeNumber(state.leftPanelWidth, LEFT_PANEL_DEFAULT_WIDTH)));
+    const rightWidth = state.rightPanelCollapsed ? 0 : Math.round(state.rightPanelWidth);
+    els.layout.style.setProperty("--lpe-left-width", `${leftWidth}px`);
+    els.layout.style.setProperty("--lpe-right-width", `${rightWidth}px`);
+    els.layout.classList.toggle("is-left-collapsed", state.leftPanelCollapsed);
+    els.layout.classList.toggle("is-right-collapsed", state.rightPanelCollapsed);
+    if (els.rightPanel) {
+      els.rightPanel.setAttribute("aria-hidden", state.rightPanelCollapsed ? "true" : "false");
+    }
+    if (els.leftCollapseBtn) {
+      els.leftCollapseBtn.innerHTML = `<span aria-hidden="true">${state.leftPanelCollapsed ? "&rsaquo;" : "&lsaquo;"}</span>`;
+      els.leftCollapseBtn.setAttribute(
+        "aria-label",
+        state.leftPanelCollapsed ? "Expand sections panel" : "Collapse sections panel"
+      );
+    }
+    if (els.rightCollapseBtn) {
+      els.rightCollapseBtn.innerHTML = '<span aria-hidden="true">&times;</span>';
+      els.rightCollapseBtn.setAttribute("aria-label", "Close settings panel");
+    }
+  }
+
+  function openRightPanel(tabName, options = {}) {
+    const forceExitFocus = options && options.forceExitFocus === true;
+    if (state.focusMode && !forceExitFocus) return;
+    if (state.focusMode && forceExitFocus) setFocusMode(false);
+    if (tabName) setRightTab(tabName);
+    state.rightPanelCollapsed = false;
+    applyPanelLayout();
+    if (els.rightPanel) {
+      window.requestAnimationFrame(() => {
+        const activePanel = els.rightTabPanels.find((panel) => panel.classList.contains("is-active"));
+        if (activePanel) activePanel.scrollTop = 0;
+      });
+    }
+  }
+
+  function closeRightPanel() {
+    state.rightPanelCollapsed = true;
+    applyPanelLayout();
+  }
+
+  function togglePanelCollapse(side) {
+    if (state.focusMode) {
+      setFocusMode(false);
+    }
+    if (side === "left") {
+      state.leftPanelCollapsed = !state.leftPanelCollapsed;
+      if (!state.leftPanelCollapsed && state.leftPanelWidth < LEFT_PANEL_MIN_WIDTH) {
+        state.leftPanelWidth = LEFT_PANEL_DEFAULT_WIDTH;
+      }
+    }
+    if (side === "right") {
+      state.rightPanelCollapsed = !state.rightPanelCollapsed;
+      if (!state.rightPanelCollapsed && state.rightPanelWidth < RIGHT_PANEL_MIN_WIDTH) {
+        state.rightPanelWidth = RIGHT_PANEL_DEFAULT_WIDTH;
+      }
+    }
+    applyPanelLayout();
+  }
+
+  function activateRailTool(tool) {
+    if (!els.utilityRail) return;
+    const buttons = Array.from(els.utilityRail.querySelectorAll("[data-rail-tool]"));
+    buttons.forEach((button) => {
+      button.classList.toggle("is-active", button.getAttribute("data-rail-tool") === tool);
+    });
+  }
+
+  function bindPanelFrameEvents() {
+    setRailExpanded(false);
+    activateRailTool("sections");
+    setFocusMode(false);
+    applyPanelLayout();
+    setRightTab(state.rightTab);
+
+    if (els.railToggle) {
+      els.railToggle.addEventListener("click", () => {
+        setRailExpanded(!state.railExpanded);
+      });
+    }
+
+    if (els.utilityRail) {
+      els.utilityRail.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const button = target.closest("[data-rail-tool]");
+        if (!(button instanceof HTMLElement)) return;
+        const tool = button.getAttribute("data-rail-tool");
+        if (!tool) return;
+        activateRailTool(tool);
+        if (tool === "settings") {
+          openRightPanel("theme", { forceExitFocus: true });
+          return;
+        }
+        if (tool === "sections") {
+          closeRightPanel();
+          if (state.leftPanelCollapsed) togglePanelCollapse("left");
+          if (els.leftPanel) els.leftPanel.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      });
+    }
+
+    if (els.leftCollapseBtn) {
+      els.leftCollapseBtn.addEventListener("click", () => togglePanelCollapse("left"));
+    }
+
+    if (els.rightCollapseBtn) {
+      els.rightCollapseBtn.addEventListener("click", () => closeRightPanel());
+    }
+
+    els.rightTabButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const tab = button.getAttribute("data-right-tab-btn");
+        if (!tab) return;
+        setRightTab(tab);
+      });
+    });
+
+    const bindResizer = (handle, side) => {
+      if (!handle) return;
+      handle.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        if (state.focusMode) setFocusMode(false);
+        const startX = event.clientX;
+        const startLeft = state.leftPanelWidth;
+        const startRight = state.rightPanelWidth;
+
+        const onMove = (moveEvent) => {
+          const deltaX = moveEvent.clientX - startX;
+          if (side === "left") {
+            state.leftPanelCollapsed = false;
+            state.leftPanelWidth = Math.max(
+              LEFT_PANEL_MIN_WIDTH,
+              Math.min(LEFT_PANEL_MAX_WIDTH, startLeft + deltaX)
+            );
+          } else {
+            state.rightPanelCollapsed = false;
+            state.rightPanelWidth = Math.max(
+              RIGHT_PANEL_MIN_WIDTH,
+              Math.min(RIGHT_PANEL_MAX_WIDTH, startRight - deltaX)
+            );
+          }
+          applyPanelLayout();
+        };
+
+        const onUp = () => {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+          document.body.classList.remove("is-panel-resizing");
+        };
+
+        document.body.classList.add("is-panel-resizing");
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+    };
+
+    bindResizer(els.leftResizer, "left");
+    bindResizer(els.rightResizer, "right");
+  }
+
+  function categoryName(categoryId) {
+    const category = state.categories.find((item) => String(item.id) === String(categoryId));
+    return category ? category.name : "Uncategorized";
+  }
+
+  async function createCategoryPrompt() {
+    const name = window.prompt("Category name");
+    if (!name || !name.trim()) return;
+    try {
+      await apiRequest("/api/dashboard/pages/categories", {
+        method: "POST",
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/draft`);
+      normalizePayload(payload);
+      renderAll();
+      queueAutosave();
+    } catch (error) {
+      alert(error.message || "Could not create category");
+    }
+  }
+
+  async function createServicePrompt() {
+    const name = window.prompt("Service name");
+    if (!name || !name.trim()) return;
+    const durationRaw = window.prompt("Duration in minutes", "60");
+    const priceRaw = window.prompt("Price (USD)", "120");
+    const categoryOptions = state.categories.map((item, index) => `${index + 1}. ${item.name}`).join("\n");
+    const categoryChoice = window.prompt(
+      `Choose category number (optional)\n${categoryOptions}`,
+      state.categories.length ? "1" : ""
+    );
+    const categoryIndex = Number(categoryChoice);
+    const category = Number.isFinite(categoryIndex) && categoryIndex > 0 ? state.categories[categoryIndex - 1] : null;
+
+    try {
+      await apiRequest("/api/dashboard/pages/services", {
+        method: "POST",
+        body: JSON.stringify({
+          name: name.trim(),
+          durationMinutes: Number(durationRaw) || 60,
+          price: priceRaw || "0",
+          categoryId: category ? category.id : null,
+        }),
+      });
+      const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/draft`);
+      normalizePayload(payload);
+      renderAll();
+      queueAutosave();
+    } catch (error) {
+      alert(error.message || "Could not create service");
+    }
+  }
+
+  async function editServicePrompt(serviceId) {
+    const current = state.services.find((item) => String(item.id) === String(serviceId));
+    if (!current) return;
+    const name = window.prompt("Service name", current.name || "");
+    if (!name || !name.trim()) return;
+    const duration = window.prompt("Duration in minutes", String(current.durationMinutes || 60));
+    const price = window.prompt("Price (USD)", String((Number(current.priceCents || 0) / 100).toFixed(2)));
+    try {
+      await apiRequest(`/api/dashboard/pages/services/${encodeURIComponent(serviceId)}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: name.trim(),
+          durationMinutes: Number(duration) || current.durationMinutes || 60,
+          price,
+        }),
+      });
+      const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/draft`);
+      normalizePayload(payload);
+      renderAll();
+      queueAutosave();
+    } catch (error) {
+      alert(error.message || "Could not update service");
+    }
+  }
+
+  async function deleteService(serviceId) {
+    if (!window.confirm("Delete this service?")) return;
+    try {
+      await apiRequest(`/api/dashboard/pages/services/${encodeURIComponent(serviceId)}`, {
+        method: "DELETE",
+      });
+      const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/draft`);
+      normalizePayload(payload);
+      renderAll();
+      queueAutosave();
+    } catch (error) {
+      alert(error.message || "Could not delete service");
+    }
+  }
+
+  async function createReviewPrompt() {
+    const name = window.prompt("Reviewer name");
+    if (!name || !name.trim()) return;
+    const rating = window.prompt("Rating (1-5)", "5");
+    const text = window.prompt("Review text");
+    if (!text || !text.trim()) return;
+    try {
+      await apiRequest("/api/dashboard/pages/reviews", {
+        method: "POST",
+        body: JSON.stringify({
+          name: name.trim(),
+          rating: Number(rating) || 5,
+          text: text.trim(),
+        }),
+      });
+      const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/draft`);
+      normalizePayload(payload);
+      renderAll();
+      queueAutosave();
+    } catch (error) {
+      alert(error.message || "Could not create review");
+    }
+  }
+
+  async function editReviewPrompt(reviewId) {
+    const current = state.reviews.find((item) => String(item.id) === String(reviewId));
+    if (!current) return;
+    const name = window.prompt("Reviewer name", current.name || "");
+    if (!name || !name.trim()) return;
+    const rating = window.prompt("Rating (1-5)", String(current.rating || 5));
+    const text = window.prompt("Review text", current.text || "");
+    if (!text || !text.trim()) return;
+    try {
+      await apiRequest(`/api/dashboard/pages/reviews/${encodeURIComponent(reviewId)}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: name.trim(),
+          rating: Number(rating) || current.rating || 5,
+          text: text.trim(),
+        }),
+      });
+      const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/draft`);
+      normalizePayload(payload);
+      renderAll();
+      queueAutosave();
+    } catch (error) {
+      alert(error.message || "Could not update review");
+    }
+  }
+
+  async function deleteReview(reviewId) {
+    if (!window.confirm("Delete this review?")) return;
+    try {
+      await apiRequest(`/api/dashboard/pages/reviews/${encodeURIComponent(reviewId)}`, {
+        method: "DELETE",
+      });
+      const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/draft`);
+      normalizePayload(payload);
+      renderAll();
+      queueAutosave();
+    } catch (error) {
+      alert(error.message || "Could not delete review");
+    }
+  }
+
+  function removeArrayItem(path, index) {
+    const parts = path.split(".");
+    let cursor = state.draftConfig;
+    for (let i = 0; i < parts.length; i += 1) {
+      const tokenPart = parts[i];
+      if (i === parts.length - 1) {
+        if (Array.isArray(cursor[tokenPart])) {
+          cursor[tokenPart].splice(index, 1);
+        }
+      } else {
+        cursor = cursor[tokenPart];
+        if (!cursor) return;
+      }
+    }
+    renderAll();
+    queueAutosave();
+  }
+
+  function addArrayItem(path, value) {
+    const parts = path.split(".");
+    let cursor = state.draftConfig;
+    for (let i = 0; i < parts.length; i += 1) {
+      const tokenPart = parts[i];
+      if (i === parts.length - 1) {
+        if (!Array.isArray(cursor[tokenPart])) {
+          cursor[tokenPart] = [];
+        }
+        cursor[tokenPart].push(value);
+      } else {
+        if (!cursor[tokenPart]) cursor[tokenPart] = {};
+        cursor = cursor[tokenPart];
+      }
+    }
+    renderAll();
+    queueAutosave();
+  }
+
+  function toggleCategorySelection(sectionIndex, categoryId, checked) {
+    const section = sectionList()[sectionIndex];
+    if (!section || section.type !== "servicesMenu") return;
+    const current = Array.isArray(section.settings.categoryIds)
+      ? section.settings.categoryIds.map(String)
+      : [];
+    const next = current.filter((item) => item !== String(categoryId));
+    if (checked) next.push(String(categoryId));
+    section.settings.categoryIds = Array.from(new Set(next));
+    queuePreviewRender();
+    queueAutosave();
+  }
+
+  async function restoreHistory(historyId) {
+    if (!window.confirm("Restore this version into draft?")) return;
+    try {
+      const payload = await apiRequest(
+        `/api/dashboard/pages/${encodeURIComponent(state.pageId)}/restore/${encodeURIComponent(historyId)}`,
+        { method: "POST" }
+      );
+      normalizePayload(payload);
+      setDirty(false);
+      renderAll();
+      setSaveStatus("saved", "Restored");
+    } catch (error) {
+      setSaveStatus("error", error.message || "Restore failed");
+    }
+  }
+
+  async function publishPage() {
+    if (state.publishInFlight) return;
+    if (!window.confirm("Publish current draft to live page?")) return;
+    state.publishInFlight = true;
+    updateSaveActions();
+    setSaveStatus("saving", "Publishing...");
+    try {
+      if (state.isDirty) {
+        const saved = await saveDraft(true);
+        if (!saved) return;
+      }
+      const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/publish`, {
+        method: "POST",
+      });
+      normalizePayload(payload);
+      setDirty(false);
+      renderAll();
+      setSaveStatus("saved", "Published");
+    } catch (error) {
+      setDirty(true);
+      setSaveStatus("error", error.message || "Publish failed");
+    } finally {
+      state.publishInFlight = false;
+      updateSaveActions();
+    }
+  }
+
+  function copyLink() {
+    const link = pageShareUrl();
+    if (!link) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(
+        () => setSaveStatus("saved", "Link copied"),
+        () => setSaveStatus("error", "Copy failed")
+      );
+      return;
+    }
+    const helper = document.createElement("textarea");
+    helper.value = link;
+    document.body.appendChild(helper);
+    helper.select();
+    document.execCommand("copy");
+    helper.remove();
+    setSaveStatus("saved", "Link copied");
+  }
+
+  function openPreview() {
+    const link = pageShareUrl();
+    if (!link) return;
+    window.open(link, "_blank", "noopener");
+  }
+
+  function reorderSections(fromIndex, toIndex) {
+    const sections = sectionList();
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= sections.length || toIndex >= sections.length) return;
+    const [moved] = sections.splice(fromIndex, 1);
+    sections.splice(toIndex, 0, moved);
+    renderAll();
+    queueAutosave();
+  }
+
+  function addSection(type, options) {
+    const entry = state.sectionLibrary.find((item) => item.type === type);
+    const settingsOverride = options && options.settings && typeof options.settings === "object"
+      ? deepClone(options.settings)
+      : null;
+    const isSingleton = options && typeof options.singleton === "boolean"
+      ? options.singleton
+      : Boolean(entry && entry.singleton);
+    const existsSingleton = isSingleton && sectionList().some((section) => section.type === type);
+    if (existsSingleton) {
+      alert("This section type can only be added once.");
+      return false;
+    }
+    const next = createSection(type);
+    if (settingsOverride) {
+      next.settings = {
+        ...next.settings,
+        ...settingsOverride,
+      };
+    }
+    const customLabel = options ? safeText(options.customLabel, "", 120) : "";
+    if (customLabel) {
+      next.customLabel = customLabel;
+    }
+    sectionList().push(next);
+    state.selectedSectionId = next.id;
+    openRightPanel("element", { forceExitFocus: true });
+    renderAll();
+    queueAutosave();
+    return true;
+  }
+
+  function addSectionFromLibraryAsset(assetId) {
+    const entry = libraryAssets().find((item) => String(item.assetId) === String(assetId));
+    if (!entry) return false;
+    return addSection(entry.type, {
+      singleton: entry.singleton,
+      settings: entry.settings || null,
+      customLabel: entry.customLabel || "",
+    });
+  }
+
+  function renderLibraryModal() {
+    if (!els.libraryGrid) return;
+    const categoryLabels = {
+      all: "All sections",
+      essentials: "Essentials",
+      headernavigation: "Header Navigation",
+      cta: "CTA",
+      salon: "Salon specific",
+      info: "Information",
+    };
+    const categoryOrder = ["all", "headernavigation", "cta", "essentials", "salon", "info"];
+    const allItems = libraryAssets();
+
+    const dynamicCategoryLabels = { ...categoryLabels };
+    const counts = { all: allItems.length };
+    allItems.forEach((item) => {
+      const key = safeText(item?.category, "other").toLowerCase() || "other";
+      if (!dynamicCategoryLabels[key]) {
+        dynamicCategoryLabels[key] = key.charAt(0).toUpperCase() + key.slice(1);
+      }
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    const extraKeys = Object.keys(counts).filter(
+      (key) => key !== "all" && !categoryOrder.includes(key)
+    );
+    const categoryKeys = [...categoryOrder, ...extraKeys].filter((key) => Number(counts[key] || 0) > 0);
+
+    if (!categoryKeys.includes(state.libraryCategory)) {
+      state.libraryCategory = "all";
+    }
+
+    const query = safeText(state.librarySearchText, "").toLowerCase();
+    const filteredItems = allItems.filter((item) => {
+      const categoryKey = safeText(item?.category, "other").toLowerCase() || "other";
+      const categoryMatches = state.libraryCategory === "all" || categoryKey === state.libraryCategory;
+      if (!categoryMatches) return false;
+      if (!query) return true;
+      const label = safeText(item.label, "").toLowerCase();
+      const description = safeText(item.description, "").toLowerCase();
+      const type = safeText(item.type, "").toLowerCase();
+      const id = safeText(item.assetId, "").toLowerCase();
+      return label.includes(query) || description.includes(query) || type.includes(query) || id.includes(query);
+    });
+
+    const visibleAssetIds = new Set(filteredItems.map((item) => String(item.assetId || "")));
+    if (state.selectedLibraryType && !visibleAssetIds.has(state.selectedLibraryType)) {
+      state.selectedLibraryType = "";
+    }
+
+    if (els.libraryMainTitle) {
+      const selectedLabel = dynamicCategoryLabels[state.libraryCategory] || "All sections";
+      els.libraryMainTitle.textContent = state.libraryCategory === "all" ? selectedLabel : `${selectedLabel} assets`;
+    }
+
+    if (els.libraryCategories) {
+      els.libraryCategories.innerHTML = categoryKeys
+        .map((key) => {
+          const active = key === state.libraryCategory;
+          const label = dynamicCategoryLabels[key] || key;
+          const count = Number(counts[key] || 0);
+          return `
+            <button
+              type="button"
+              class="lpe-library-category ${active ? "is-active" : ""}"
+              data-action="select-library-category"
+              data-category="${escapeHtml(key)}"
+            >
+              <span class="lpe-library-category-label">${escapeHtml(label)}</span>
+              <span class="lpe-library-category-count">${count} ${count === 1 ? "type" : "types"}</span>
+            </button>
+          `;
+        })
+        .join("");
+    }
+
+    if (!filteredItems.length) {
+      els.libraryGrid.innerHTML = '<p class="lp-empty">No section assets match your search.</p>';
+      if (els.dialogSelect) {
+        els.dialogSelect.disabled = true;
+      }
+      return;
+    }
+
+    els.libraryGrid.innerHTML = `
+      <div class="lpe-library-cards">
+        ${filteredItems
+          .map((item) => {
+            const selected = state.selectedLibraryType === item.assetId;
+            const sectionTypeLabel = sectionLabelByType(item.type, item.label);
+            return `
+              <article
+                class="lpe-library-card lpe-library-asset-card ${selected ? "is-selected" : ""}"
+                data-action="select-library"
+                data-asset-id="${escapeHtml(item.assetId)}"
+                role="button"
+                tabindex="0"
+                aria-pressed="${selected ? "true" : "false"}"
+              >
+                <div class="lpe-library-card-meta">
+                  <span class="lpe-library-card-icon">${sectionAssetIcon(item.icon)}</span>
+                  <span class="lpe-library-card-chip">${escapeHtml(
+                    dynamicCategoryLabels[safeText(item.category, "other").toLowerCase()] || "Section"
+                  )}</span>
+                </div>
+                ${sectionAssetPreviewMarkup(item)}
+                <h4>${escapeHtml(sectionTypeLabel)}</h4>
+                <p>${escapeHtml(item.description)}</p>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    `;
+
+    if (els.dialogSelect) {
+      els.dialogSelect.disabled = !state.selectedLibraryType;
+    }
+  }
+
+  function openAddDialog() {
+    if (!els.addDialog) return;
+    state.selectedLibraryType = "";
+    state.libraryCategory = "all";
+    state.librarySearchText = "";
+    if (els.librarySearch) {
+      els.librarySearch.value = "";
+    }
+    renderLibraryModal();
+    els.addDialog.showModal();
+  }
+
+  function closeAddDialog() {
+    if (!els.addDialog || !els.addDialog.open) return;
+    els.addDialog.close();
+  }
+
+  function bindTopbarEvents() {
+    document.querySelectorAll(".lpe-device-toggle button[data-device]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const device = button.getAttribute("data-device");
+        if (!device) return;
+        state.device = device;
+        document.querySelectorAll(".lpe-device-toggle button[data-device]").forEach((item) => {
+          item.classList.toggle("is-active", item.getAttribute("data-device") === device);
+        });
+        if (els.previewFrame) {
+          els.previewFrame.classList.toggle("is-desktop", device === "desktop");
+          els.previewFrame.classList.toggle("is-mobile", device === "mobile");
+        }
+      });
+    });
+
+    if (els.previewBtn) els.previewBtn.addEventListener("click", openPreview);
+    if (els.copyLinkBtn) els.copyLinkBtn.addEventListener("click", copyLink);
+    if (els.publishBtn) els.publishBtn.addEventListener("click", publishPage);
+    if (els.focusBtn) {
+      els.focusBtn.addEventListener("click", () => {
+        setFocusMode(!state.focusMode);
+      });
+    }
+    if (els.saveTopBtn) {
+      els.saveTopBtn.addEventListener("click", () => {
+        if (state.saveTimer) clearTimeout(state.saveTimer);
+        saveDraft(true);
+      });
+    }
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "\\" || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      event.preventDefault();
+      setFocusMode(!state.focusMode);
+    });
+  }
+
+  function bindSectionsEvents() {
+    if (!els.sectionsList) return;
+    let dragFrom = -1;
+    let dragRow = null;
+    let dropRow = null;
+
+    const clearDragClasses = () => {
+      if (dragRow) dragRow.classList.remove("is-dragging");
+      if (dropRow) dropRow.classList.remove("is-drop-target");
+      dragRow = null;
+      dropRow = null;
+    };
+
+    const closeRowMenu = () => {
+      if (!state.openRowMenuSectionId) return;
+      state.openRowMenuSectionId = "";
+      renderSectionsList();
+    };
+
+    if (els.sectionsFilter) {
+      els.sectionsFilter.addEventListener("input", () => {
+        state.sectionsFilterText = safeText(els.sectionsFilter.value, "");
+        renderSectionsList();
+      });
+    }
+
+    els.sectionsList.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const actionEl = target.closest("[data-action]");
+      if (!(actionEl instanceof HTMLElement)) {
+        const row = target.closest(".lpe-section-row[data-section-id]");
+        if (!(row instanceof HTMLElement)) return;
+        const sectionId = row.getAttribute("data-section-id");
+        if (!sectionId) return;
+        state.selectedSectionId = sectionId;
+        openRightPanel("element", { forceExitFocus: true });
+        setRightTab("element");
+        activateRailTool("sections");
+        renderSectionsList();
+        renderSectionControls();
+        renderPreview();
+        return;
+      }
+      const action = actionEl.getAttribute("data-action");
+      const sectionId = actionEl.getAttribute("data-section-id");
+      if (!action || !sectionId) return;
+
+      state.openRowMenuSectionId = "";
+
+      if (action === "select-section") {
+        state.selectedSectionId = sectionId;
+        openRightPanel("element", { forceExitFocus: true });
+        setRightTab("element");
+        activateRailTool("sections");
+        renderSectionsList();
+        renderSectionControls();
+        renderPreview();
+        return;
+      }
+
+      const index = findSectionIndexById(sectionId);
+      if (index < 0) return;
+
+      if (action === "toggle-section") {
+        const section = sectionList()[index];
+        section.enabled = !(section.enabled !== false);
+        renderAll();
+        queueAutosave();
+        return;
+      }
+
+      if (action === "duplicate-section") {
+        const source = sectionList()[index];
+        const clone = deepClone(source);
+        clone.id = `${source.type}-${Math.random().toString(36).slice(2, 8)}`;
+        sectionList().splice(index + 1, 0, clone);
+        state.selectedSectionId = clone.id;
+        openRightPanel("element", { forceExitFocus: true });
+        renderAll();
+        queueAutosave();
+        return;
+      }
+
+      if (action === "delete-section") {
+        if (sectionList().length === 1) {
+          alert("At least one section is required.");
+          return;
+        }
+        sectionList().splice(index, 1);
+        ensureSelection();
+        renderAll();
+        queueAutosave();
+      }
+    });
+
+    els.sectionsList.addEventListener("dragstart", (event) => {
+      const row = event.target.closest("[data-index]");
+      if (!row) return;
+      dragFrom = Number(row.getAttribute("data-index"));
+      if (Number.isFinite(dragFrom)) {
+        dragRow = row;
+        dragRow.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        const sectionId = String(row.getAttribute("data-section-id") || "");
+        event.dataTransfer.setData("text/plain", sectionId);
+      }
+    });
+
+    els.sectionsList.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      const row = event.target.closest("[data-index]");
+      if (!row || row === dragRow) return;
+      if (dropRow && dropRow !== row) {
+        dropRow.classList.remove("is-drop-target");
+      }
+      dropRow = row;
+      dropRow.classList.add("is-drop-target");
+    });
+
+    els.sectionsList.addEventListener("drop", (event) => {
+      event.preventDefault();
+      const row = event.target.closest("[data-index]");
+      if (!row) {
+        clearDragClasses();
+        return;
+      }
+      const toIndex = Number(row.getAttribute("data-index"));
+      if (!Number.isFinite(toIndex) || !Number.isFinite(dragFrom)) {
+        clearDragClasses();
+        return;
+      }
+      clearDragClasses();
+      if (toIndex === dragFrom) {
+        dragFrom = -1;
+        return;
+      }
+      reorderSections(dragFrom, toIndex);
+      dragFrom = -1;
+    });
+
+    els.sectionsList.addEventListener("dragend", () => {
+      clearDragClasses();
+      dragFrom = -1;
+    });
+
+    els.sectionsList.addEventListener("contextmenu", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const row = target.closest(".lpe-section-row[data-section-id]");
+      if (!(row instanceof HTMLElement)) return;
+      const sectionId = String(row.getAttribute("data-section-id") || "");
+      if (!sectionId) return;
+      event.preventDefault();
+      state.selectedSectionId = sectionId;
+      state.openRowMenuSectionId = sectionId;
+      renderSectionsList();
+      renderSectionControls();
+      renderPreview();
+    });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (!target.closest("#lpe-sections-list")) {
+        closeRowMenu();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      closeRowMenu();
+    });
+  }
+
+  function bindControlsEvents() {
+    const attachValueBinding = (container) => {
+      if (!container) return;
+      const handleBind = (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const path = target.getAttribute("data-bind-path");
+        if (!path) return;
+        const kind = target.getAttribute("data-bind-type") || "string";
+        const value =
+          target instanceof HTMLInputElement && target.type === "checkbox"
+            ? target.checked
+            : target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement
+              ? target.value
+              : "";
+        setPathValue(path, value, kind);
+        if (path.startsWith("theme.")) {
+          renderPresetThemes();
+          refreshSeoPreviews();
+        }
+        if (path === "page.slug" || path === "page.title") {
+          renderPageMeta();
+          refreshSeoPreviews();
+        }
+        queuePreviewRender();
+        queueAutosave();
+      };
+      container.addEventListener("input", handleBind);
+      container.addEventListener("change", handleBind);
+    };
+
+    attachValueBinding(els.themeControls);
+    attachValueBinding(els.sectionControls);
+
+    if (els.themeControls) {
+      els.themeControls.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const action = target.getAttribute("data-action");
+        if (action !== "choose-image-upload") return;
+        const path = target.getAttribute("data-path");
+        const uploadInput = getUploadInputByPath(path);
+        if (uploadInput) uploadInput.click();
+      });
+
+      els.themeControls.addEventListener("change", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) return;
+        if (target.type === "file" && target.getAttribute("data-upload-input") === "true") {
+          const path = target.getAttribute("data-path");
+          if (!path) return;
+          handleImageUpload(path, target);
+        }
+      });
+    }
+
+    if (els.sectionControls) {
+      els.sectionControls.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const action = target.getAttribute("data-action");
+        if (!action) return;
+
+        if (action === "choose-image-upload") {
+          const path = target.getAttribute("data-path");
+          const uploadInput = getUploadInputByPath(path);
+          if (uploadInput) uploadInput.click();
+          return;
+        }
+
+        if (action === "add-array-item") {
+          const path = target.getAttribute("data-path");
+          const template = target.getAttribute("data-template");
+          const defaults = {
+            marqueeItem: "",
+            slide: {
+              imageUrl: "",
+              title: "",
+              subtitle: "",
+              buttonLabel: "",
+              buttonHref: "",
+            },
+            spotlightCard: {
+              title: "",
+              description: "",
+              imageUrl: "",
+              buttonLabel: "",
+              buttonHref: "",
+            },
+            instagramItem: {
+              url: "",
+              link: "",
+            },
+          };
+          addArrayItem(path, Object.prototype.hasOwnProperty.call(defaults, template) ? defaults[template] : "");
+          return;
+        }
+        if (action === "add-image-item") {
+          addArrayItem(target.getAttribute("data-path"), { url: "", alt: "" });
+          return;
+        }
+        if (action === "add-faq-item") {
+          addArrayItem(target.getAttribute("data-path"), { question: "", answer: "" });
+          return;
+        }
+        if (action === "remove-array-item") {
+          const path = target.getAttribute("data-path");
+          const index = Number(target.getAttribute("data-index"));
+          removeArrayItem(path, index);
+          return;
+        }
+        if (action === "toggle-category-id") return;
+        if (action === "create-category") {
+          createCategoryPrompt();
+          return;
+        }
+        if (action === "create-service") {
+          createServicePrompt();
+          return;
+        }
+        if (action === "edit-service") {
+          editServicePrompt(target.getAttribute("data-service-id"));
+          return;
+        }
+        if (action === "delete-service") {
+          deleteService(target.getAttribute("data-service-id"));
+          return;
+        }
+        if (action === "create-review") {
+          createReviewPrompt();
+          return;
+        }
+        if (action === "edit-review") {
+          editReviewPrompt(target.getAttribute("data-review-id"));
+          return;
+        }
+        if (action === "delete-review") {
+          deleteReview(target.getAttribute("data-review-id"));
+        }
+      });
+
+      els.sectionControls.addEventListener("change", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) return;
+        if (
+          target.type === "file" &&
+          target.getAttribute("data-upload-input") === "true"
+        ) {
+          const path = target.getAttribute("data-path");
+          if (!path) return;
+          handleImageUpload(path, target);
+          return;
+        }
+        const action = target.getAttribute("data-action");
+        if (action !== "toggle-category-id") return;
+        const sectionIndex = Number(target.getAttribute("data-section-index"));
+        const categoryId = target.getAttribute("data-category-id");
+        if (!Number.isFinite(sectionIndex) || !categoryId) return;
+        toggleCategorySelection(sectionIndex, categoryId, target.checked);
+      });
+    }
+  }
+
+  function bindHistoryEvents() {
+    if (!els.historyList) return;
+    els.historyList.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const action = target.getAttribute("data-action");
+      if (action !== "restore-version") return;
+      const historyId = target.getAttribute("data-history-id");
+      if (!historyId) return;
+      restoreHistory(historyId);
+    });
+  }
+
+  function bindModalEvents() {
+    if (els.openThemeDialogBtn) {
+      els.openThemeDialogBtn.addEventListener("click", () => {
+        openThemeDialog();
+      });
+    }
+
+    if (els.addSectionBtn) {
+      els.addSectionBtn.addEventListener("click", () => {
+        openAddDialog();
+      });
+    }
+
+    if (els.dialogCancel) {
+      els.dialogCancel.addEventListener("click", () => {
+        closeAddDialog();
+      });
+    }
+
+    if (els.dialogBack) {
+      els.dialogBack.addEventListener("click", () => {
+        closeAddDialog();
+      });
+    }
+
+    if (els.addDialog) {
+      els.addDialog.addEventListener("click", (event) => {
+        if (event.target === els.addDialog) {
+          closeAddDialog();
+        }
+      });
+    }
+
+    if (els.libraryGrid) {
+      els.libraryGrid.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const card = target.closest("[data-action='select-library']");
+        if (!card) return;
+        const assetId = card.getAttribute("data-asset-id");
+        if (!assetId) return;
+        state.selectedLibraryType = assetId;
+        renderLibraryModal();
+      });
+
+      els.libraryGrid.addEventListener("keydown", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+        const card = target.closest("[data-action='select-library']");
+        if (!(card instanceof HTMLElement)) return;
+        event.preventDefault();
+        const assetId = card.getAttribute("data-asset-id");
+        if (!assetId) return;
+        state.selectedLibraryType = assetId;
+        renderLibraryModal();
+      });
+    }
+
+    if (els.libraryCategories) {
+      els.libraryCategories.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const categoryButton = target.closest("[data-action='select-library-category']");
+        if (!(categoryButton instanceof HTMLElement)) return;
+        const category = categoryButton.getAttribute("data-category");
+        if (!category) return;
+        state.libraryCategory = category;
+        renderLibraryModal();
+      });
+    }
+
+    if (els.librarySearch) {
+      els.librarySearch.addEventListener("input", () => {
+        state.librarySearchText = safeText(els.librarySearch.value, "");
+        renderLibraryModal();
+      });
+    }
+
+    if (els.dialogSelect) {
+      els.dialogSelect.addEventListener("click", () => {
+        if (!state.selectedLibraryType) {
+          alert("Select a section first.");
+          return;
+        }
+        addSectionFromLibraryAsset(state.selectedLibraryType);
+        closeAddDialog();
+      });
+    }
+
+    if (els.themeDialogCancel) {
+      els.themeDialogCancel.addEventListener("click", () => {
+        if (els.themeDialog) els.themeDialog.close();
+      });
+    }
+
+    if (els.themeGrid) {
+      els.themeGrid.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+
+        const quickApplyButton = target.closest("[data-action='quick-apply-theme-template']");
+        if (quickApplyButton instanceof HTMLElement) {
+          const templateId = quickApplyButton.getAttribute("data-template-id");
+          if (!templateId) return;
+          state.selectedThemeTemplateId = templateId;
+          applySelectedThemeTemplate();
+          return;
+        }
+
+        const card = target.closest("[data-action='select-theme-template']");
+        if (!(card instanceof HTMLElement)) return;
+        const templateId = card.getAttribute("data-template-id");
+        if (!templateId) return;
+        state.selectedThemeTemplateId = templateId;
+        renderThemeDialogTemplates();
+      });
+    }
+
+    if (els.themeDialogApply) {
+      els.themeDialogApply.addEventListener("click", () => {
+        applySelectedThemeTemplate();
+      });
+    }
+  }
+
+  async function loadEditor() {
+    state.pageId = parsePageIdFromPath();
+    if (!state.pageId) {
+      setSaveStatus("error", "Invalid page id");
+      return;
+    }
+    setSaveStatus("saving", "Loading...");
+    try {
+      const payload = await apiRequest(`/api/dashboard/pages/${encodeURIComponent(state.pageId)}/draft`);
+      normalizePayload(payload);
+      setDirty(false);
+      renderAll();
+      setSaveStatus("saved", "Saved");
+    } catch (error) {
+      setDirty(true);
+      setSaveStatus("error", error.message || "Load failed");
+    }
+  }
+
+  bindPanelFrameEvents();
+  bindTopbarEvents();
+  bindSectionsEvents();
+  bindControlsEvents();
+  bindHistoryEvents();
+  bindModalEvents();
+  loadEditor();
+})();

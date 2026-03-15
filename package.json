@@ -1,0 +1,49 @@
+{
+  "name": "meetscheduling",
+  "version": "1.0.0",
+  "description": "Meetscheduling-style meeting scheduling backend with PostgreSQL, event types, availability, slot generation, and bookings.",
+  "main": "src/server.js",
+  "scripts": {
+    "build": "npm run build:dashboard-ui",
+    "build:dashboard-ui": "rm -rf ./assets/dashboard-react && npx tailwindcss -c tailwind.dashboard.config.cjs -i ./dashboard-tailwind.css -o ./assets/dashboard-react.css --minify && npx esbuild dashboard-app.jsx --bundle --format=esm --splitting --platform=browser --target=es2018 --outdir=./assets/dashboard-react --minify",
+    "deploy:prod": "DEPLOY_ENV=production bash scripts/deploy.sh",
+    "pm2:prod": "pm2 start ecosystem.config.js --env production",
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "dev:preview": "npm run build:dashboard-ui && sh -c 'PORT=${PORT:-8081}; APP_BASE_URL=${APP_BASE_URL:-http://127.0.0.1:$PORT}; HOST=127.0.0.1 PREVIEW_MODE=true SKIP_DB_MIGRATIONS=true RUN_SEED_ON_BOOT=false PORT=$PORT APP_BASE_URL=$APP_BASE_URL HOST=$HOST node src/server.js'",
+    "migrate": "node scripts/migrate.js",
+    "seed": "node scripts/seed.js",
+    "paypal:catalog": "node scripts/create-paypal-catalog.js"
+  },
+  "keywords": [
+    "meeting",
+    "scheduling",
+    "calendar",
+    "express",
+    "postgresql",
+    "saas"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^16.4.7",
+    "esbuild": "^0.27.3",
+    "express": "^4.21.2",
+    "express-session": "^1.19.0",
+    "googleapis": "^144.0.0",
+    "grapesjs": "^0.22.14",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^0.577.0",
+    "luxon": "^3.6.1",
+    "nodemailer": "^6.10.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "passport-microsoft": "^2.1.0",
+    "pg": "^8.16.3",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "speakeasy": "^2.0.0",
+    "tailwindcss": "^3.4.17"
+  }
+}

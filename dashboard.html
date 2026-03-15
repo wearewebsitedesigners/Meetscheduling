@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard | MeetScheduling</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <link rel="shortcut icon" href="/assets/favicon.svg" />
+  <meta name="color-scheme" content="light dark" />
+  <script>
+    (() => {
+      try {
+        const previewHosts = new Set(["localhost", "127.0.0.1"]);
+        const isPreview = previewHosts.has(window.location.hostname);
+        if (!isPreview) return;
+
+        window.__MEETSCHEDULING_LOCAL_PREVIEW__ = true;
+
+        localStorage.removeItem("meetscheduling_auth_token");
+
+        const previewStateKey = "meetscheduling_dashboard_preview_state_v1";
+        const userKey = "meetscheduling_auth_user";
+        const fallbackUser = {
+          id: "preview-user",
+          displayName: "Workspace User",
+          username: "preview-user",
+          email: "preview@meetscheduling.com",
+          timezone: "UTC",
+          avatarUrl: "",
+        };
+
+        let previewUser = fallbackUser;
+        try {
+          const raw = localStorage.getItem(previewStateKey);
+          const parsed = raw ? JSON.parse(raw) : null;
+          if (parsed && parsed.user) {
+            previewUser = {
+              ...fallbackUser,
+              ...parsed.user,
+            };
+          }
+        } catch {
+          previewUser = fallbackUser;
+        }
+
+        localStorage.setItem(userKey, JSON.stringify(previewUser));
+      } catch {
+        // ignore preview bootstrap failures
+      }
+    })();
+  </script>
+  <script>
+    (() => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token");
+        if (!token || window.__MEETSCHEDULING_LOCAL_PREVIEW__) return;
+
+        localStorage.setItem("meetscheduling_auth_token", token);
+        params.delete("token");
+
+        const nextQuery = params.toString();
+        const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash || ""}`;
+        window.history.replaceState({}, "", nextUrl);
+      } catch {
+        // ignore token bootstrap failures
+      }
+    })();
+  </script>
+  <script>
+    (() => {
+      try {
+        const key = "meetscheduling_react_theme_v1";
+        const stored = localStorage.getItem(key);
+        const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const dark = stored ? stored === "dark" : prefersDark;
+        document.documentElement.classList.toggle("dark", dark);
+      } catch {
+        // ignore
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="/assets/dashboard-react.css?v=20260313-calendarfix1" />
+</head>
+
+<body>
+  <div id="dashboard-root"></div>
+  <noscript>You need JavaScript enabled to use the MeetScheduling dashboard.</noscript>
+  <script type="module" src="/assets/dashboard-react/dashboard-app.js?v=20260313-calendarfix1"></script>
+</body>
+
+</html>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Meetscheduling logo">
+  <rect width="512" height="512" rx="88" fill="#ffffff" />
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="216" cy="256" r="142" stroke="#1E5ED8" stroke-width="44" />
+    <circle cx="296" cy="256" r="142" stroke="#111111" stroke-opacity="0.9" stroke-width="44" />
+  </g>
+</svg>

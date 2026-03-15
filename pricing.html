@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MeetScheduling Pricing</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <link rel="shortcut icon" href="/assets/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Sora:wght@600;700;800&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/styles/tokens.css" />
+  <link rel="stylesheet" href="/pricing.css?v=2" />
+</head>
+
+<body class="pricing-page">
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="/" aria-label="MeetScheduling home">
+        <img src="/assets/scheduling-logo.svg" alt="MeetScheduling logo"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';" />
+        <span class="brand-fallback" style="display:none;">MeetScheduling</span>
+      </a>
+
+      <nav class="topnav" aria-label="Primary">
+        <a href="/">Product</a>
+        <a class="active" href="/pricing">Pricing</a>
+        <a href="/">Resources</a>
+      </nav>
+
+      <div class="top-actions">
+        <a class="btn btn-light" href="/login">Log in</a>
+        <a class="btn btn-dark" href="/signup">Start for free</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero container">
+      <p class="eyebrow">Pricing</p>
+      <h1>Choose the right plan for your workspace</h1>
+      <p class="hero-copy">
+        Upgrade instantly with PayPal subscriptions and unlock higher limits,
+        advanced automation, and deeper customization.
+      </p>
+
+      <div class="tool-pills" aria-label="Tools included">
+        <span>Scheduling</span>
+        <span>Payments</span>
+        <span>CRM</span>
+        <span>Email marketing</span>
+        <span>Forms</span>
+        <span>Automations</span>
+        <span>Landing pages</span>
+      </div>
+
+      <div class="billing-switch" role="tablist" aria-label="Billing cycle">
+        <button type="button" class="active" data-cycle="monthly" aria-selected="true">Monthly billing</button>
+      </div>
+    </section>
+
+    <section class="billing-status container" id="billingStatus" hidden>
+      <div class="billing-status-copy">
+        <p class="billing-label">Current subscription</p>
+        <h3 id="billingPlanName">Basic</h3>
+        <p id="billingStatusText">Inactive</p>
+      </div>
+      <div class="billing-status-actions">
+        <button class="btn btn-light" id="refreshBillingBtn" type="button">Refresh status</button>
+        <button class="btn btn-light" id="cancelSubscriptionBtn" type="button" hidden>Cancel subscription</button>
+      </div>
+    </section>
+
+    <section class="plans container">
+      <article class="plan-card">
+        <h2>Basic</h2>
+        <p class="plan-tag">Solo operations with core scheduling</p>
+        <p class="price">
+          <span data-monthly="$15">$15</span>
+          <small>/month</small>
+        </p>
+        <button class="btn btn-dark block" type="button" data-action="subscribe-plan" data-plan-key="BASIC">
+          Choose Basic
+        </button>
+        <ul>
+          <li>Staff limit: 1</li>
+          <li>Booking pages: 1</li>
+          <li>Calendars: 1</li>
+          <li>Core scheduling + contacts</li>
+        </ul>
+      </article>
+
+      <article class="plan-card highlighted">
+        <p class="badge">Most popular</p>
+        <h2>Popular</h2>
+        <p class="plan-tag">Growing businesses and teams</p>
+        <p class="price">
+          <span data-monthly="$28">$28</span>
+          <small>/month</small>
+        </p>
+        <button class="btn btn-dark block" type="button" data-action="subscribe-plan" data-plan-key="POPULAR">
+          Choose Popular
+        </button>
+        <ul>
+          <li>Staff limit: 6</li>
+          <li>Booking pages: 3</li>
+          <li>Calendars: 6</li>
+          <li>Email automations + payments</li>
+          <li>Remove branding + meeting links</li>
+        </ul>
+      </article>
+
+      <article class="plan-card">
+        <h2>Pro</h2>
+        <p class="plan-tag">Advanced scale and API access</p>
+        <p class="price">
+          <span data-monthly="$79">$79</span>
+          <small>/month</small>
+        </p>
+        <button class="btn btn-dark block" type="button" data-action="subscribe-plan" data-plan-key="PRO">
+          Choose Pro
+        </button>
+        <ul>
+          <li>Staff limit: 36</li>
+          <li>Booking pages: Unlimited</li>
+          <li>Calendars: 36</li>
+          <li>SMS reminders + API access</li>
+          <li>Custom CSS + packages/subscriptions</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="compare container">
+      <div class="section-head">
+        <h3>Compare our plans</h3>
+        <p>Everything included at each level so you can scale confidently.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table aria-label="Plan comparison">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Basic</th>
+              <th>Popular</th>
+              <th>Pro</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>Booking pages</th>
+              <td>1</td>
+              <td>3</td>
+              <td>Unlimited</td>
+            </tr>
+            <tr>
+              <th>Calendars connected</th>
+              <td>1</td>
+              <td>6</td>
+              <td>36</td>
+            </tr>
+            <tr>
+              <th>Staff limit</th>
+              <td>1</td>
+              <td>6</td>
+              <td>36</td>
+            </tr>
+            <tr>
+              <th>Email automations</th>
+              <td>-</td>
+              <td>Yes</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <th>Payments</th>
+              <td>-</td>
+              <td>Yes</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <th>SMS reminders</th>
+              <td>-</td>
+              <td>-</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <th>API access</th>
+              <td>-</td>
+              <td>-</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <th>Custom CSS</th>
+              <td>-</td>
+              <td>-</td>
+              <td>Yes</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="fit container">
+      <div class="fit-main">
+        <h3>Not sure if MeetScheduling is the right fit?</h3>
+        <p>
+          Start with Basic and upgrade in seconds. Your limits and premium features update
+          automatically after PayPal confirmation.
+        </p>
+        <a class="btn btn-dark" href="/signup">Start with free plan</a>
+      </div>
+      <div class="fit-grid">
+        <article>
+          <h4>Instant migration</h4>
+          <p>Move forms, links, and booking flows with guided onboarding.</p>
+        </article>
+        <article>
+          <h4>Team onboarding</h4>
+          <p>Set roles, access controls, and routing logic in minutes.</p>
+        </article>
+        <article>
+          <h4>Built for growth</h4>
+          <p>Start free and upgrade only when your business needs more.</p>
+        </article>
+        <article>
+          <h4>Fast support</h4>
+          <p>Get direct help when configuring billing, reminders, and automations.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="container" id="upgradeRequiredMessage" hidden>
+      <div class="warning-box" id="upgradeRequiredText"></div>
+    </section>
+  </main>
+
+  <div class="paypal-modal hidden" id="paypalModal" aria-hidden="true">
+    <div class="paypal-modal-backdrop" data-action="close-paypal-modal"></div>
+    <div class="paypal-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="paypalModalTitle">
+      <div class="paypal-modal-head">
+        <p class="paypal-chip">Secure checkout</p>
+        <button type="button" class="paypal-close-btn" data-action="close-paypal-modal" aria-label="Close">×</button>
+      </div>
+      <h3 id="paypalModalTitle">Complete your subscription</h3>
+      <p class="paypal-modal-copy" id="paypalModalCopy">Choose PayPal below to confirm this plan.</p>
+      <div class="paypal-plan-card" id="paypalPlanCard">
+        <div>
+          <p class="paypal-plan-label">Selected plan</p>
+          <h4 id="paypalPlanName">Basic</h4>
+          <p class="paypal-plan-meta" id="paypalPlanMeta">1 staff member • 1 booking page</p>
+        </div>
+        <p class="paypal-plan-price" id="paypalPlanPrice">$15/month</p>
+      </div>
+      <ul class="paypal-checkout-steps" aria-label="Checkout steps">
+        <li class="active" data-checkout-step="1">1. Review</li>
+        <li data-checkout-step="2">2. Approve</li>
+        <li data-checkout-step="3">3. Activate</li>
+      </ul>
+      <div class="paypal-processing" id="paypalLoadingState">
+        <span class="paypal-spinner" aria-hidden="true"></span>
+        <p id="paypalLoadingText" aria-live="polite">Preparing secure PayPal checkout...</p>
+      </div>
+      <div id="paypalButtonContainer"></div>
+      <div class="paypal-trust-strip" aria-label="Checkout assurances">
+        <span>SSL encrypted</span>
+        <span>Cancel anytime</span>
+        <span>Instant activation</span>
+      </div>
+      <p class="paypal-modal-note">If nothing appears, refresh this page and try again.</p>
+    </div>
+  </div>
+
+  <script src="/pricing.js?v=3" defer></script>
+</body>
+
+</html>

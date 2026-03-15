@@ -1,0 +1,152 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Sora:wght@500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: "DM Sans", sans-serif;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+}
+
+@layer utilities {
+  .scrollbar-soft {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+  }
+
+  .scrollbar-soft::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .scrollbar-soft::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-soft::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.3);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+}
+
+@layer components {
+  .landing-builder-canvas .gjs-editor,
+  .landing-builder-canvas .gjs-one-bg,
+  .landing-builder-canvas .gjs-two-color,
+  .landing-builder-canvas .gjs-three-bg,
+  .landing-builder-canvas .gjs-four-color {
+    background: transparent;
+    color: #e2e8f0;
+  }
+
+  .landing-builder-canvas .gjs-editor {
+    height: 100%;
+    min-height: 100%;
+    font-family: "DM Sans", sans-serif;
+  }
+
+  .landing-builder-canvas .gjs-cv-canvas {
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background:
+      radial-gradient(circle at top, rgba(37, 99, 235, 0.08), transparent 26%),
+      linear-gradient(180deg, #08111f 0%, #0b1324 100%);
+  }
+
+  .landing-builder-canvas .gjs-cv-canvas__frames,
+  .landing-builder-canvas .gjs-frame-wrapper {
+    padding: 20px;
+    height: 100%;
+  }
+
+  .landing-builder-canvas .gjs-frame-wrapper {
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+  }
+
+  .landing-builder-canvas .gjs-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 20px 60px rgba(2, 8, 23, 0.28);
+  }
+
+  .landing-builder-canvas .gjs-pn-panels,
+  .landing-builder-canvas .gjs-blocks-c,
+  .landing-builder-canvas .gjs-sm-sector,
+  .landing-builder-canvas .gjs-trt-traits,
+  .landing-builder-canvas .gjs-layers {
+    display: none !important;
+  }
+
+  .landing-builder-canvas .gjs-toolbar {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 6px;
+    background: rgba(8, 17, 31, 0.92);
+    box-shadow: 0 16px 40px rgba(2, 8, 23, 0.45);
+    backdrop-filter: blur(16px);
+  }
+
+  .landing-builder-canvas .gjs-toolbar-item {
+    border-radius: 12px;
+    color: #cbd5e1;
+    transition: background 160ms ease, color 160ms ease;
+  }
+
+  .landing-builder-canvas .gjs-toolbar-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  .landing-builder-canvas .gjs-selected {
+    outline: 2px solid rgba(34, 211, 238, 0.75) !important;
+    outline-offset: 2px;
+  }
+
+  .landing-builder-canvas .gjs-highlighter,
+  .landing-builder-canvas .gjs-hovered {
+    outline-color: rgba(34, 211, 238, 0.5) !important;
+  }
+
+  .landing-builder-canvas .gjs-resizer {
+    border-color: rgba(34, 211, 238, 0.7) !important;
+  }
+
+  .landing-builder-canvas .gjs-badge {
+    border-radius: 999px;
+    padding: 6px 10px;
+    background: rgba(8, 17, 31, 0.94);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 30px rgba(2, 8, 23, 0.42);
+  }
+
+  .landing-builder-canvas .gjs-placeholder {
+    background: rgba(37, 99, 235, 0.22);
+    outline: 1px dashed rgba(147, 197, 253, 0.72);
+  }
+}

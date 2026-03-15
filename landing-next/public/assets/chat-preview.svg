@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="590" viewBox="0 0 740 590" fill="none">
+  <rect width="740" height="590" rx="24" fill="url(#bg)"/>
+  <rect x="1" y="1" width="738" height="588" rx="23" stroke="#AFEECF"/>
+  <text x="36" y="56" font-family="Arial" font-size="30" font-weight="700" fill="#0B1221">Client chat</text>
+  <rect x="586" y="24" width="120" height="40" rx="20" fill="#122338"/>
+  <text x="628" y="50" font-family="Arial" font-size="18" font-weight="700" fill="#FFFFFF">Live</text>
+
+  <rect x="30" y="96" width="460" height="108" rx="18" fill="#FFFFFF" stroke="#D8E4DE"/>
+  <text x="54" y="150" font-family="Arial" font-size="24" font-weight="600" fill="#0B1221">Hi, can we reschedule for tomorrow?</text>
+
+  <rect x="186" y="232" width="524" height="108" rx="18" fill="#11233A"/>
+  <text x="214" y="286" font-family="Arial" font-size="24" font-weight="600" fill="#FFFFFF">Done. I shared a new slot at 11:30 AM.</text>
+
+  <rect x="30" y="368" width="310" height="108" rx="18" fill="#FFFFFF" stroke="#D8E4DE"/>
+  <text x="54" y="422" font-family="Arial" font-size="24" font-weight="600" fill="#0B1221">Perfect, thanks!</text>
+
+  <defs>
+    <linearGradient id="bg" x1="370" y1="0" x2="370" y2="590" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D7FFEA"/>
+      <stop offset="1" stop-color="#BCF7DE"/>
+    </linearGradient>
+  </defs>
+</svg>

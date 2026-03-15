@@ -1,0 +1,1153 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book Meeting | MeetScheduling</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <link rel="shortcut icon" href="/assets/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-color: #eef4ff;
+      --bg-strong: #f7fbff;
+      --card-bg: rgba(255, 255, 255, 0.96);
+      --panel-border: rgba(214, 225, 244, 0.9);
+      --text-main: #143254;
+      --text-muted: #6b7c96;
+      --text-soft: #97a4bb;
+      --brand-color: #1d63ea;
+      --brand-hover: #174eb8;
+      --brand-light: #edf3ff;
+      --brand-strong: #0f4bcc;
+      --success: #10b981;
+      --error: #cf4664;
+      --error-bg: rgba(255, 239, 243, 0.95);
+      --shadow-xl: 0 28px 90px rgba(15, 35, 74, 0.12);
+      --shadow-md: 0 16px 40px rgba(29, 99, 234, 0.14);
+      --radius-xl: 32px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      font-family: 'Manrope', sans-serif;
+      color: var(--text-main);
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 32%),
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent 28%),
+        linear-gradient(180deg, #f6faff 0%, #eef4ff 45%, #f7fbff 100%);
+      padding: 24px 14px;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    strong {
+      font-family: 'Sora', sans-serif;
+      letter-spacing: -0.03em;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page-shell {
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    .booking-page-topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+      padding: 0 6px;
+    }
+
+    .booking-page-host {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .top-host-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #8a5a3e 0%, #2c1d16 62%, #080808 100%);
+      color: #d8a37b;
+      font-weight: 800;
+      font-size: 1rem;
+      box-shadow: 0 18px 36px rgba(27, 18, 12, 0.22);
+    }
+
+    .booking-page-host-meta {
+      min-width: 0;
+    }
+
+    .booking-page-label {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      margin-bottom: 4px;
+    }
+
+    #top-host-name {
+      display: block;
+      min-width: 0;
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .booking-page-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .topbar-link,
+    .topbar-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1px solid var(--panel-border);
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--text-main);
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    }
+
+    .topbar-link:hover,
+    .topbar-btn:hover {
+      border-color: rgba(29, 99, 234, 0.3);
+      background: #fff;
+      color: var(--brand-color);
+      transform: translateY(-1px);
+    }
+
+    .topbar-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+    }
+
+    .topbar-copy-btn.is-copied {
+      border-color: rgba(16, 185, 129, 0.32);
+      color: #0f8a66;
+      background: rgba(236, 253, 245, 0.94);
+    }
+
+    .booking-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      min-height: 720px;
+      background: var(--card-bg);
+      border: 1px solid rgba(214, 225, 244, 0.84);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      backdrop-filter: blur(18px);
+    }
+
+    @media (min-width: 980px) {
+      .booking-wrapper {
+        grid-template-columns: 320px minmax(0, 1fr);
+      }
+    }
+
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: rgba(248, 251, 255, 0.88);
+      backdrop-filter: blur(12px);
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    .loading-overlay.active {
+      display: flex;
+    }
+
+    .spinner {
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      border: 4px solid rgba(29, 99, 234, 0.12);
+      border-top-color: var(--brand-color);
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .event-details {
+      position: relative;
+      padding: 28px 24px;
+      border-bottom: 1px solid var(--panel-border);
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 38%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    }
+
+    @media (min-width: 980px) {
+      .event-details {
+        border-bottom: none;
+        border-right: 1px solid var(--panel-border);
+        padding: 34px 28px;
+      }
+    }
+
+    .host-profile {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      align-items: center;
+      justify-content: center;
+      padding-bottom: 22px;
+      border-bottom: 1px solid var(--panel-border);
+      text-align: center;
+    }
+
+    .host-avatar {
+      width: 88px;
+      height: 88px;
+      border-radius: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #8a5a3e 0%, #2c1d16 62%, #080808 100%);
+      color: #d8a37b;
+      font-size: 2rem;
+      font-weight: 800;
+      box-shadow: 0 22px 46px rgba(0, 0, 0, 0.24);
+    }
+
+    .host-name {
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.88rem;
+      letter-spacing: 0.01em;
+    }
+
+    .event-title {
+      margin-top: 20px;
+      font-size: clamp(1.6rem, 3vw, 2.1rem);
+      line-height: 1.1;
+      text-align: center;
+    }
+
+    .event-meta-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 22px 0;
+    }
+
+    .event-meta-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 15px;
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--text-muted);
+      font-size: 0.93rem;
+      font-weight: 600;
+      line-height: 1.5;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    .event-meta-item#sidebar-datetime {
+      color: var(--brand-color);
+      background: rgba(237, 243, 255, 0.92);
+      border-color: rgba(29, 99, 234, 0.12);
+    }
+
+    .event-meta-icon {
+      flex: 0 0 18px;
+      width: 18px;
+      height: 18px;
+      opacity: 0.8;
+      margin-top: 1px;
+    }
+
+    .event-desc {
+      padding: 16px 18px;
+      border-radius: 22px;
+      border: 1px solid var(--panel-border);
+      background: rgba(255, 255, 255, 0.84);
+      color: var(--text-muted);
+      line-height: 1.7;
+      font-size: 0.93rem;
+      min-height: 92px;
+    }
+
+    .booking-sidebar-legal {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-top: 18px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .booking-sidebar-legal a {
+      color: var(--brand-color);
+    }
+
+    .step-container {
+      background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      overflow: auto;
+    }
+
+    .step-inner {
+      padding: 22px 18px 26px;
+    }
+
+    @media (min-width: 768px) {
+      .step-inner {
+        padding: 26px 24px 32px;
+      }
+    }
+
+    @media (min-width: 1180px) {
+      .step-inner {
+        padding: 28px 30px 34px;
+      }
+    }
+
+    .step-progress {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      border-radius: 999px;
+      border: 1px solid var(--panel-border);
+      background: #f8fbff;
+      margin-bottom: 22px;
+    }
+
+    .step-pill {
+      min-width: 82px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      text-align: center;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .step-pill.is-active {
+      background: linear-gradient(135deg, #1d63ea 0%, #3b82f6 100%);
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(29, 99, 234, 0.24);
+    }
+
+    .step-pill.is-done {
+      color: var(--brand-color);
+    }
+
+    .step-panel.hidden {
+      display: none;
+    }
+
+    .form-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    .form-title {
+      font-size: 1.18rem;
+      line-height: 1.2;
+      color: var(--text-main);
+    }
+
+    .form-subtitle {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--panel-border);
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--text-main);
+      cursor: pointer;
+      transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+    }
+
+    .back-btn:hover {
+      border-color: rgba(29, 99, 234, 0.2);
+      color: var(--brand-color);
+      background: #fff;
+    }
+
+    .calendar-slots-layout {
+      display: grid;
+      gap: 22px;
+    }
+
+    @media (min-width: 1024px) {
+      .calendar-slots-layout {
+        grid-template-columns: minmax(0, 1fr) 240px;
+      }
+    }
+
+    .calendar-card,
+    .slots-card,
+    .details-card {
+      border: 1px solid var(--panel-border);
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.06), transparent 34%),
+        linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+      box-shadow: 0 16px 38px rgba(15, 23, 42, 0.05);
+    }
+
+    .calendar-card {
+      padding: 18px;
+    }
+
+    @media (min-width: 768px) {
+      .calendar-card {
+        padding: 22px;
+      }
+    }
+
+    .calendar-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--panel-border);
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    .calendar-card-title-label {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      margin-bottom: 5px;
+    }
+
+    .calendar-card-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .calendar-date-pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(237, 243, 255, 0.9);
+      color: var(--brand-color);
+      font-size: 0.73rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .calendar-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      margin-bottom: 18px;
+    }
+
+    .calendar-month-year {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      min-width: 140px;
+      text-align: center;
+    }
+
+    .calendar-nav-btn {
+      width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .calendar-nav-btn:hover:not(:disabled) {
+      color: var(--brand-color);
+      background: var(--brand-light);
+      border-color: rgba(29, 99, 234, 0.12);
+    }
+
+    .calendar-nav-btn:disabled {
+      opacity: 0.38;
+      cursor: not-allowed;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px 0;
+      text-align: center;
+    }
+
+    .calendar-day-name {
+      padding: 8px 0;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-main);
+    }
+
+    .calendar-day {
+      width: 38px;
+      height: 38px;
+      margin: 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: #fff;
+      color: var(--brand-color);
+      font-size: 0.88rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .calendar-day:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: var(--brand-light);
+      border-color: rgba(29, 99, 234, 0.12);
+    }
+
+    .calendar-day.selected {
+      background: linear-gradient(135deg, #1d63ea 0%, #3b82f6 100%);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 16px 30px rgba(29, 99, 234, 0.28);
+    }
+
+    .calendar-day:disabled {
+      background: transparent;
+      box-shadow: none;
+      color: #c3cfdf;
+      cursor: default;
+    }
+
+    .timezone-picker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid var(--panel-border);
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--text-muted);
+    }
+
+    .timezone-picker select,
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--text-main);
+      padding: 15px 16px;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .timezone-picker select {
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus,
+    .timezone-picker select:focus {
+      border-color: rgba(29, 99, 234, 0.32);
+      box-shadow: 0 0 0 4px rgba(29, 99, 234, 0.08);
+    }
+
+    .slots-card {
+      padding: 18px 16px;
+      align-self: start;
+      min-height: 100%;
+    }
+
+    .slots-header {
+      margin-bottom: 14px;
+      font-size: 0.88rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-main);
+      transition: opacity 0.2s ease;
+    }
+
+    .slots-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 240px;
+    }
+
+    .slot-action-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .slot-btn,
+    .confirm-slot-btn,
+    .submit-btn {
+      min-height: 48px;
+      border-radius: 16px;
+      font-weight: 800;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+    }
+
+    .slot-btn {
+      background: #fff;
+      border-color: rgba(29, 99, 234, 0.14);
+      color: var(--brand-color);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    .slot-btn:hover {
+      transform: translateY(-1px);
+      background: var(--brand-light);
+      border-color: rgba(29, 99, 234, 0.22);
+    }
+
+    .slot-btn.active {
+      background: linear-gradient(135deg, #1d63ea 0%, #3b82f6 100%);
+      color: #fff;
+      box-shadow: 0 16px 28px rgba(29, 99, 234, 0.24);
+    }
+
+    .confirm-slot-btn {
+      min-width: 88px;
+      padding: 0 18px;
+      background: var(--text-main);
+      color: #fff;
+      box-shadow: 0 14px 28px rgba(15, 35, 74, 0.14);
+    }
+
+    .confirm-slot-btn:hover,
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .details-card {
+      padding: 24px 20px;
+    }
+
+    @media (min-width: 880px) {
+      .details-card {
+        padding: 28px 24px;
+      }
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .details-summary-card {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding: 18px 18px 16px;
+      border-radius: 22px;
+      border: 1px solid rgba(29, 99, 234, 0.12);
+      background: linear-gradient(180deg, rgba(237, 243, 255, 0.84) 0%, rgba(255, 255, 255, 0.96) 100%);
+      box-shadow: 0 14px 34px rgba(15, 35, 74, 0.08);
+    }
+
+    .details-summary-badge {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(29, 99, 234, 0.1);
+      color: var(--brand-color);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .details-summary-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .details-summary-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .details-summary-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+
+    @media (min-width: 760px) {
+      .form-grid.form-grid--two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      font-size: 0.86rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: var(--text-main);
+    }
+
+    .form-group textarea {
+      min-height: 140px;
+      resize: vertical;
+      line-height: 1.65;
+    }
+
+    .field-helper {
+      color: var(--text-muted);
+      font-size: 0.84rem;
+      line-height: 1.65;
+    }
+
+    .booking-legal-copy {
+      margin: 10px 0 18px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(29, 99, 234, 0.1);
+      background: rgba(248, 251, 255, 0.84);
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.65;
+    }
+
+    .booking-legal-copy a {
+      color: var(--brand-color);
+      font-weight: 800;
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #1d63ea 0%, #3b82f6 100%);
+      color: #fff;
+      box-shadow: 0 20px 36px rgba(29, 99, 234, 0.28);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.72;
+      cursor: progress;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .error-msg {
+      display: none;
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(207, 70, 100, 0.18);
+      background: var(--error-bg);
+      color: var(--error);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .booking-step-lead {
+      margin-bottom: 18px;
+    }
+
+    .booking-step-lead p {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      line-height: 1.65;
+    }
+
+    .utility-icon {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+    }
+
+    @media (max-width: 979px) {
+      body {
+        padding: 14px 10px 18px;
+      }
+
+      .booking-page-topbar {
+        padding: 0 2px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .booking-page-actions {
+        width: 100%;
+        justify-content: stretch;
+      }
+
+      .topbar-link,
+      .topbar-btn {
+        flex: 1 1 calc(50% - 5px);
+      }
+
+      .host-avatar {
+        width: 72px;
+        height: 72px;
+        font-size: 1.7rem;
+      }
+
+      .calendar-day {
+        width: 34px;
+        height: 34px;
+      }
+
+      .step-pill {
+        min-width: 70px;
+        padding-inline: 10px;
+        font-size: 0.64rem;
+      }
+    }
+  </style>
+</head>
+
+<body class="booking-public-page">
+  <div class="page-shell">
+    <header class="booking-page-topbar">
+      <div class="booking-page-host">
+        <span id="top-host-avatar" class="top-host-avatar">MS</span>
+        <div class="booking-page-host-meta">
+          <span class="booking-page-label">Hosted by</span>
+          <span id="top-host-name">Loading...</span>
+        </div>
+      </div>
+      <div class="booking-page-actions">
+        <a id="view-landing-link" class="topbar-link" href="#">View landing page</a>
+        <button id="copy-link-btn" class="topbar-btn topbar-copy-btn" type="button" aria-label="Copy booking link">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2M5 9h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" />
+          </svg>
+          <span id="copy-link-label">Copy link</span>
+        </button>
+        <button id="topbar-menu-btn" class="topbar-btn" type="button" aria-label="Return to landing page">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+          <span>Back</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="booking-wrapper">
+      <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <span id="loading-text">Loading event...</span>
+      </div>
+
+      <aside class="event-details">
+        <div class="host-profile">
+          <div id="host-avatar" class="host-avatar">MS</div>
+          <div id="host-name" class="host-name">Loading...</div>
+        </div>
+
+        <h1 id="event-title" class="event-title">Loading event...</h1>
+
+        <ul class="event-meta-list">
+          <li class="event-meta-item">
+            <svg class="event-meta-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            <span id="event-duration">-- min</span>
+          </li>
+          <li class="event-meta-item">
+            <svg class="event-meta-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z" />
+            </svg>
+            <span id="event-location" style="text-transform: capitalize;">Web conferencing details provided upon confirmation.</span>
+          </li>
+          <li class="event-meta-item" id="sidebar-datetime" style="display:none;">
+            <svg class="event-meta-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" />
+            </svg>
+            <span id="sidebar-datetime-text"></span>
+          </li>
+        </ul>
+
+        <div id="event-desc" class="event-desc"></div>
+
+        <div class="booking-sidebar-legal">
+          <a href="/cookie-settings">Cookie settings</a>
+          <a href="/privacy">Privacy Policy</a>
+        </div>
+      </aside>
+
+      <main class="step-container">
+        <div class="step-inner">
+          <div class="step-progress" aria-label="Booking progress">
+            <div id="step-pill-select" class="step-pill is-active">Select</div>
+            <div id="step-pill-details" class="step-pill">Details</div>
+            <div id="step-pill-confirm" class="step-pill">Confirm</div>
+          </div>
+
+          <div id="step-calendar" class="step-panel">
+            <div class="booking-step-lead">
+              <h2 class="form-title">Select a Date &amp; Time</h2>
+              <p>Choose a date first, then select the time that works best for your schedule.</p>
+            </div>
+
+            <div id="error-alert" class="error-msg"></div>
+
+            <div class="calendar-slots-layout">
+              <section class="calendar-card calendar-section">
+                <div class="calendar-card-header">
+                  <div>
+                    <span class="calendar-card-title-label">Availability window</span>
+                    <div class="calendar-card-title">Pick your preferred date</div>
+                  </div>
+                  <div id="selected-date-pill" class="calendar-date-pill">Choose a day</div>
+                </div>
+
+                <div class="calendar-header">
+                  <button id="prev-month" class="calendar-nav-btn" type="button" aria-label="Previous month">
+                    <svg class="utility-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div id="calendar-month-year" class="calendar-month-year">...</div>
+                  <button id="next-month" class="calendar-nav-btn" type="button" aria-label="Next month">
+                    <svg class="utility-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="calendar-grid">
+                  <div class="calendar-day-name">Sun</div>
+                  <div class="calendar-day-name">Mon</div>
+                  <div class="calendar-day-name">Tue</div>
+                  <div class="calendar-day-name">Wed</div>
+                  <div class="calendar-day-name">Thu</div>
+                  <div class="calendar-day-name">Fri</div>
+                  <div class="calendar-day-name">Sat</div>
+                </div>
+                <div id="calendar-days" class="calendar-grid" style="margin-top: 6px;"></div>
+
+                <div class="timezone-picker">
+                  <svg class="utility-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3.055 11H5a2 2 0 0 1 2 2v1a2 2 0 0 0 2 2 2 2 0 0 1 2 2v2.945M8 3.935V5.5A2.5 2.5 0 0 0 10.5 8h.5a2 2 0 0 1 2 2 2 2 0 1 0 4 0 2 2 0 0 1 2-2h1.064M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                  <select id="timezone-select" aria-label="Select timezone"></select>
+                </div>
+              </section>
+
+              <aside class="slots-card slots-section">
+                <div id="slots-header" class="slots-header" style="opacity:0;">Select a date</div>
+                <div id="slots-list" class="slots-list"></div>
+              </aside>
+            </div>
+          </div>
+
+          <div id="step-details" class="step-panel hidden">
+            <div class="details-card">
+              <div class="form-header">
+                <div>
+                  <h2 class="form-title">Enter your details</h2>
+                  <p class="form-subtitle">Add the booking details once, confirm the slot, and the meeting is scheduled instantly.</p>
+                </div>
+                <button id="form-back-btn" class="back-btn" type="button" aria-label="Back to date selection">
+                  <svg class="utility-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M15 18l-6-6 6-6" />
+                  </svg>
+                </button>
+              </div>
+
+              <div id="form-error-alert" class="error-msg"></div>
+
+              <form id="booking-form">
+                <div class="details-summary-card">
+                  <span class="details-summary-badge">Ready to confirm</span>
+                  <div id="details-summary-title" class="details-summary-title">Meeting</div>
+                  <div class="details-summary-list">
+                    <div class="details-summary-row">
+                      <svg class="utility-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" />
+                      </svg>
+                      <span id="details-summary-time">Select a slot to continue.</span>
+                    </div>
+                    <div class="details-summary-row">
+                      <svg class="utility-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm7.5 10a7.5 7.5 0 0 1-11.68 6.21l1.52-2.63a4.5 4.5 0 0 0 6.14-6.14l2.63-1.52A7.47 7.47 0 0 1 19.5 12ZM12 4.5a7.47 7.47 0 0 1 3.97 1.14l-1.52 2.63A4.5 4.5 0 0 0 8.3 14.4l-2.63 1.52A7.5 7.5 0 0 1 12 4.5Z" />
+                      </svg>
+                      <span id="details-summary-zone">Timezone updates automatically.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-grid form-grid--two">
+                  <div class="form-group">
+                    <label for="name-input">Name *</label>
+                    <input type="text" id="name-input" placeholder="Your full name" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="email-input">Email *</label>
+                    <input type="email" id="email-input" placeholder="name@company.com" required />
+                  </div>
+                </div>
+
+                <div class="form-grid form-grid--two">
+                  <div class="form-group">
+                    <label for="phone-input">Phone number</label>
+                    <input type="tel" id="phone-input" placeholder="+91 98765 43210" inputmode="tel" />
+                    <p class="field-helper">Optional, but useful if the host sends a reminder before the call.</p>
+                  </div>
+                  <div class="form-group">
+                    <label for="timezone-select-details">Timezone</label>
+                    <input type="text" id="timezone-select-details" value="Syncs from selected timezone" readonly />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="notes-input">Message</label>
+                  <textarea id="notes-input" rows="5" placeholder="Share goals, background, or anything helpful before the meeting."></textarea>
+                </div>
+
+                <p class="booking-legal-copy">
+                  By proceeding, you confirm that you have read and agree to MeetScheduling's
+                  <a href="/terms">Terms of Service</a>
+                  and
+                  <a href="/privacy">Privacy Policy</a>.
+                </p>
+
+                <button type="submit" id="confirm-booking-btn" class="submit-btn">Confirm booking</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="/booking.js"></script>
+</body>
+
+</html>

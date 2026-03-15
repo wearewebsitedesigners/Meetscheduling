@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="690" viewBox="0 0 1180 690" fill="none">
+  <rect width="1180" height="690" rx="28" fill="#FFFFFF"/>
+  <rect x="1" y="1" width="1178" height="688" rx="27" stroke="#CFD6E4"/>
+  <rect width="1180" height="56" rx="28" fill="#F8F9FD"/>
+  <circle cx="34" cy="28" r="7" fill="#D8DDEA"/>
+  <circle cx="56" cy="28" r="7" fill="#D8DDEA"/>
+  <circle cx="78" cy="28" r="7" fill="#D8DDEA"/>
+  <rect x="0" y="56" width="250" height="634" fill="#FCFDFF"/>
+  <rect x="250" y="56" width="1" height="634" fill="#E8EDF6"/>
+  <text x="28" y="104" font-family="Arial" font-weight="700" font-size="28" fill="#0B1221">CRM</text>
+  <g fill="#F0F4FB">
+    <rect x="28" y="132" width="194" height="36" rx="10"/>
+    <rect x="28" y="182" width="194" height="36" rx="10"/>
+    <rect x="28" y="232" width="194" height="36" rx="10"/>
+    <rect x="28" y="282" width="194" height="36" rx="10"/>
+  </g>
+  <g font-family="Arial" font-size="15" font-weight="700" fill="#5F6780">
+    <text x="46" y="156">Dashboard</text>
+    <text x="46" y="206">Leads</text>
+    <text x="46" y="256">Meetings</text>
+    <text x="46" y="306">Reports</text>
+  </g>
+
+  <g>
+    <rect x="282" y="92" width="278" height="120" rx="14" fill="#FFFFFF" stroke="#E4E8F3"/>
+    <rect x="576" y="92" width="278" height="120" rx="14" fill="#FFFFFF" stroke="#E4E8F3"/>
+    <rect x="870" y="92" width="278" height="120" rx="14" fill="#FFFFFF" stroke="#E4E8F3"/>
+  </g>
+
+  <g font-family="Arial" fill="#68728B" font-size="16">
+    <text x="306" y="132">Pipeline</text>
+    <text x="600" y="132">Won</text>
+    <text x="894" y="132">Meetings</text>
+  </g>
+  <g font-family="Arial" fill="#0B1221" font-size="48" font-weight="700">
+    <text x="306" y="187">37</text>
+    <text x="600" y="187">12</text>
+    <text x="894" y="187">28</text>
+  </g>
+
+  <g>
+    <rect x="282" y="240" width="866" height="94" rx="12" fill="#FAFCFF" stroke="#E4E8F3"/>
+    <rect x="282" y="352" width="866" height="94" rx="12" fill="#FAFCFF" stroke="#E4E8F3"/>
+    <rect x="282" y="464" width="866" height="94" rx="12" fill="#FAFCFF" stroke="#E4E8F3"/>
+  </g>
+
+  <g font-family="Arial" font-size="24" fill="#4F5B74" font-weight="700">
+    <text x="316" y="295">Acme Corp</text>
+    <text x="316" y="407">Horizon AI</text>
+    <text x="316" y="519">Nova Labs</text>
+
+    <text x="676" y="295">Demo call</text>
+    <text x="676" y="407">Proposal review</text>
+    <text x="676" y="519">Follow-up</text>
+
+    <text x="1040" y="295">Today</text>
+    <text x="1006" y="407">Tomorrow</text>
+    <text x="1070" y="519">Fri</text>
+  </g>
+</svg>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page Builder | MeetScheduling</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="shortcut icon" href="/assets/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Sora:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/tokens.css" />
+    <link rel="stylesheet" href="/page-renderer.css" />
+    <link rel="stylesheet" href="/page-builder.css" />
+  </head>
+  <body class="pbuilder-body">
+    <div class="pbuilder-shell">
+      <header class="pbuilder-topbar">
+        <div class="pbuilder-topbar-left">
+          <a class="pbuilder-back-link" href="/dashboard?section=landing-page">&larr; Dashboard</a>
+          <div>
+            <h1 class="pbuilder-title">Booking Page Builder</h1>
+            <p id="pbuilder-page-meta" class="pbuilder-subtitle">Loading page...</p>
+          </div>
+        </div>
+        <div class="pbuilder-topbar-actions">
+          <span id="pbuilder-save-status" class="pbuilder-save-status">Saved</span>
+          <a id="pbuilder-live-link" class="pbuilder-live-link" href="#" target="_blank" rel="noopener">Open live page</a>
+          <button id="pbuilder-publish-btn" class="pbuilder-btn pbuilder-btn-primary" type="button">
+            Publish
+          </button>
+        </div>
+      </header>
+
+      <main class="pbuilder-layout">
+        <aside class="pbuilder-sidebar">
+          <section class="pbuilder-card">
+            <header class="pbuilder-card-head">
+              <h2>Theme</h2>
+            </header>
+            <div id="pbuilder-theme-controls" class="pbuilder-controls"></div>
+          </section>
+
+          <section class="pbuilder-card">
+            <header class="pbuilder-card-head">
+              <h2>Sections</h2>
+              <div class="pbuilder-inline-control">
+                <select id="pbuilder-add-type"></select>
+                <button id="pbuilder-add-section-btn" class="pbuilder-btn pbuilder-btn-secondary" type="button">
+                  Add
+                </button>
+              </div>
+            </header>
+            <ul id="pbuilder-sections-list" class="pbuilder-sections-list" aria-label="Sections"></ul>
+          </section>
+
+          <section class="pbuilder-card">
+            <header class="pbuilder-card-head">
+              <h2>Selected settings</h2>
+            </header>
+            <div id="pbuilder-section-controls" class="pbuilder-controls">
+              <p class="pbuilder-empty">Select a section to edit settings.</p>
+            </div>
+          </section>
+
+          <section class="pbuilder-card">
+            <header class="pbuilder-card-head">
+              <h2>Version history</h2>
+            </header>
+            <ul id="pbuilder-history-list" class="pbuilder-history-list"></ul>
+          </section>
+        </aside>
+
+        <section class="pbuilder-preview-column">
+          <header class="pbuilder-preview-toolbar">
+            <div class="pbuilder-device-toggle" role="tablist" aria-label="Preview device">
+              <button type="button" class="is-active" data-device="desktop">Desktop</button>
+              <button type="button" data-device="tablet">Tablet</button>
+              <button type="button" data-device="mobile">Mobile</button>
+            </div>
+          </header>
+          <div id="pbuilder-preview-frame" class="pbuilder-preview-frame is-desktop">
+            <div id="pbuilder-preview-root"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/page-renderer.js"></script>
+    <script src="/page-builder.js" defer></script>
+  </body>
+</html>

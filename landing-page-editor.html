@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Landing Page Editor | MeetScheduling</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="shortcut icon" href="/assets/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Sora:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/tokens.css" />
+    <link rel="stylesheet" href="/landing-page-renderer.css" />
+    <link rel="stylesheet" href="/landing-page-editor.css" />
+  </head>
+  <body class="lpe-body">
+    <div class="lpe-shell">
+      <header class="lpe-topbar">
+        <div class="lpe-topbar-brand">
+          <a href="/dashboard" class="lpe-back-link" aria-label="Back to dashboard">&larr;</a>
+          <span class="lpe-brand-name">MeetScheduling</span>
+          <span class="lpe-brand-live">Live</span>
+          <button type="button" class="lpe-top-icon-btn lpe-top-dots" aria-label="More options" title="More options">
+            <span aria-hidden="true">&hellip;</span>
+          </button>
+        </div>
+        <div class="lpe-topbar-center">
+          <span class="lpe-topbar-home" aria-hidden="true">&#8962;</span>
+          <h1 id="lpe-page-title">Home page</h1>
+        </div>
+        <div class="lpe-topbar-actions">
+          <div class="lpe-device-toggle" role="tablist" aria-label="Preview device">
+            <button type="button" class="is-active" data-device="desktop" aria-label="Desktop view" title="Desktop view">
+              <svg class="lpe-topbar-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="12" rx="2"></rect>
+                <path d="M8 20h8"></path>
+                <path d="M12 16v4"></path>
+              </svg>
+            </button>
+            <button type="button" data-device="mobile" aria-label="Mobile view" title="Mobile view">
+              <svg class="lpe-topbar-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="7" y="3" width="10" height="18" rx="2"></rect>
+                <path d="M11 18h2"></path>
+              </svg>
+            </button>
+          </div>
+          <button
+            type="button"
+            id="lpe-focus-btn"
+            class="lpe-btn lpe-btn-secondary lpe-top-icon-btn"
+            aria-pressed="false"
+            aria-label="Focus mode"
+            title="Focus mode"
+          >
+            <svg class="lpe-topbar-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
+              <path d="M16 3h3a2 2 0 0 1 2 2v3"></path>
+              <path d="M8 21H5a2 2 0 0 1-2-2v-3"></path>
+              <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+            </svg>
+          </button>
+          <button
+            type="button"
+            id="lpe-preview-btn"
+            class="lpe-btn lpe-btn-secondary lpe-top-icon-btn"
+            aria-label="Open preview"
+            title="Open preview"
+          >
+            <svg class="lpe-topbar-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+          <button
+            type="button"
+            id="lpe-copy-link-btn"
+            class="lpe-btn lpe-btn-secondary lpe-top-icon-btn"
+            aria-label="Copy link"
+            title="Copy link"
+          >
+            <svg class="lpe-topbar-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M10 13a5 5 0 0 1 0-7l1.5-1.5a5 5 0 0 1 7 7L17 13"></path>
+              <path d="M14 11a5 5 0 0 1 0 7l-1.5 1.5a5 5 0 0 1-7-7L7 11"></path>
+            </svg>
+          </button>
+          <button type="button" id="lpe-save-top-btn" class="lpe-btn lpe-btn-muted" disabled>Save</button>
+          <button type="button" id="lpe-publish-btn" class="lpe-btn lpe-btn-primary">Publish</button>
+        </div>
+      </header>
+
+      <main id="lpe-layout" class="lpe-layout">
+        <aside id="lpe-utility-rail" class="lpe-utility-rail is-collapsed" aria-label="Editor tools">
+          <button
+            type="button"
+            class="lpe-rail-btn is-active"
+            data-rail-tool="sections"
+            data-tooltip="Sections"
+            aria-label="Sections"
+            title="Sections"
+          >
+            <span class="lpe-rail-icon" aria-hidden="true">
+              <svg class="lpe-icon-svg" viewBox="0 0 24 24">
+                <path d="M4 6h16"></path>
+                <path d="M4 12h16"></path>
+                <path d="M4 18h16"></path>
+              </svg>
+            </span>
+            <span class="lpe-rail-label">Sections</span>
+          </button>
+          <button
+            type="button"
+            class="lpe-rail-btn"
+            data-rail-tool="settings"
+            data-tooltip="Settings"
+            aria-label="Settings"
+            title="Settings"
+          >
+            <span class="lpe-rail-icon" aria-hidden="true">
+              <svg class="lpe-icon-svg" viewBox="0 0 24 24">
+                <path d="M12 8.75a3.25 3.25 0 1 0 0 6.5 3.25 3.25 0 0 0 0-6.5Z"></path>
+                <path d="M3 12h2.2"></path>
+                <path d="M18.8 12H21"></path>
+                <path d="m5.64 5.64 1.56 1.56"></path>
+                <path d="m16.8 16.8 1.56 1.56"></path>
+                <path d="M12 3v2.2"></path>
+                <path d="M12 18.8V21"></path>
+                <path d="m18.36 5.64-1.56 1.56"></path>
+                <path d="m7.2 16.8-1.56 1.56"></path>
+              </svg>
+            </span>
+            <span class="lpe-rail-label">Settings</span>
+          </button>
+        </aside>
+
+        <aside id="lpe-left-panel" class="lpe-left-panel">
+          <section class="lpe-panel-card lpe-sections-card">
+            <div class="lpe-panel-head lpe-sections-toolbar">
+              <button id="lpe-add-section-btn" type="button" class="lpe-btn lpe-btn-add">+ Add Section</button>
+            </div>
+            <ul id="lpe-sections-list" class="lpe-sections-list"></ul>
+          </section>
+
+          <button id="lpe-open-theme-dialog" type="button" class="lpe-prebuilt-trigger lpe-panel-card">
+            <span class="lpe-prebuilt-trigger-title">Prebuilt Themes</span>
+            <span class="lpe-prebuilt-trigger-subtitle">Apply full page designs</span>
+            <span id="lpe-prebuilt-trigger-meta" class="lpe-prebuilt-trigger-meta">Browse 5 theme templates</span>
+          </button>
+
+        </aside>
+
+        <button
+          id="lpe-resizer-left"
+          type="button"
+          class="lpe-resizer lpe-resizer-left"
+          aria-label="Resize sections panel"
+          title="Resize panel"
+        ></button>
+
+        <section class="lpe-center-panel">
+          <div id="lpe-preview-frame" class="lpe-preview-frame is-desktop">
+            <div id="lpe-preview-root"></div>
+          </div>
+        </section>
+
+        <aside id="lpe-right-panel" class="lpe-right-panel lpe-slide-panel" aria-label="Section settings" aria-hidden="true">
+          <section class="lpe-panel-card lpe-settings-shell">
+            <div class="lpe-panel-head">
+              <h2>Settings</h2>
+              <div class="lpe-panel-head-actions">
+                <button
+                  id="lpe-right-collapse"
+                  type="button"
+                  class="lpe-icon-btn"
+                  aria-label="Close settings panel"
+                  title="Done editing"
+                >
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="lpe-settings-tabs" role="tablist" aria-label="Settings type">
+              <button type="button" class="is-active" data-right-tab-btn="element">Content</button>
+              <button type="button" data-right-tab-btn="theme">Style</button>
+            </div>
+
+            <section class="lpe-right-tab-panel is-active" data-right-tab-panel="element">
+              <div class="lpe-panel-head">
+                <h3>Selected Section</h3>
+              </div>
+              <div id="lpe-section-controls" class="lpe-controls"></div>
+              <details class="lpe-control-group">
+                <summary>Version History</summary>
+                <div class="lpe-control-group-body">
+                  <div id="lpe-history-list" class="lpe-history-list"></div>
+                </div>
+              </details>
+            </section>
+
+            <section class="lpe-right-tab-panel" data-right-tab-panel="theme">
+              <div class="lpe-panel-head">
+                <h3>Theme & SEO Settings</h3>
+              </div>
+              <div id="lpe-theme-controls" class="lpe-controls"></div>
+              <details class="lpe-control-group">
+                <summary>Search & Social Preview</summary>
+                <div class="lpe-control-group-body">
+                  <article class="lpe-google-snippet" id="lpe-google-snippet"></article>
+                  <div class="lpe-social-previews">
+                    <article class="lpe-social-preview">
+                      <h3>Open Graph</h3>
+                      <div id="lpe-og-preview" class="lpe-social-card"></div>
+                    </article>
+                    <article class="lpe-social-preview">
+                      <h3>Twitter</h3>
+                      <div id="lpe-twitter-preview" class="lpe-social-card"></div>
+                    </article>
+                  </div>
+                </div>
+              </details>
+            </section>
+          </section>
+
+        </aside>
+      </main>
+    </div>
+
+    <dialog id="lpe-add-dialog" class="lpe-dialog">
+      <form method="dialog" class="lpe-dialog-content">
+        <header class="lpe-dialog-header">
+          <div>
+            <h2>Sections</h2>
+            <p>Choose theme assets to add into your landing page.</p>
+          </div>
+          <button type="button" id="lpe-dialog-back" class="lpe-btn lpe-btn-secondary lpe-dialog-back-btn" aria-label="Back to builder">
+            &larr; Back
+          </button>
+        </header>
+        <div class="lpe-library-layout">
+          <aside class="lpe-library-sidebar" aria-label="Theme asset categories">
+            <h3>Theme assets</h3>
+            <div id="lpe-library-categories" class="lpe-library-categories"></div>
+          </aside>
+          <section class="lpe-library-main">
+            <div class="lpe-library-main-head">
+              <h3 id="lpe-library-main-title">All sections</h3>
+              <label class="lpe-library-search-wrap" for="lpe-library-search">
+                <input
+                  id="lpe-library-search"
+                  type="search"
+                  placeholder="Search assets..."
+                  autocomplete="off"
+                  aria-label="Search section assets"
+                />
+              </label>
+            </div>
+            <div id="lpe-library-grid" class="lpe-library-grid"></div>
+          </section>
+        </div>
+        <footer class="lpe-dialog-actions">
+          <button type="button" id="lpe-dialog-cancel" class="lpe-btn lpe-btn-secondary">Cancel</button>
+          <button type="button" id="lpe-dialog-select" class="lpe-btn lpe-btn-primary">Add Section</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog id="lpe-theme-dialog" class="lpe-dialog lpe-theme-dialog">
+      <form method="dialog" class="lpe-dialog-content lpe-theme-dialog-content">
+        <header>
+          <h2>Choose a Prebuilt Theme</h2>
+          <p>Pick one of 5 complete page designs with live preview and apply it instantly.</p>
+        </header>
+        <div id="lpe-theme-grid" class="lpe-theme-grid"></div>
+        <footer class="lpe-dialog-actions">
+          <button type="button" id="lpe-theme-dialog-cancel" class="lpe-btn lpe-btn-secondary">Cancel</button>
+          <button type="button" id="lpe-theme-dialog-apply" class="lpe-btn lpe-btn-primary">Apply Theme</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <script src="/landing-page-renderer.js"></script>
+    <script src="/landing-page-editor.js" defer></script>
+  </body>
+</html>

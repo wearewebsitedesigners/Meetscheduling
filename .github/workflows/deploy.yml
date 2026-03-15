@@ -1,0 +1,41 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: meetscheduling-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Run production deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          command_timeout: 30m
+          script: |
+            export DEPLOY_ENV=production
+            export APP_DIR=/home/meetscheduling/htdocs/www.meetscheduling.com
+            export PM2_APP_NAME=meetscheduling
+            export BRANCH=main
+            export HEALTHCHECK_URL=http://127.0.0.1:8080/api/health
+
+            cd /home/meetscheduling/htdocs/www.meetscheduling.com
+            bash scripts/deploy.sh
+
+      - name: Verify public health endpoint
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error https://www.meetscheduling.com/api/health >/dev/null

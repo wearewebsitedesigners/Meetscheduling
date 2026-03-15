@@ -1,0 +1,66 @@
+.lpp-body {
+  margin: 0;
+  min-height: 100vh;
+  background: #f2f6fc;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+.lpp-root {
+  min-height: 100vh;
+}
+
+.lpp-loading,
+.lpp-error {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 24px;
+  color: #405777;
+}
+
+.lpp-loading p,
+.lpp-error p {
+  margin: 0;
+}
+
+.lpp-spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 3px solid #d3deef;
+  border-top-color: #1a73e8;
+  animation: lpp-spin 900ms linear infinite;
+  margin: 0 auto 12px;
+}
+
+.lpp-error h1 {
+  margin: 0 0 8px;
+  color: #102b4e;
+}
+
+.lpp-error a {
+  display: inline-flex;
+  margin-top: 14px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid #1a73e8;
+  background: #1a73e8;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.lpp-error a:hover {
+  background: #165ec2;
+  border-color: #165ec2;
+}
+
+@keyframes lpp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

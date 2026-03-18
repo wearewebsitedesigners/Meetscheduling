@@ -882,7 +882,7 @@ function buildMergedItems(rows) {
   return items;
 }
 
-function deriveGoogleCalendarStatusFromRow(calendarRow) {
+function deriveGoogleCalendarStatusFromRow(calendarRow, diagnostics = {}) {
   if (!calendarRow) {
     return {
       connected: false,
@@ -896,7 +896,7 @@ function deriveGoogleCalendarStatusFromRow(calendarRow) {
     };
   }
 
-  const tokenInspection = inspectGoogleTokensFromMetadata(calendarRow.metadata || {});
+  const tokenInspection = inspectGoogleTokensFromMetadata(calendarRow.metadata || {}, diagnostics);
   const tokens = tokenInspection.tokens;
   const hasWriteScope = hasGoogleCalendarWriteScope(tokens);
   const hasRefreshToken = Boolean(tokens.refresh_token);
@@ -1775,8 +1775,63 @@ function stripLegacyTokenFields(metadata = {}) {
   return safe;
 }
 
-function inspectGoogleTokensFromMetadata(metadata = {}) {
+function summarizeGoogleTokenStorage(metadata = {}) {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return {
+      hasMetadata: false,
+      hasOauthBlock: false,
+      hasEncryptedTokens: false,
+      storedScope: "",
+      storedHasRefreshTokenFlag: false,
+    };
+  }
+
+  const oauthBlock =
+    metadata.oauth && typeof metadata.oauth === "object" && !Array.isArray(metadata.oauth)
+      ? metadata.oauth
+      : null;
+
+  return {
+    hasMetadata: true,
+    hasOauthBlock: Boolean(oauthBlock),
+    hasEncryptedTokens: Boolean(oauthBlock?.encryptedTokens),
+    storedScope: typeof oauthBlock?.scope === "string" ? oauthBlock.scope.trim() : "",
+    storedHasRefreshTokenFlag: Boolean(oauthBlock?.hasRefreshToken),
+  };
+}
+
+function getTokenCryptoLogState() {
+  const integrationTokenSecretConfigured = Boolean(String(env.integrationTokenSecret || "").trim());
+  const jwtSecretConfigured = Boolean(String(env.jwtSecret || "").trim());
+  return {
+    integrationTokenSecretConfigured,
+    jwtSecretConfigured,
+    tokenCryptoKeySource: integrationTokenSecretConfigured
+      ? "INTEGRATION_TOKEN_SECRET"
+      : "JWT_SECRET",
+  };
+}
+
+function inspectGoogleTokensFromMetadata(metadata = {}, diagnostics = {}) {
+  const traceId = String(diagnostics?.traceId || "").trim();
+  const scopeId = String(diagnostics?.scopeId || "").trim();
+  const logContext = String(diagnostics?.logContext || "").trim();
+  const shouldLogInspection = Boolean(traceId || diagnostics?.forceLog);
+  const storage = summarizeGoogleTokenStorage(metadata);
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    if (shouldLogInspection) {
+      logGoogleOAuth(
+        traceId,
+        "token_storage_inspected",
+        {
+          logContext,
+          scopeId,
+          ...storage,
+          decryptReturnedNull: false,
+        },
+        { force: true }
+      );
+    }
     return {
       tokens: {},
       source: "none",
@@ -1791,6 +1846,20 @@ function inspectGoogleTokensFromMetadata(metadata = {}) {
       : null;
   if (oauthBlock?.encryptedTokens) {
     const decrypted = decryptTokenPayload(oauthBlock.encryptedTokens);
+    if (shouldLogInspection) {
+      logGoogleOAuth(
+        traceId,
+        "token_storage_inspected",
+        {
+          logContext,
+          scopeId,
+          ...storage,
+          decryptReturnedNull: !decrypted,
+          ...getTokenCryptoLogState(),
+        },
+        { force: true }
+      );
+    }
     if (decrypted) {
       const sanitized = sanitizeGoogleTokens(decrypted);
       if (!sanitized.scope && typeof oauthBlock.scope === "string" && oauthBlock.scope.trim()) {
@@ -1809,6 +1878,20 @@ function inspectGoogleTokensFromMetadata(metadata = {}) {
       hasEncryptedTokens: true,
       decryptFailed: true,
     };
+  }
+
+  if (shouldLogInspection) {
+    logGoogleOAuth(
+      traceId,
+      "token_storage_inspected",
+      {
+        logContext,
+        scopeId,
+        ...storage,
+        decryptReturnedNull: false,
+      },
+      { force: true }
+    );
   }
 
   const legacyOauthSanitized = sanitizeGoogleTokens(oauthBlock || {});
@@ -1841,8 +1924,8 @@ function inspectGoogleTokensFromMetadata(metadata = {}) {
   };
 }
 
-function readGoogleTokensFromMetadata(metadata = {}) {
-  return inspectGoogleTokensFromMetadata(metadata).tokens;
+function readGoogleTokensFromMetadata(metadata = {}, diagnostics = {}) {
+  return inspectGoogleTokensFromMetadata(metadata, diagnostics).tokens;
 }
 
 function buildGoogleOAuthMetadata(existingMetadata = {}, tokens = {}) {
@@ -2024,11 +2107,20 @@ async function getGoogleCalendarAuthUrl(authContext, redirectUriCandidateOrOptio
   };
 }
 
-async function getGoogleCalendarConnectionStatusForUser(userIdStr) {
-  const existingRows = await listUserCalendarRows(userIdStr);
+async function getGoogleCalendarConnectionStatusForUser(userIdStr, diagnostics = {}) {
+  const scopeId = String(userIdStr || "").trim();
+  const traceId = String(diagnostics?.traceId || "").trim();
+  const logContext = String(diagnostics?.logContext || "").trim();
+  const existingRows = await listUserCalendarRows(scopeId);
   const googleCal = existingRows.find((row) => row.provider === GOOGLE_PROVIDER_KEY);
-  const status = deriveGoogleCalendarStatusFromRow(googleCal);
-  return {
+  const storage = summarizeGoogleTokenStorage(googleCal?.metadata || {});
+  const status = deriveGoogleCalendarStatusFromRow(googleCal, {
+    traceId,
+    scopeId,
+    logContext,
+    forceLog: diagnostics?.forceLog,
+  });
+  const resolved = {
     connected: status.connected,
     hasRefreshToken: status.hasRefreshToken,
     hasWriteScope: status.hasWriteScope,
@@ -2038,7 +2130,32 @@ async function getGoogleCalendarConnectionStatusForUser(userIdStr) {
     reason: status.reason,
     tokenSource: status.tokenSource,
     tokenDecryptFailed: status.tokenDecryptFailed,
+    rowFound: Boolean(googleCal),
   };
+  if (traceId || diagnostics?.forceLog) {
+    logGoogleOAuth(
+      traceId,
+      "calendar_status_resolved",
+      {
+        logContext,
+        scopeId,
+        rowFound: resolved.rowFound,
+        integrationId: resolved.integrationId,
+        connected: resolved.connected,
+        hasWriteScope: resolved.hasWriteScope,
+        hasRefreshToken: resolved.hasRefreshToken,
+        hasUsableToken: resolved.hasUsableToken,
+        accountEmail: resolved.accountEmail,
+        reason: resolved.reason,
+        tokenSource: resolved.tokenSource,
+        tokenDecryptFailed: resolved.tokenDecryptFailed,
+        ...storage,
+        ...getTokenCryptoLogState(),
+      },
+      { force: true }
+    );
+  }
+  return resolved;
 }
 
 async function getVerifiedGoogleCalendarConnectionStatus(authContext = {}) {
@@ -2046,11 +2163,22 @@ async function getVerifiedGoogleCalendarConnectionStatus(authContext = {}) {
     authContext?.workspaceId || authContext?.scopeId || authContext?.userId || ""
   );
   const userId = String(authContext?.userId || "");
-  const workspaceStatus = await getGoogleCalendarConnectionStatusForUser(workspaceId);
+  const traceId = String(authContext?.traceId || "").trim();
+  const forceLog = Boolean(authContext?.forceLog);
+  const logContext = String(authContext?.logContext || "verified_status").trim();
+  const workspaceStatus = await getGoogleCalendarConnectionStatusForUser(workspaceId, {
+    traceId,
+    forceLog,
+    logContext: `${logContext}.workspace`,
+  });
   let userScopeStatus = null;
 
   if (userId && userId !== workspaceId) {
-    userScopeStatus = await getGoogleCalendarConnectionStatusForUser(userId);
+    userScopeStatus = await getGoogleCalendarConnectionStatusForUser(userId, {
+      traceId,
+      forceLog,
+      logContext: `${logContext}.user`,
+    });
   }
 
   const workspaceMismatch = Boolean(
@@ -2059,7 +2187,7 @@ async function getVerifiedGoogleCalendarConnectionStatus(authContext = {}) {
       (!workspaceStatus.integrationId || !workspaceStatus.connected)
   );
 
-  return {
+  const resolved = {
     scope: "workspace",
     workspaceId,
     userId: userId || null,
@@ -2082,6 +2210,10 @@ async function getVerifiedGoogleCalendarConnectionStatus(authContext = {}) {
         }
       : null,
   };
+  if (traceId || forceLog) {
+    logGoogleOAuth(traceId, "verified_status_resolved", resolved, { force: true });
+  }
+  return resolved;
 }
 
 async function handleGoogleCalendarCallback(
@@ -2207,7 +2339,12 @@ async function handleGoogleCalendarCallback(
     }
     const existingGoogle = existingRows.find((row) => row.provider === GOOGLE_PROVIDER_KEY);
     const mergedTokens = mergeGoogleTokens(
-      readGoogleTokensFromMetadata(existingGoogle?.metadata || {}),
+      readGoogleTokensFromMetadata(existingGoogle?.metadata || {}, {
+        traceId,
+        scopeId: workspaceId,
+        logContext: "oauth_callback.existing_row",
+        forceLog: true,
+      }),
       tokens
     );
     if (!String(mergedTokens.scope || "").trim()) {
@@ -2302,6 +2439,9 @@ async function handleGoogleCalendarCallback(
     const finalStatus = await getVerifiedGoogleCalendarConnectionStatus({
       workspaceId,
       userId: userIdStr,
+      traceId,
+      forceLog: true,
+      logContext: "oauth_callback.post_save",
     });
     logGoogleOAuth(traceId, "post_save_status_check", finalStatus, {
       force: true,

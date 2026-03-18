@@ -67,6 +67,45 @@ function normalizeGoogleCalendarReturnPath(
   }
 }
 
+function extractSameOriginReturnPathFromRequest(req = null) {
+  const referer = String(req?.headers?.referer || "").trim();
+  if (!referer) return "";
+
+  try {
+    const refererUrl = new URL(referer);
+    const appBaseUrl = new URL(`${resolveAppBaseUrl(req)}/`);
+    if (refererUrl.origin !== appBaseUrl.origin) {
+      return "";
+    }
+
+    const returnPath = `${refererUrl.pathname}${refererUrl.search}${refererUrl.hash}`;
+    if (returnPath.startsWith("/api/integrations/google-calendar/")) {
+      return "";
+    }
+    return returnPath;
+  } catch {
+    return "";
+  }
+}
+
+function resolveGoogleCalendarReturnPath({
+  returnPath = "",
+  req = null,
+  fallback = DEFAULT_GOOGLE_CALENDAR_RETURN_PATH,
+} = {}) {
+  const explicit = String(returnPath || "").trim();
+  if (explicit) {
+    return normalizeGoogleCalendarReturnPath(explicit, fallback);
+  }
+
+  const fromRequest = extractSameOriginReturnPathFromRequest(req);
+  if (fromRequest) {
+    return normalizeGoogleCalendarReturnPath(fromRequest, fallback);
+  }
+
+  return normalizeGoogleCalendarReturnPath("", fallback);
+}
+
 function buildGoogleCalendarAppRedirect(req, returnPath = "", params = {}) {
   const targetPath = normalizeGoogleCalendarReturnPath(returnPath);
   const url = new URL(targetPath, `${resolveAppBaseUrl(req)}/`);
@@ -85,5 +124,6 @@ module.exports = {
   resolveAppBaseUrl,
   resolveGoogleRedirectUri,
   normalizeGoogleCalendarReturnPath,
+  resolveGoogleCalendarReturnPath,
   buildGoogleCalendarAppRedirect,
 };

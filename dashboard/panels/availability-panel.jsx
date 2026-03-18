@@ -699,7 +699,7 @@ export default function AvailabilityPanel() {
         setNotice("Preview mode: Google Calendar connection is disabled locally.");
         return;
       }
-      const returnPath = `${window.location.pathname}${window.location.search}`;
+      const returnPath = `${window.location.pathname}${window.location.search}${window.location.hash || ""}`;
       const payload = await apiFetch(
         `/api/integrations/google-calendar/auth-url?returnPath=${encodeURIComponent(returnPath)}`
       );

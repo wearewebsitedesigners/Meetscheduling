@@ -4,6 +4,7 @@ const { requireAuth } = require("../middleware/auth");
 const { assertBoolean, assertOptionalString } = require("../utils/validation");
 const {
   resolveGoogleRedirectUri,
+  resolveGoogleCalendarReturnPath,
   buildGoogleCalendarAppRedirect,
 } = require("../utils/google-calendar-oauth");
 const {
@@ -110,8 +111,12 @@ router.use(requireAuth);
 router.get(
   "/google-calendar/auth-url",
   asyncHandler(async (req, res) => {
-    const returnPath = assertOptionalString(req.query.returnPath, "returnPath", {
+    const requestedReturnPath = assertOptionalString(req.query.returnPath, "returnPath", {
       max: 500,
+    });
+    const returnPath = resolveGoogleCalendarReturnPath({
+      returnPath: requestedReturnPath,
+      req,
     });
     const { authUrl, redirectUri, returnPath: normalizedReturnPath, traceId } =
       await getGoogleCalendarAuthUrl(
@@ -134,6 +139,8 @@ router.get(
     const status = await getVerifiedGoogleCalendarConnectionStatus({
       userId: req.auth.userId,
       workspaceId: req.auth.workspaceId,
+      forceLog: true,
+      logContext: "status_endpoint",
     });
     res.json({ status });
   })

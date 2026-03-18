@@ -6,11 +6,41 @@ const IV_BYTES = 12;
 const TAG_BYTES = 16;
 const VERSION = 1;
 
-function deriveKey() {
-  const source =
-    String(env.integrationTokenSecret || "").trim() ||
-    String(env.jwtSecret || "").trim();
-  return crypto.createHash("sha256").update(source).digest();
+function buildKey(secret) {
+  return crypto.createHash("sha256").update(secret).digest();
+}
+
+function getKeyCandidates() {
+  const candidates = [];
+  const integrationSecret = String(env.integrationTokenSecret || "").trim();
+  const jwtSecret = String(env.jwtSecret || "").trim();
+
+  if (integrationSecret) {
+    candidates.push({
+      source: "INTEGRATION_TOKEN_SECRET",
+      key: buildKey(integrationSecret),
+    });
+  }
+
+  if (jwtSecret && jwtSecret !== integrationSecret) {
+    candidates.push({
+      source: "JWT_SECRET",
+      key: buildKey(jwtSecret),
+    });
+  }
+
+  if (!candidates.length) {
+    candidates.push({
+      source: "JWT_SECRET",
+      key: buildKey(jwtSecret),
+    });
+  }
+
+  return candidates;
+}
+
+function getPrimaryKeyCandidate() {
+  return getKeyCandidates()[0];
 }
 
 function safeJsonParse(raw) {
@@ -26,7 +56,8 @@ function encryptTokenPayload(payload) {
     return null;
   }
 
-  const key = deriveKey();
+  const primary = getPrimaryKeyCandidate();
+  const key = primary.key;
   const iv = crypto.randomBytes(IV_BYTES);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv, { authTagLength: TAG_BYTES });
   const plaintext = Buffer.from(JSON.stringify(payload), "utf8");
@@ -42,32 +73,82 @@ function encryptTokenPayload(payload) {
   };
 }
 
-function decryptTokenPayload(encryptedValue) {
+function decryptTokenPayloadDetailed(encryptedValue) {
+  const attemptedKeySources = getKeyCandidates().map((candidate) => candidate.source);
   if (!encryptedValue || typeof encryptedValue !== "object" || Array.isArray(encryptedValue)) {
-    return null;
+    return {
+      payload: null,
+      keySource: "",
+      attemptedKeySources,
+      failureReason: "invalid_payload",
+    };
   }
 
-  if (Number(encryptedValue.v) !== VERSION) return null;
-  if (String(encryptedValue.alg || "") !== "A256GCM") return null;
-
-  try {
-    const key = deriveKey();
-    const iv = Buffer.from(String(encryptedValue.iv || ""), "base64");
-    const tag = Buffer.from(String(encryptedValue.tag || ""), "base64");
-    const data = Buffer.from(String(encryptedValue.data || ""), "base64");
-    if (iv.length !== IV_BYTES || tag.length !== TAG_BYTES || !data.length) return null;
-
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: TAG_BYTES });
-    decipher.setAuthTag(tag);
-    const decrypted = Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");
-    const parsed = safeJsonParse(decrypted);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
+  if (Number(encryptedValue.v) !== VERSION) {
+    return {
+      payload: null,
+      keySource: "",
+      attemptedKeySources,
+      failureReason: "unsupported_version",
+    };
   }
+
+  if (String(encryptedValue.alg || "") !== "A256GCM") {
+    return {
+      payload: null,
+      keySource: "",
+      attemptedKeySources,
+      failureReason: "unsupported_algorithm",
+    };
+  }
+
+  const iv = Buffer.from(String(encryptedValue.iv || ""), "base64");
+  const tag = Buffer.from(String(encryptedValue.tag || ""), "base64");
+  const data = Buffer.from(String(encryptedValue.data || ""), "base64");
+  if (iv.length !== IV_BYTES || tag.length !== TAG_BYTES || !data.length) {
+    return {
+      payload: null,
+      keySource: "",
+      attemptedKeySources,
+      failureReason: "invalid_envelope",
+    };
+  }
+
+  for (const candidate of getKeyCandidates()) {
+    try {
+      const decipher = crypto.createDecipheriv(ALGORITHM, candidate.key, iv, {
+        authTagLength: TAG_BYTES,
+      });
+      decipher.setAuthTag(tag);
+      const decrypted = Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");
+      const parsed = safeJsonParse(decrypted);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return {
+          payload: parsed,
+          keySource: candidate.source,
+          attemptedKeySources,
+          failureReason: "",
+        };
+      }
+    } catch {
+      // Try the next configured key source before giving up.
+    }
+  }
+
+  return {
+    payload: null,
+    keySource: "",
+    attemptedKeySources,
+    failureReason: "decrypt_failed",
+  };
+}
+
+function decryptTokenPayload(encryptedValue) {
+  return decryptTokenPayloadDetailed(encryptedValue).payload;
 }
 
 module.exports = {
   encryptTokenPayload,
   decryptTokenPayload,
+  decryptTokenPayloadDetailed,
 };

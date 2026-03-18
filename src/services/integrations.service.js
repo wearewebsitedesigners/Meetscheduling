@@ -900,7 +900,8 @@ function deriveGoogleCalendarStatusFromRow(calendarRow, diagnostics = {}) {
   const tokens = tokenInspection.tokens;
   const hasWriteScope = hasGoogleCalendarWriteScope(tokens);
   const hasRefreshToken = Boolean(tokens.refresh_token);
-  const hasUsableToken = hasRefreshToken || hasUsableAccessToken(tokens);
+  const hasUsableAccessTokenValue = hasUsableAccessToken(tokens);
+  const hasUsableToken = hasRefreshToken || hasUsableAccessTokenValue;
   const connected = Boolean(calendarRow.connected) && hasWriteScope && hasUsableToken;
   let reason = "connected";
   if (!calendarRow.connected) {
@@ -913,6 +914,32 @@ function deriveGoogleCalendarStatusFromRow(calendarRow, diagnostics = {}) {
     reason = "missing_scope";
   } else if (!hasUsableToken) {
     reason = hasRefreshToken ? "missing_access_token" : "missing_refresh_token";
+  }
+
+  if (diagnostics?.traceId || diagnostics?.forceLog) {
+    logGoogleOAuth(
+      String(diagnostics.traceId || "").trim(),
+      "calendar_status_flags",
+      {
+        logContext: String(diagnostics.logContext || "").trim(),
+        scopeId: String(diagnostics.scopeId || "").trim(),
+        rowConnected: Boolean(calendarRow.connected),
+        scope: String(tokens.scope || "").trim(),
+        hasWriteScope,
+        hasRefreshToken,
+        hasAccessToken: Boolean(tokens.access_token),
+        expiryDate:
+          Number.isFinite(Number(tokens.expiry_date)) && Number(tokens.expiry_date) > 0
+            ? Number(tokens.expiry_date)
+            : null,
+        hasUsableAccessToken: hasUsableAccessTokenValue,
+        hasUsableToken,
+        decryptFailed: tokenInspection.decryptFailed,
+        tokenSource: tokenInspection.source,
+        reason,
+      },
+      { force: true }
+    );
   }
 
   return {
@@ -1657,7 +1684,7 @@ const { google } = require("googleapis");
 const env = require("../config/env");
 const {
   encryptTokenPayload,
-  decryptTokenPayload,
+  decryptTokenPayloadDetailed,
 } = require("../utils/integration-token-crypto");
 
 const GOOGLE_PROVIDER_KEY = "google-calendar";
@@ -1845,7 +1872,12 @@ function inspectGoogleTokensFromMetadata(metadata = {}, diagnostics = {}) {
       ? metadata.oauth
       : null;
   if (oauthBlock?.encryptedTokens) {
-    const decrypted = decryptTokenPayload(oauthBlock.encryptedTokens);
+    const decryptResult = decryptTokenPayloadDetailed(oauthBlock.encryptedTokens);
+    const decrypted = decryptResult.payload;
+    const decryptedTokens = sanitizeGoogleTokens(decrypted || {});
+    if (!decryptedTokens.scope && typeof oauthBlock.scope === "string" && oauthBlock.scope.trim()) {
+      decryptedTokens.scope = oauthBlock.scope.trim();
+    }
     if (shouldLogInspection) {
       logGoogleOAuth(
         traceId,
@@ -1855,6 +1887,18 @@ function inspectGoogleTokensFromMetadata(metadata = {}, diagnostics = {}) {
           scopeId,
           ...storage,
           decryptReturnedNull: !decrypted,
+          decryptKeySource: decryptResult.keySource || "",
+          decryptAttemptedKeySources: decryptResult.attemptedKeySources || [],
+          decryptFailureReason: decryptResult.failureReason || "",
+          decryptedScope: String(decryptedTokens.scope || "").trim(),
+          decryptedHasRefreshToken: Boolean(decryptedTokens.refresh_token),
+          decryptedHasAccessToken: Boolean(decryptedTokens.access_token),
+          decryptedExpiryDate:
+            Number.isFinite(Number(decryptedTokens.expiry_date)) &&
+            Number(decryptedTokens.expiry_date) > 0
+              ? Number(decryptedTokens.expiry_date)
+              : null,
+          decryptedHasUsableAccessToken: hasUsableAccessToken(decryptedTokens),
           ...getTokenCryptoLogState(),
         },
         { force: true }
@@ -2192,6 +2236,7 @@ async function getVerifiedGoogleCalendarConnectionStatus(authContext = {}) {
     workspaceId,
     userId: userId || null,
     connected: workspaceStatus.connected,
+    rowFound: workspaceStatus.rowFound,
     hasRefreshToken: workspaceStatus.hasRefreshToken,
     hasWriteScope: workspaceStatus.hasWriteScope,
     hasUsableToken: workspaceStatus.hasUsableToken,
@@ -2395,6 +2440,63 @@ async function handleGoogleCalendarCallback(
       accountEmail: savedCalendarRow.account_email || "",
       connected: !!savedCalendarRow.connected,
     });
+
+    const readbackRows = await listUserCalendarRows(workspaceId);
+    const readbackGoogleRow = readbackRows.find((row) => row.provider === GOOGLE_PROVIDER_KEY) || null;
+    const readbackStorage = summarizeGoogleTokenStorage(readbackGoogleRow?.metadata || {});
+    const readbackTokens = readGoogleTokensFromMetadata(readbackGoogleRow?.metadata || {}, {
+      traceId,
+      scopeId: workspaceId,
+      logContext: "oauth_callback.saved_row_readback",
+      forceLog: true,
+    });
+    const readbackStatus = deriveGoogleCalendarStatusFromRow(readbackGoogleRow, {
+      traceId,
+      scopeId: workspaceId,
+      logContext: "oauth_callback.saved_row_readback",
+      forceLog: true,
+    });
+    logGoogleOAuth(
+      traceId,
+      "calendar_row_readback",
+      {
+        rowFound: Boolean(readbackGoogleRow),
+        rowConnected: Boolean(readbackGoogleRow?.connected),
+        accountEmail: String(readbackGoogleRow?.account_email || "").trim().toLowerCase(),
+        hasOauthBlock: readbackStorage.hasOauthBlock,
+        hasEncryptedTokens: readbackStorage.hasEncryptedTokens,
+        decryptedScope: String(readbackTokens.scope || "").trim(),
+        decryptedHasRefreshToken: Boolean(readbackTokens.refresh_token),
+        decryptedHasAccessToken: Boolean(readbackTokens.access_token),
+        decryptedExpiryDate:
+          Number.isFinite(Number(readbackTokens.expiry_date)) &&
+          Number(readbackTokens.expiry_date) > 0
+            ? Number(readbackTokens.expiry_date)
+            : null,
+        decryptedHasUsableAccessToken: hasUsableAccessToken(readbackTokens),
+        hasWriteScope: readbackStatus.hasWriteScope,
+        hasRefreshToken: readbackStatus.hasRefreshToken,
+        hasUsableToken: readbackStatus.hasUsableToken,
+        tokenDecryptFailed: readbackStatus.tokenDecryptFailed,
+        reason: readbackStatus.reason,
+      },
+      { force: true }
+    );
+
+    if (!readbackStatus.connected) {
+      throw createGoogleOAuthError(
+        "Google Calendar row saved but immediate readback failed",
+        classifyGoogleStatusVerificationError(readbackStatus),
+        {
+          oauthTraceId: traceId,
+          oauthReturnPath: returnPath,
+          status: {
+            ...readbackStatus,
+            rowFound: Boolean(readbackGoogleRow),
+          },
+        }
+      );
+    }
 
     const meetDetails = CATALOG_BY_KEY.get("google-meet");
     if (meetDetails) {

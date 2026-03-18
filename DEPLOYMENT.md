@@ -23,6 +23,7 @@ Important:
 
 - This app runs as a single PM2 `fork` process on port `8080`.
 - Use `pm2 restart meetscheduling --update-env`, not `pm2 reload`, otherwise PM2 may try a hot handoff and the replacement process can fail with `EADDRINUSE`.
+- The GitHub Actions workflow forces IPv4 for SSH to avoid runner-side IPv6 connection issues that can surface as `dial tcp ... i/o timeout`.
 - On some VPS setups, Git may refuse to pull with `detected dubious ownership`; add the app directory once with:
 
 ```bash
@@ -37,10 +38,12 @@ Required secrets:
 
 - `VPS_HOST` (example: `meetscheduling.com`)
 - `VPS_USER` (SSH user on server)
-- `VPS_SSH_PRIVATE_KEY` (private key matching VPS `authorized_keys`)
+- `VPS_SSH_KEY` (private key matching VPS `authorized_keys`)
 
 Optional secrets:
 
+- `VPS_SSH_PRIVATE_KEY` (legacy alias; the workflow accepts either secret name)
+- `VPS_SSH_PORT` (default `22`)
 - `VPS_SSH_PASSPHRASE` (only if your private key is encrypted)
 
 Optional repository variables:
@@ -107,7 +110,18 @@ Optional overrides:
 - `DEPLOY_PATH` (default `/var/www/meetscheduling`)
 - `DEPLOY_REF` (default `main`)
 
-## 5) Post-deploy smoke checks
+## 5) SSH timeout troubleshooting
+
+If GitHub Actions fails with `dial tcp ... i/o timeout`, the runner could not open a TCP connection to the SSH host. That happens before key authentication, so the usual causes are:
+
+- `VPS_HOST` points at the wrong host or a proxied DNS record instead of the VPS itself
+- `VPS_SSH_PORT` is wrong or the SSH daemon is not listening on that port
+- the VPS firewall, cloud firewall, or provider security group allows your local IP but blocks GitHub-hosted runners
+- the host has a broken IPv6 path; the workflow now forces IPv4 to avoid that class of failure
+
+For the most stable setup, use the VPS public IP or a direct DNS A record for `VPS_HOST`, and verify that the SSH port is reachable from outside your local network.
+
+## 6) Post-deploy smoke checks
 
 ```bash
 APP_URL=https://your-domain.com bash scripts/smoke.sh
@@ -120,7 +134,7 @@ Expected:
 - protected routes work with token
 - frontend pages return HTTP 200
 
-## 6) Production checklist
+## 7) Production checklist
 
 - Replace all placeholder secrets.
 - Configure SMTP for booking confirmation emails.

@@ -633,7 +633,7 @@ function mapRowToItem(row, rank) {
   };
 }
 
-async function listUserIntegrationRows(userId, client = null) {
+async function listUserIntegrationRows(workspaceId, client = null) {
   const result = await query(
     `
       SELECT
@@ -656,13 +656,13 @@ async function listUserIntegrationRows(userId, client = null) {
       WHERE workspace_id = $1
       ORDER BY updated_at DESC
     `,
-    [userId],
+    [workspaceId],
     client
   );
   return result.rows;
 }
 
-async function listUserCalendarRows(userId, client = null) {
+async function listUserCalendarRows(workspaceId, client = null) {
   const result = await query(
     `
       SELECT
@@ -685,7 +685,7 @@ async function listUserCalendarRows(userId, client = null) {
       WHERE workspace_id = $1
       ORDER BY connected DESC, updated_at DESC
     `,
-    [userId],
+    [workspaceId],
     client
   );
 
@@ -706,7 +706,7 @@ async function listUserCalendarRows(userId, client = null) {
   return deduped;
 }
 
-async function getCalendarSettingsRow(userId, client = null) {
+async function getCalendarSettingsRow(workspaceId, client = null) {
   const result = await query(
     `
       SELECT
@@ -721,14 +721,14 @@ async function getCalendarSettingsRow(userId, client = null) {
       WHERE workspace_id = $1
       LIMIT 1
     `,
-    [userId],
+    [workspaceId],
     client
   );
   return result.rows[0] || null;
 }
 
-async function upsertCalendarSettings(userId, input = {}, client = null) {
-  const existing = await getCalendarSettingsRow(userId, client);
+async function upsertCalendarSettings(workspaceId, input = {}, client = null) {
+  const existing = await getCalendarSettingsRow(workspaceId, client);
   const selectedProvider =
     Object.prototype.hasOwnProperty.call(input, "selectedProvider")
       ? input.selectedProvider === null || input.selectedProvider === ""
@@ -744,6 +744,9 @@ async function upsertCalendarSettings(userId, input = {}, client = null) {
       ? !!input.autoSync
       : existing?.auto_sync || false;
 
+  // `user_calendar_settings` still has a legacy uniqueness path keyed by `user_id`.
+  // Persist the workspace-scoped row under the workspace principal so reads, limits,
+  // and selection stay aligned with the active workspace.
   const result = existing
     ? await query(
         `
@@ -765,7 +768,7 @@ async function upsertCalendarSettings(userId, input = {}, client = null) {
             created_at,
             updated_at
       `,
-        [userId, userId, selectedProvider, includeBuffers, autoSync],
+        [workspaceId, workspaceId, selectedProvider, includeBuffers, autoSync],
         client
       )
     : await query(
@@ -797,7 +800,7 @@ async function upsertCalendarSettings(userId, input = {}, client = null) {
             created_at,
             updated_at
       `,
-        [userId, userId, selectedProvider, includeBuffers, autoSync],
+        [workspaceId, workspaceId, selectedProvider, includeBuffers, autoSync],
         client
       );
 
@@ -1048,7 +1051,7 @@ function normalizeConnectPayload(payload) {
   };
 }
 
-async function upsertIntegration(userId, normalizedPayload, client = null) {
+async function upsertIntegration(workspaceId, normalizedPayload, client = null) {
   const existing = await query(
     `
       SELECT id
@@ -1058,10 +1061,13 @@ async function upsertIntegration(userId, normalizedPayload, client = null) {
       ORDER BY updated_at DESC, created_at DESC, id DESC
       LIMIT 1
     `,
-    [userId, normalizedPayload.provider],
+    [workspaceId, normalizedPayload.provider],
     client
   );
 
+  // `user_integrations` still has a legacy uniqueness path keyed by `user_id`.
+  // Persist the workspace-scoped row under the workspace principal so callback save,
+  // status verification, and downstream booking reads resolve the same record.
   const row = existing.rows[0]
     ? await query(
         `
@@ -1098,8 +1104,8 @@ async function upsertIntegration(userId, normalizedPayload, client = null) {
             updated_at
       `,
         [
-          userId,
-          userId,
+          workspaceId,
+          workspaceId,
           normalizedPayload.accountEmail,
           normalizedPayload.category,
           normalizedPayload.displayName,
@@ -1161,8 +1167,8 @@ async function upsertIntegration(userId, normalizedPayload, client = null) {
             updated_at
       `,
         [
-          userId,
-          userId,
+          workspaceId,
+          workspaceId,
           normalizedPayload.provider,
           normalizedPayload.accountEmail,
           normalizedPayload.category,
@@ -1178,14 +1184,14 @@ async function upsertIntegration(userId, normalizedPayload, client = null) {
 }
 
 async function listIntegrationsForUser(
-  userId,
+  workspaceId,
   { tab = "discover", filter = "all", search = "", sort = "most_popular" } = {}
 ) {
   const safeTab = normalizeTab(tab);
   const safeFilter = normalizeFilter(filter);
   const safeSort = normalizeSort(sort);
 
-  const rows = await listUserIntegrationRows(userId);
+  const rows = await listUserIntegrationRows(workspaceId);
   const merged = applyGoogleConnectionState(buildMergedItems(rows), rows);
   const filtered = applyFilters(merged, {
     tab: safeTab,
@@ -1206,23 +1212,23 @@ async function listIntegrationsForUser(
   };
 }
 
-async function connectIntegration(userId, payload) {
+async function connectIntegration(workspaceId, payload) {
   const normalized = normalizeConnectPayload(payload || {});
   if (normalized.provider === "google-calendar") {
     throw badRequest("Use Google OAuth to connect Google Calendar");
   }
   if (normalized.provider === "google-meet") {
-    const calendarStatus = await getGoogleCalendarConnectionStatusForUser(userId);
+    const calendarStatus = await getGoogleCalendarConnectionStatusForUser(workspaceId);
     if (!calendarStatus.connected) {
       throw badRequest("Connect Google Calendar first to enable Google Meet");
     }
     normalized.accountEmail = normalized.accountEmail || calendarStatus.accountEmail || "";
   }
-  const row = await upsertIntegration(userId, normalized);
+  const row = await upsertIntegration(workspaceId, normalized);
   return mapRowToItem(row, normalized.metadata.popularRank || 9999);
 }
 
-async function connectAllIntegrations(userId, accountEmail = "") {
+async function connectAllIntegrations(workspaceId, accountEmail = "") {
   const safeEmail = accountEmail
     ? assertEmail(assertOptionalString(accountEmail, "accountEmail", { max: 320 }))
     : "";
@@ -1237,7 +1243,7 @@ async function connectAllIntegrations(userId, accountEmail = "") {
         continue;
       }
       const row = await upsertIntegration(
-        userId,
+        workspaceId,
         {
           provider: item.key,
           displayName: item.name,
@@ -1261,7 +1267,7 @@ async function connectAllIntegrations(userId, accountEmail = "") {
   return result.map((row, index) => mapRowToItem(row, index + 1));
 }
 
-async function configureIntegration(userId, provider, payload = {}) {
+async function configureIntegration(workspaceId, provider, payload = {}) {
   const safeProvider = normalizeProviderKey(provider);
   const accountEmailRaw = assertOptionalString(payload.accountEmail, "accountEmail", {
     max: 320,
@@ -1299,11 +1305,11 @@ async function configureIntegration(userId, provider, payload = {}) {
         created_at,
         updated_at
     `,
-    [accountEmail, JSON.stringify(metadata), userId, safeProvider]
+    [accountEmail, JSON.stringify(metadata), workspaceId, safeProvider]
   );
 
   if (!result.rows[0]) {
-    return connectIntegration(userId, {
+    return connectIntegration(workspaceId, {
       provider: safeProvider,
       accountEmail,
       metadata,
@@ -1313,7 +1319,7 @@ async function configureIntegration(userId, provider, payload = {}) {
   return mapRowToItem(result.rows[0], 9999);
 }
 
-async function setIntegrationConnection(userId, provider, connected) {
+async function setIntegrationConnection(workspaceId, provider, connected) {
   const safeProvider = normalizeProviderKey(provider);
   if (!ENABLED_INTEGRATION_KEYS.has(safeProvider)) {
     throw badRequest("Only Google Calendar and Google Meet are available in Integrations");
@@ -1322,12 +1328,12 @@ async function setIntegrationConnection(userId, provider, connected) {
     throw badRequest("Use Google OAuth to connect Google Calendar");
   }
   if (safeProvider === "google-meet" && !!connected) {
-    const calendarStatus = await getGoogleCalendarConnectionStatusForUser(userId);
+    const calendarStatus = await getGoogleCalendarConnectionStatusForUser(workspaceId);
     if (!calendarStatus.connected) {
       throw badRequest("Connect Google Calendar first to enable Google Meet");
     }
     const details = CATALOG_BY_KEY.get("google-meet");
-    const row = await upsertIntegration(userId, {
+    const row = await upsertIntegration(workspaceId, {
       provider: "google-meet",
       displayName: details?.name || "Google Meet",
       category: details?.category || "Video",
@@ -1369,7 +1375,7 @@ async function setIntegrationConnection(userId, provider, connected) {
         created_at,
         updated_at
     `,
-    [!!connected, userId, safeProvider]
+    [!!connected, workspaceId, safeProvider]
   );
 
   if (safeProvider === "google-calendar" && !connected) {
@@ -1379,12 +1385,12 @@ async function setIntegrationConnection(userId, provider, connected) {
         SET connected = FALSE, updated_at = NOW()
         WHERE workspace_id = $1 AND provider = 'google-meet'
       `,
-      [userId]
+      [workspaceId]
     );
   }
 
   if (!result.rows[0] && connected) {
-    return connectIntegration(userId, { provider: safeProvider });
+    return connectIntegration(workspaceId, { provider: safeProvider });
   }
 
   if (!result.rows[0]) {
@@ -1397,26 +1403,26 @@ async function setIntegrationConnection(userId, provider, connected) {
   return mapRowToItem(result.rows[0], 9999);
 }
 
-async function disconnectAllIntegrations(userId) {
+async function disconnectAllIntegrations(workspaceId) {
   const result = await query(
     `
       UPDATE user_integrations
       SET connected = FALSE, updated_at = NOW()
       WHERE workspace_id = $1 AND connected = TRUE
     `,
-    [userId]
+    [workspaceId]
   );
   return { updated: result.rowCount || 0 };
 }
 
-async function removeIntegration(userId, provider) {
+async function removeIntegration(workspaceId, provider) {
   const safeProvider = normalizeProviderKey(provider);
   const result = await query(
     `
       DELETE FROM user_integrations
       WHERE workspace_id = $1 AND provider = $2
     `,
-    [userId, safeProvider]
+    [workspaceId, safeProvider]
   );
   return { deleted: result.rowCount || 0 };
 }
@@ -1444,10 +1450,10 @@ function buildCalendarConnectPayload(providerKey, accountEmail) {
   };
 }
 
-async function listCalendarConnectionsForUser(userId) {
+async function listCalendarConnectionsForUser(workspaceId) {
   const [rows, settings] = await Promise.all([
-    listUserCalendarRows(userId),
-    getCalendarSettingsRow(userId),
+    listUserCalendarRows(workspaceId),
+    getCalendarSettingsRow(workspaceId),
   ]);
 
   const existingByProvider = new Map(rows.map((row) => [row.provider, mapRowToItem(row, 9999)]));
@@ -1509,20 +1515,20 @@ async function listCalendarConnectionsForUser(userId) {
   };
 }
 
-async function connectCalendarForUser(userId, payload = {}) {
+async function connectCalendarForUser(workspaceId, payload = {}) {
   const provider = normalizeCalendarProviderKey(payload.provider || payload.providerKey);
   if (provider === "google-calendar") {
     throw badRequest("Use Google OAuth to connect Google Calendar");
   }
-  await assertFeature(userId, "availability");
+  await assertFeature(workspaceId, "availability");
 
-  const existingRows = await listUserCalendarRows(userId);
+  const existingRows = await listUserCalendarRows(workspaceId);
   const alreadyConnected = existingRows.find(
     (item) => item.provider === provider && item.connected
   );
   if (!alreadyConnected) {
     const connectedCount = existingRows.filter((item) => item.connected).length;
-    await assertLimit(userId, "calendars_limit", connectedCount);
+    await assertLimit(workspaceId, "calendars_limit", connectedCount);
   }
 
   const accountEmail = assertEmail(
@@ -1530,21 +1536,24 @@ async function connectCalendarForUser(userId, payload = {}) {
     "accountEmail"
   );
 
-  const row = await upsertIntegration(userId, buildCalendarConnectPayload(provider, accountEmail));
+  const row = await upsertIntegration(
+    workspaceId,
+    buildCalendarConnectPayload(provider, accountEmail)
+  );
   const mapped = mapRowToItem(row, 9999);
-  const settings = await upsertCalendarSettings(userId, {});
+  const settings = await upsertCalendarSettings(workspaceId, {});
 
   if (!normalizeStoredSelectedProvider(settings.selected_provider)) {
-    await upsertCalendarSettings(userId, { selectedProvider: provider });
+    await upsertCalendarSettings(workspaceId, { selectedProvider: provider });
   }
 
   return mapCalendarRecord(mapped);
 }
 
-async function syncCalendarForUser(userId, provider) {
+async function syncCalendarForUser(workspaceId, provider) {
   const providerKey = normalizeCalendarProviderKey(provider);
 
-  const existingRows = await listUserCalendarRows(userId);
+  const existingRows = await listUserCalendarRows(workspaceId);
   const existing = existingRows.find((row) => row.provider === providerKey);
   if (!existing || !existing.connected) {
     throw badRequest("Connect this calendar account first");
@@ -1559,7 +1568,7 @@ async function syncCalendarForUser(userId, provider) {
         AND start_at_utc >= NOW()
         AND start_at_utc < NOW() + INTERVAL '30 days'
     `,
-    [userId]
+    [workspaceId]
   );
   const upcomingCount = Number(upcomingCountResult.rows[0]?.count || 0);
 
@@ -1595,7 +1604,7 @@ async function syncCalendarForUser(userId, provider) {
         syncSource: "manual",
         syncedBookingsCount: upcomingCount,
       }),
-      userId,
+      workspaceId,
       providerKey,
     ]
   );
@@ -1607,7 +1616,7 @@ async function syncCalendarForUser(userId, provider) {
   };
 }
 
-async function updateCalendarSettingsForUser(userId, payload = {}) {
+async function updateCalendarSettingsForUser(workspaceId, payload = {}) {
   const updates = {};
   if (Object.prototype.hasOwnProperty.call(payload, "selectedProvider")) {
     updates.selectedProvider = payload.selectedProvider;
@@ -1619,7 +1628,7 @@ async function updateCalendarSettingsForUser(userId, payload = {}) {
     updates.autoSync = !!payload.autoSync;
   }
 
-  const settings = await upsertCalendarSettings(userId, updates);
+  const settings = await upsertCalendarSettings(workspaceId, updates);
   return {
     selectedProvider: settings.selected_provider,
     includeBuffers: settings.include_buffers,
@@ -1627,12 +1636,12 @@ async function updateCalendarSettingsForUser(userId, payload = {}) {
   };
 }
 
-async function disconnectCalendarForUser(userId, provider) {
+async function disconnectCalendarForUser(workspaceId, provider) {
   const providerKey = normalizeCalendarProviderKey(provider);
-  const integration = await setIntegrationConnection(userId, providerKey, false);
-  const settings = await getCalendarSettingsRow(userId);
+  const integration = await setIntegrationConnection(workspaceId, providerKey, false);
+  const settings = await getCalendarSettingsRow(workspaceId);
   if (normalizeStoredSelectedProvider(settings?.selected_provider) === providerKey) {
-    await upsertCalendarSettings(userId, { selectedProvider: null });
+    await upsertCalendarSettings(workspaceId, { selectedProvider: null });
   }
   return {
     providerKey,

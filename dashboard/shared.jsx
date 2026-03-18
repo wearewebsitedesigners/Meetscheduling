@@ -720,6 +720,28 @@ function handlePreviewApi(path, options = {}) {
     });
   }
 
+  if (pathname === "/api/integrations/google-calendar/status" && method === "GET") {
+    const googleCalendar = state.calendars.find((item) => item.providerKey === "google-calendar") || null;
+    return previewJson({
+      status: {
+        scope: "workspace",
+        workspaceId: "",
+        userId: "",
+        connected: Boolean(googleCalendar?.connected),
+        hasWriteScope: Boolean(googleCalendar?.connected),
+        hasRefreshToken: Boolean(googleCalendar?.connected),
+        hasUsableToken: Boolean(googleCalendar?.connected),
+        integrationId: googleCalendar?.providerKey || null,
+        accountEmail: googleCalendar?.accountEmail || "",
+        reason: googleCalendar?.connected ? "connected" : "missing_row",
+        tokenSource: googleCalendar?.connected ? "preview" : "none",
+        tokenDecryptFailed: false,
+        workspaceMismatch: false,
+        userScopeStatus: null,
+      },
+    });
+  }
+
   if (pathname === "/api/integrations/calendars/settings" && method === "PATCH") {
     state.calendarSettings = {
       selectedProvider: body.selectedProvider || "",

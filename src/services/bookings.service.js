@@ -513,7 +513,7 @@ async function createPublicBooking({
   };
   if (event.locationType === "google_meet") {
     try {
-      googleConnection = await getGoogleCalendarConnectionStatusForUser(event.userId);
+      googleConnection = await getGoogleCalendarConnectionStatusForUser(hostWorkspaceId);
     } catch (error) {
       googleConnection = {
         connected: false,
@@ -681,7 +681,7 @@ async function createPublicBooking({
 
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       try {
-        const gcal = await getAuthenticatedGoogleClient(event.userId);
+        const gcal = await getAuthenticatedGoogleClient(hostWorkspaceId);
         calendarResult = await createGoogleCalendarEventWithMeet({
           calendarClient: gcal,
           booking,
@@ -848,7 +848,7 @@ async function createPublicBooking({
   };
 }
 
-async function refreshPendingGoogleMeetLinks(userId, rows) {
+async function refreshPendingGoogleMeetLinks(scopeId, rows) {
   if (!Array.isArray(rows) || !rows.length) return rows;
   const columnSupport = await getBookingColumnSupport();
   if (!hasExtendedBookingColumns(columnSupport)) return rows;
@@ -919,7 +919,7 @@ async function refreshPendingGoogleMeetLinks(userId, rows) {
     accountEmail: "",
   };
   try {
-    connectionStatus = await getGoogleCalendarConnectionStatusForUser(userId);
+    connectionStatus = await getGoogleCalendarConnectionStatusForUser(scopeId);
   } catch {
     connectionStatus = {
       connected: false,
@@ -936,7 +936,7 @@ async function refreshPendingGoogleMeetLinks(userId, rows) {
 
   let gcal;
   try {
-    gcal = await getAuthenticatedGoogleClient(userId);
+    gcal = await getAuthenticatedGoogleClient(scopeId);
   } catch (error) {
     const status = parseGoogleErrorStatus(error);
     const message = String(error?.message || "").toLowerCase();
@@ -1115,19 +1115,19 @@ async function refreshPendingGoogleMeetLinks(userId, rows) {
 async function refreshPendingGoogleMeetLinksForRows(rows) {
   if (!Array.isArray(rows) || !rows.length) return rows;
 
-  const rowsByUserId = new Map();
+  const rowsByScopeId = new Map();
   for (const row of rows) {
-    const userId = String(row.user_id || "").trim();
-    if (!userId) continue;
-    if (!rowsByUserId.has(userId)) rowsByUserId.set(userId, []);
-    rowsByUserId.get(userId).push(row);
+    const scopeId = String(row.workspace_id || row.user_id || "").trim();
+    if (!scopeId) continue;
+    if (!rowsByScopeId.has(scopeId)) rowsByScopeId.set(scopeId, []);
+    rowsByScopeId.get(scopeId).push(row);
   }
 
-  if (!rowsByUserId.size) return rows;
+  if (!rowsByScopeId.size) return rows;
 
   const refreshedById = new Map();
-  for (const [userId, userRows] of rowsByUserId.entries()) {
-    const refreshedRows = await refreshPendingGoogleMeetLinks(userId, userRows);
+  for (const [scopeId, scopedRows] of rowsByScopeId.entries()) {
+    const refreshedRows = await refreshPendingGoogleMeetLinks(scopeId, scopedRows);
     for (const refreshedRow of refreshedRows) {
       refreshedById.set(String(refreshedRow.id), refreshedRow);
     }
@@ -1225,7 +1225,10 @@ async function getPublicBookingConfirmationForEvent(
     throw notFound("Booking confirmation not found");
   }
 
-  const refreshedRows = await refreshPendingGoogleMeetLinks(event.userId, [row]);
+  const refreshedRows = await refreshPendingGoogleMeetLinks(
+    event.workspaceId || event.userId,
+    [row]
+  );
   const finalRow = refreshedRows[0] || row;
 
   return mapBookingRow(finalRow, safeTimezone);

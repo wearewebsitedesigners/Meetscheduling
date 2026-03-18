@@ -441,6 +441,23 @@ export default function AvailabilityPanel() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get("success") && !params.get("error") && !params.get("trace")) {
+      return undefined;
+    }
+
+    params.delete("success");
+    params.delete("error");
+    params.delete("trace");
+    const nextSearch = params.toString();
+    const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash || ""}`;
+    window.history.replaceState({}, "", nextUrl);
+    return undefined;
+  }, []);
+
+  useEffect(() => {
     if (!selectedEvent) return;
     setRuleDraft({
       bufferBeforeMin: selectedEvent.bufferBeforeMin,
@@ -682,7 +699,10 @@ export default function AvailabilityPanel() {
         setNotice("Preview mode: Google Calendar connection is disabled locally.");
         return;
       }
-      const payload = await apiFetch("/api/integrations/google-calendar/auth-url");
+      const returnPath = `${window.location.pathname}${window.location.search}`;
+      const payload = await apiFetch(
+        `/api/integrations/google-calendar/auth-url?returnPath=${encodeURIComponent(returnPath)}`
+      );
       const url = payload?.url || "";
       if (!url) throw new Error("Could not start Google Calendar connection.");
       window.location.href = url;

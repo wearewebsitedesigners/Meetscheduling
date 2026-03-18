@@ -41,6 +41,7 @@ const env = {
   ),
   jwtSecret: readEnv("JWT_SECRET", "replace-me-in-prod"),
   integrationTokenSecret: readEnv("INTEGRATION_TOKEN_SECRET", ""),
+  googleOAuthDebug: readBool("GOOGLE_OAUTH_DEBUG", false),
   publicBookingSigningSecret: readEnv(
     "PUBLIC_BOOKING_SIGNING_SECRET",
     "replace-me-in-prod"

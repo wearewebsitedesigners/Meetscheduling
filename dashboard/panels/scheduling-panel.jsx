@@ -25,16 +25,130 @@ const googleCalendarStatusMessages = {
   google_calendar_connected: {
     notice: "Google Calendar connected successfully.",
   },
+  google_oauth_denied: {
+    error: "Google Calendar connection was cancelled or denied in Google.",
+  },
   missing_oauth_params: {
     error: "Google Calendar connection could not be completed. Missing OAuth parameters.",
   },
   invalid_or_expired_oauth_state: {
     error: "Google Calendar connection expired. Please try connecting again.",
   },
+  google_calendar_workspace_access_invalid: {
+    error: "Google Calendar callback could not be matched to an active workspace. Sign in again and retry.",
+  },
+  google_token_exchange_failed: {
+    error: "Google Calendar token exchange failed on the server. Check the server logs and Google OAuth configuration.",
+  },
+  google_scope_missing: {
+    error: "Google returned successfully, but the required Google Calendar write scope was missing.",
+  },
+  google_tokens_not_persisted: {
+    error: "Google returned successfully, but the server could not persist usable Google Calendar tokens for this workspace.",
+  },
+  google_status_verification_failed: {
+    error: "Google returned successfully, but the server could not verify the saved Google Calendar status for this workspace.",
+  },
+  google_calendar_token_exchange_failed: {
+    error: "Google Calendar token exchange failed on the server. Check the server logs and Google OAuth configuration.",
+  },
+  google_calendar_post_save_verification_failed: {
+    error: "Google Calendar returned successfully, but the server could not verify the saved connection state.",
+  },
   google_calendar_connect_failed: {
     error: "Google Calendar connection failed. Please try again.",
   },
 };
+
+const googleCalendarDebugReasonMessages = {
+  missing_row: "No Google Calendar row exists for the active workspace.",
+  workspace_mismatch:
+    "A Google Calendar connection exists for the signed-in user scope, but not for the active workspace.",
+  missing_scope: "Google tokens were saved, but the Google Calendar write scope is missing.",
+  missing_tokens: "The Google integration row exists, but usable OAuth tokens were not found in it.",
+  missing_refresh_token: "The integration row was saved without a refresh token.",
+  missing_access_token: "The saved Google token is no longer usable.",
+  token_decrypt_failed: "The saved Google token payload could not be decrypted on this server.",
+  disconnected: "The Google Calendar row exists, but it is marked disconnected.",
+};
+
+function normalizeGoogleCalendarStatus(status = {}) {
+  if (!status || typeof status !== "object" || Array.isArray(status)) {
+    return {
+      connected: false,
+      hasWriteScope: false,
+      hasRefreshToken: false,
+      hasUsableToken: false,
+      accountEmail: "",
+      reason: "missing_row",
+      workspaceMismatch: false,
+      scope: "workspace",
+      workspaceId: "",
+      userId: "",
+      tokenSource: "none",
+      tokenDecryptFailed: false,
+      userScopeStatus: null,
+    };
+  }
+
+  return {
+    connected: Boolean(status.connected),
+    hasWriteScope: Boolean(status.hasWriteScope),
+    hasRefreshToken: Boolean(status.hasRefreshToken),
+    hasUsableToken: Boolean(status.hasUsableToken),
+    accountEmail: String(status.accountEmail || "").trim(),
+    reason: String(status.reason || "").trim() || "missing_row",
+    workspaceMismatch: Boolean(status.workspaceMismatch),
+    scope: String(status.scope || "workspace").trim() || "workspace",
+    workspaceId: String(status.workspaceId || "").trim(),
+    userId: String(status.userId || "").trim(),
+    tokenSource: String(status.tokenSource || "").trim(),
+    tokenDecryptFailed: Boolean(status.tokenDecryptFailed),
+    userScopeStatus:
+      status.userScopeStatus && typeof status.userScopeStatus === "object"
+        ? {
+            connected: Boolean(status.userScopeStatus.connected),
+            accountEmail: String(status.userScopeStatus.accountEmail || "").trim(),
+            reason: String(status.userScopeStatus.reason || "").trim(),
+          }
+        : null,
+  };
+}
+
+function mergeGoogleCalendarStatus(calendars, status) {
+  const nextStatus = normalizeGoogleCalendarStatus(status);
+  return (calendars || []).map((item) => {
+    if (item.providerKey !== "google-calendar") return item;
+    return {
+      ...item,
+      connected: nextStatus.connected,
+      accountEmail: nextStatus.connected ? nextStatus.accountEmail || item.accountEmail || "" : "",
+      syncStatus: nextStatus.connected ? "connected" : "disconnected",
+      reason: nextStatus.reason,
+      hasWriteScope: nextStatus.hasWriteScope,
+      hasRefreshToken: nextStatus.hasRefreshToken,
+      hasUsableToken: nextStatus.hasUsableToken,
+      tokenSource: nextStatus.tokenSource,
+      tokenDecryptFailed: nextStatus.tokenDecryptFailed,
+      workspaceMismatch: nextStatus.workspaceMismatch,
+    };
+  });
+}
+
+function buildGoogleCalendarDebugMessage(status) {
+  const nextStatus = normalizeGoogleCalendarStatus(status);
+  return googleCalendarDebugReasonMessages[nextStatus.reason] || "";
+}
+
+function buildGoogleCalendarDebugFacts(status) {
+  const nextStatus = normalizeGoogleCalendarStatus(status);
+  return [
+    `${nextStatus.scope}-scoped status`,
+    `write scope: ${nextStatus.hasWriteScope ? "yes" : "no"}`,
+    `refresh token: ${nextStatus.hasRefreshToken ? "yes" : "no"}`,
+    `usable token: ${nextStatus.hasUsableToken ? "yes" : "no"}`,
+  ].join(" · ");
+}
 const locationOptions = [
   { value: "google_meet", label: "Google Meet" },
   { value: "zoom", label: "Zoom" },
@@ -439,6 +553,9 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
   const [username, setUsername] = useState("");
   const [calendars, setCalendars] = useState([]);
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [googleCalendarStatus, setGoogleCalendarStatus] = useState(
+    normalizeGoogleCalendarStatus()
+  );
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("create");
@@ -456,22 +573,26 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
       setNotice("");
     }
     try {
-      const [mePayload, eventPayload, calendarPayload] = await Promise.all([
+      const [mePayload, eventPayload, calendarPayload, googleStatusPayload] = await Promise.all([
         apiFetch("/api/auth/me"),
         apiFetch("/api/event-types?includeInactive=true"),
         apiFetch("/api/integrations/calendars"),
+        apiFetch("/api/integrations/google-calendar/status"),
       ]);
       const nextEventTypes = (eventPayload?.eventTypes || []).map(normalizeEventType);
-      const nextCalendars = calendarPayload?.calendars || [];
+      const verifiedGoogleStatus = normalizeGoogleCalendarStatus(
+        googleStatusPayload?.status || {}
+      );
+      const nextCalendars = mergeGoogleCalendarStatus(
+        calendarPayload?.calendars || [],
+        verifiedGoogleStatus
+      );
       setEventTypes(nextEventTypes);
       setSelectedEventId((current) => current || nextEventTypes[0]?.id || "");
       setUsername(mePayload?.user?.username || "");
+      setGoogleCalendarStatus(verifiedGoogleStatus);
       setCalendars(nextCalendars);
-      setGoogleConnected(
-        nextCalendars.some(
-          (item) => item.providerKey === "google-calendar" && item.connected
-        )
-      );
+      setGoogleConnected(Boolean(verifiedGoogleStatus.connected));
     } catch (loadError) {
       setError(loadError.message || "Failed to load scheduling data.");
     } finally {
@@ -489,21 +610,27 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
     const params = new URLSearchParams(window.location.search);
     const successKey = params.get("success");
     const errorKey = params.get("error");
+    const traceId = params.get("trace");
     const statusConfig = googleCalendarStatusMessages[successKey || errorKey];
 
     if (!statusConfig) return undefined;
 
     if (statusConfig.notice) {
-      setNotice(statusConfig.notice);
+      setNotice(traceId ? `${statusConfig.notice} Reference: ${traceId}.` : statusConfig.notice);
       setError("");
     }
 
     if (statusConfig.error) {
-      setError(statusConfig.error);
+      setError(traceId ? `${statusConfig.error} Reference: ${traceId}.` : statusConfig.error);
       setNotice("");
     }
 
-    window.history.replaceState({}, "", window.location.pathname);
+    params.delete("success");
+    params.delete("error");
+    params.delete("trace");
+    const nextSearch = params.toString();
+    const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash || ""}`;
+    window.history.replaceState({}, "", nextUrl);
     loadPanel({ preserveMessages: true });
 
     return undefined;
@@ -553,6 +680,16 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
       googleMeetCount,
     };
   }, [eventTypes]);
+
+  const googleDebugMessage = useMemo(
+    () => buildGoogleCalendarDebugMessage(googleCalendarStatus),
+    [googleCalendarStatus]
+  );
+
+  const googleDebugFacts = useMemo(
+    () => buildGoogleCalendarDebugFacts(googleCalendarStatus),
+    [googleCalendarStatus]
+  );
 
   const selectedEvent = eventTypes.find((item) => item.id === selectedEventId) || filteredEventTypes[0] || null;
 
@@ -726,7 +863,10 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
 
   const handleConnectGoogle = async () => {
     try {
-      const payload = await apiFetch("/api/integrations/google-calendar/auth-url");
+      const returnPath = `${window.location.pathname}${window.location.search}`;
+      const payload = await apiFetch(
+        `/api/integrations/google-calendar/auth-url?returnPath=${encodeURIComponent(returnPath)}`
+      );
       if (payload?.url) {
         window.location.href = payload.url;
       }
@@ -813,6 +953,17 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
               <p className="mt-1 text-sm text-amber-700/90 dark:text-amber-100/80">
                 Connect it before creating Google Meet event types so booking confirmations can generate real meeting links.
               </p>
+              {googleDebugMessage ? (
+                <div className="mt-3 rounded-2xl border border-amber-200/70 bg-white/65 px-3 py-3 text-xs text-amber-900/90 shadow-inner dark:border-amber-300/10 dark:bg-white/[0.05] dark:text-amber-100/85">
+                  <p>{googleDebugMessage}</p>
+                  <p className="mt-1">{googleDebugFacts}</p>
+                  {googleCalendarStatus.workspaceMismatch && googleCalendarStatus.userScopeStatus?.accountEmail ? (
+                    <p className="mt-1">
+                      User-scoped Google account: {googleCalendarStatus.userScopeStatus.accountEmail}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
             <button
               type="button"

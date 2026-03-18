@@ -3,6 +3,10 @@ const asyncHandler = require("../middleware/async-handler");
 const { requireAuth } = require("../middleware/auth");
 const { assertBoolean, assertOptionalString } = require("../utils/validation");
 const {
+  resolveGoogleRedirectUri,
+  buildGoogleCalendarAppRedirect,
+} = require("../utils/google-calendar-oauth");
+const {
   listIntegrationsForUser,
   connectIntegration,
   connectAllIntegrations,
@@ -15,36 +19,16 @@ const {
   syncCalendarForUser,
   updateCalendarSettingsForUser,
   disconnectCalendarForUser,
+  getVerifiedGoogleCalendarConnectionStatus,
   getGoogleCalendarAuthUrl,
   handleGoogleCalendarCallback,
+  readGoogleCalendarOAuthStateContext,
 } = require("../services/integrations.service");
 
 const router = express.Router();
 
 function buildCallbackUrl(req) {
-  // Always prefer the explicitly configured redirect URI from environment.
-  // This prevents redirect_uri_mismatch errors when running behind a reverse
-  // proxy where x-forwarded-* headers may produce an incorrect URL.
-  const fromEnv = String(process.env.GOOGLE_REDIRECT_URI || "").trim();
-  if (fromEnv) return fromEnv;
-
-  // Fallback: dynamically construct from request headers (dev / no-env mode).
-  const forwardedProto = String(req.headers["x-forwarded-proto"] || "")
-    .split(",")[0]
-    .trim();
-  const forwardedHost = String(req.headers["x-forwarded-host"] || "")
-    .split(",")[0]
-    .trim();
-  const protocol = forwardedProto || req.protocol || "https";
-  const host = forwardedHost || req.get("host") || "localhost:8080";
-  return `${protocol}://${host}/api/integrations/google-calendar/callback`;
-}
-
-function buildSchedulingRedirect(suffix = "") {
-  const query = String(suffix || "").trim();
-  return query
-    ? `/dashboard/scheduling?${query}`
-    : "/dashboard/scheduling";
+  return resolveGoogleRedirectUri({ req });
 }
 
 // --- PUBLIC ROUTES (No requireAuth) ---
@@ -54,23 +38,65 @@ router.get(
   "/google-calendar/callback",
   asyncHandler(async (req, res) => {
     const code = req.query.code;
-    const state = req.query.state; // We encode userId in state
+    const state = req.query.state;
+    const stateContext = readGoogleCalendarOAuthStateContext(state);
+    const oauthError = assertOptionalString(req.query.error, "error", { max: 120 });
+    const oauthErrorDescription = assertOptionalString(
+      req.query.error_description,
+      "error_description",
+      { max: 500 }
+    );
+
+    if (oauthError) {
+      console.error("Google Calendar OAuth callback returned an error:", {
+        error: oauthError,
+        errorDescription: oauthErrorDescription || "",
+        stateDecoded: stateContext,
+        redirectUri: buildCallbackUrl(req),
+      });
+      return res.redirect(
+        buildGoogleCalendarAppRedirect(req, stateContext?.returnPath, {
+          error: "google_oauth_denied",
+          trace: stateContext?.traceId || "",
+        })
+      );
+    }
 
     if (!code || !state) {
-      return res.redirect(buildSchedulingRedirect("error=missing_oauth_params"));
+      console.error("Google Calendar OAuth callback is missing code/state", {
+        hasCode: Boolean(code),
+        hasState: Boolean(state),
+        redirectUri: buildCallbackUrl(req),
+      });
+      return res.redirect(
+        buildGoogleCalendarAppRedirect(req, stateContext?.returnPath, {
+          error: "missing_oauth_params",
+          trace: stateContext?.traceId || "",
+        })
+      );
     }
 
     try {
-      await handleGoogleCalendarCallback(state, code, buildCallbackUrl(req));
-      res.redirect(buildSchedulingRedirect("success=google_calendar_connected"));
+      const result = await handleGoogleCalendarCallback({
+        stateToken: state,
+        code,
+        redirectUriCandidate: buildCallbackUrl(req),
+      });
+      res.redirect(
+        buildGoogleCalendarAppRedirect(req, result.returnPath, {
+          success: "google_calendar_connected",
+          trace: result.traceId || "",
+        })
+      );
     } catch (err) {
       console.error("Google Calendar OAuth error:", err);
-      const message = String(err?.message || "").toLowerCase();
-      const errorCode = /oauth state|invalid or expired/.test(message)
-        ? "invalid_or_expired_oauth_state"
-        : "google_calendar_connect_failed";
+      const errorCode =
+        String(err?.oauthErrorCode || "").trim() || "google_calendar_connect_failed";
       res.redirect(
-        buildSchedulingRedirect(`error=${encodeURIComponent(errorCode)}`)
+        buildGoogleCalendarAppRedirect(req, err?.oauthReturnPath || stateContext?.returnPath, {
+          error: errorCode,
+          trace: String(err?.oauthTraceId || "").trim(),
+        })
       );
     }
   })
@@ -84,12 +110,32 @@ router.use(requireAuth);
 router.get(
   "/google-calendar/auth-url",
   asyncHandler(async (req, res) => {
-    const callbackUrl = buildCallbackUrl(req);
-    const { authUrl, redirectUri } = await getGoogleCalendarAuthUrl(
-      req.auth.userId,
-      callbackUrl
-    );
-    res.json({ url: authUrl, redirectUri });
+    const returnPath = assertOptionalString(req.query.returnPath, "returnPath", {
+      max: 500,
+    });
+    const { authUrl, redirectUri, returnPath: normalizedReturnPath, traceId } =
+      await getGoogleCalendarAuthUrl(
+        {
+          userId: req.auth.userId,
+          workspaceId: req.auth.workspaceId,
+        },
+        {
+          redirectUriCandidate: buildCallbackUrl(req),
+          returnPath,
+        }
+      );
+    res.json({ url: authUrl, redirectUri, returnPath: normalizedReturnPath, traceId });
+  })
+);
+
+router.get(
+  "/google-calendar/status",
+  asyncHandler(async (req, res) => {
+    const status = await getVerifiedGoogleCalendarConnectionStatus({
+      userId: req.auth.userId,
+      workspaceId: req.auth.workspaceId,
+    });
+    res.json({ status });
   })
 );
 
@@ -101,7 +147,7 @@ router.get(
     const search = assertOptionalString(req.query.search, "search", { max: 200 });
     const sort = req.query.sort || "most_popular";
 
-    const payload = await listIntegrationsForUser(req.auth.userId, {
+    const payload = await listIntegrationsForUser(req.auth.workspaceId, {
       tab,
       filter,
       search,
@@ -114,7 +160,7 @@ router.get(
 router.post(
   "/connect",
   asyncHandler(async (req, res) => {
-    const integration = await connectIntegration(req.auth.userId, req.body || {});
+    const integration = await connectIntegration(req.auth.workspaceId, req.body || {});
     res.status(201).json({ integration });
   })
 );
@@ -125,7 +171,7 @@ router.post(
     const accountEmail = assertOptionalString(req.body?.accountEmail, "accountEmail", {
       max: 320,
     });
-    const integrations = await connectAllIntegrations(req.auth.userId, accountEmail);
+    const integrations = await connectAllIntegrations(req.auth.workspaceId, accountEmail);
     res.json({
       integrations,
       count: integrations.length,
@@ -136,7 +182,7 @@ router.post(
 router.post(
   "/disconnect-all",
   asyncHandler(async (req, res) => {
-    const result = await disconnectAllIntegrations(req.auth.userId);
+    const result = await disconnectAllIntegrations(req.auth.workspaceId);
     res.json(result);
   })
 );
@@ -144,7 +190,7 @@ router.post(
 router.get(
   "/calendars",
   asyncHandler(async (req, res) => {
-    const payload = await listCalendarConnectionsForUser(req.auth.userId);
+    const payload = await listCalendarConnectionsForUser(req.auth.workspaceId);
     res.json(payload);
   })
 );
@@ -156,7 +202,7 @@ router.post(
     const accountEmail = assertOptionalString(req.body?.accountEmail, "accountEmail", {
       max: 320,
     });
-    const calendar = await connectCalendarForUser(req.auth.userId, {
+    const calendar = await connectCalendarForUser(req.auth.workspaceId, {
       provider,
       accountEmail,
     });
@@ -167,7 +213,7 @@ router.post(
 router.post(
   "/calendars/:provider/sync",
   asyncHandler(async (req, res) => {
-    const sync = await syncCalendarForUser(req.auth.userId, req.params.provider);
+    const sync = await syncCalendarForUser(req.auth.workspaceId, req.params.provider);
     res.json(sync);
   })
 );
@@ -175,7 +221,7 @@ router.post(
 router.post(
   "/calendars/:provider/disconnect",
   asyncHandler(async (req, res) => {
-    const result = await disconnectCalendarForUser(req.auth.userId, req.params.provider);
+    const result = await disconnectCalendarForUser(req.auth.workspaceId, req.params.provider);
     res.json(result);
   })
 );
@@ -201,7 +247,7 @@ router.patch(
       updates.autoSync = assertBoolean(req.body.autoSync, "autoSync");
     }
 
-    const settings = await updateCalendarSettingsForUser(req.auth.userId, updates);
+    const settings = await updateCalendarSettingsForUser(req.auth.workspaceId, updates);
     res.json({ settings });
   })
 );
@@ -210,7 +256,7 @@ router.patch(
   "/:provider/configure",
   asyncHandler(async (req, res) => {
     const integration = await configureIntegration(
-      req.auth.userId,
+      req.auth.workspaceId,
       req.params.provider,
       req.body || {}
     );
@@ -223,7 +269,7 @@ router.patch(
   asyncHandler(async (req, res) => {
     const connected = assertBoolean(req.body?.connected, "connected");
     const integration = await setIntegrationConnection(
-      req.auth.userId,
+      req.auth.workspaceId,
       req.params.provider,
       connected
     );
@@ -235,7 +281,7 @@ router.post(
   "/:provider/connect",
   asyncHandler(async (req, res) => {
     const integration = await setIntegrationConnection(
-      req.auth.userId,
+      req.auth.workspaceId,
       req.params.provider,
       true
     );
@@ -247,7 +293,7 @@ router.post(
   "/:provider/disconnect",
   asyncHandler(async (req, res) => {
     const integration = await setIntegrationConnection(
-      req.auth.userId,
+      req.auth.workspaceId,
       req.params.provider,
       false
     );
@@ -258,7 +304,7 @@ router.post(
 router.delete(
   "/:provider",
   asyncHandler(async (req, res) => {
-    const result = await removeIntegration(req.auth.userId, req.params.provider);
+    const result = await removeIntegration(req.auth.workspaceId, req.params.provider);
     res.json(result);
   })
 );

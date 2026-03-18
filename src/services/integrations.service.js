@@ -2,6 +2,12 @@ const { query, withTransaction } = require("../db/pool");
 const { badRequest } = require("../utils/http-error");
 const { assertEmail, assertOptionalString } = require("../utils/validation");
 const { assertFeature, assertLimit } = require("./entitlements.service");
+const { resolveWorkspaceMembership } = require("./workspace.service");
+const {
+  normalizeGoogleRedirectUri,
+  resolveGoogleRedirectUri,
+  normalizeGoogleCalendarReturnPath,
+} = require("../utils/google-calendar-oauth");
 
 const INTEGRATION_CATALOG = [
   {
@@ -605,6 +611,7 @@ function mapRowToItem(row, rank) {
   return {
     id: row.id,
     key: providerKey,
+    workspaceId: row.workspace_id || row.user_id || null,
     name: displayName || known?.name || providerKey,
     category: row.category || known?.category || "Automation",
     description:
@@ -632,6 +639,7 @@ async function listUserIntegrationRows(userId, client = null) {
       SELECT
         id,
         user_id,
+        workspace_id,
         provider,
         account_email,
         connected,
@@ -645,7 +653,7 @@ async function listUserIntegrationRows(userId, client = null) {
         created_at,
         updated_at
       FROM user_integrations
-      WHERE user_id = $1
+      WHERE workspace_id = $1
       ORDER BY updated_at DESC
     `,
     [userId],
@@ -660,6 +668,7 @@ async function listUserCalendarRows(userId, client = null) {
       SELECT
         id,
         user_id,
+        workspace_id,
         provider,
         account_email,
         connected,
@@ -673,7 +682,7 @@ async function listUserCalendarRows(userId, client = null) {
         created_at,
         updated_at
       FROM user_integrations
-      WHERE user_id = $1
+      WHERE workspace_id = $1
       ORDER BY connected DESC, updated_at DESC
     `,
     [userId],
@@ -702,13 +711,14 @@ async function getCalendarSettingsRow(userId, client = null) {
     `
       SELECT
         user_id,
+        workspace_id,
         selected_provider,
         include_buffers,
         auto_sync,
         created_at,
         updated_at
       FROM user_calendar_settings
-      WHERE user_id = $1
+      WHERE workspace_id = $1
       LIMIT 1
     `,
     [userId],
@@ -734,35 +744,62 @@ async function upsertCalendarSettings(userId, input = {}, client = null) {
       ? !!input.autoSync
       : existing?.auto_sync || false;
 
-  const result = await query(
-    `
-      INSERT INTO user_calendar_settings (
-        user_id,
-        selected_provider,
-        include_buffers,
-        auto_sync,
-        created_at,
-        updated_at
+  const result = existing
+    ? await query(
+        `
+          UPDATE user_calendar_settings
+          SET
+            user_id = $1,
+            workspace_id = $2,
+            selected_provider = $3,
+            include_buffers = $4,
+            auto_sync = $5,
+            updated_at = NOW()
+          WHERE workspace_id = $2
+          RETURNING
+            user_id,
+            workspace_id,
+            selected_provider,
+            include_buffers,
+            auto_sync,
+            created_at,
+            updated_at
+      `,
+        [userId, userId, selectedProvider, includeBuffers, autoSync],
+        client
       )
-      VALUES ($1, $2, $3, $4, NOW(), NOW())
-      ON CONFLICT (user_id)
-      DO UPDATE
-      SET
-        selected_provider = EXCLUDED.selected_provider,
-        include_buffers = EXCLUDED.include_buffers,
-        auto_sync = EXCLUDED.auto_sync,
-        updated_at = NOW()
-      RETURNING
-        user_id,
-        selected_provider,
-        include_buffers,
-        auto_sync,
-        created_at,
-        updated_at
-    `,
-    [userId, selectedProvider, includeBuffers, autoSync],
-    client
-  );
+    : await query(
+        `
+          INSERT INTO user_calendar_settings (
+            user_id,
+            workspace_id,
+            selected_provider,
+            include_buffers,
+            auto_sync,
+            created_at,
+            updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+          ON CONFLICT (user_id)
+          DO UPDATE
+          SET
+            workspace_id = EXCLUDED.workspace_id,
+            selected_provider = EXCLUDED.selected_provider,
+            include_buffers = EXCLUDED.include_buffers,
+            auto_sync = EXCLUDED.auto_sync,
+            updated_at = NOW()
+          RETURNING
+            user_id,
+            workspace_id,
+            selected_provider,
+            include_buffers,
+            auto_sync,
+            created_at,
+            updated_at
+      `,
+        [userId, userId, selectedProvider, includeBuffers, autoSync],
+        client
+      );
 
   return result.rows[0];
 }
@@ -782,6 +819,16 @@ function mapCalendarRecord(item) {
         : item.connected
           ? "connected"
           : "disconnected",
+    reason:
+      typeof item.metadata?.connectionReason === "string" && item.metadata.connectionReason.trim()
+        ? item.metadata.connectionReason
+        : "",
+    hasWriteScope: !!item.metadata?.hasWriteScope,
+    hasRefreshToken: !!item.metadata?.hasRefreshToken,
+    hasUsableToken: !!item.metadata?.hasUsableToken,
+    tokenSource:
+      typeof item.metadata?.tokenSource === "string" ? item.metadata.tokenSource : "",
+    tokenDecryptFailed: !!item.metadata?.tokenDecryptFailed,
   };
 }
 
@@ -840,14 +887,30 @@ function deriveGoogleCalendarStatusFromRow(calendarRow) {
       hasRefreshToken: false,
       hasUsableToken: false,
       accountEmail: "",
+      reason: "missing_row",
+      tokenSource: "none",
+      tokenDecryptFailed: false,
     };
   }
 
-  const tokens = readGoogleTokensFromMetadata(calendarRow.metadata || {});
+  const tokenInspection = inspectGoogleTokensFromMetadata(calendarRow.metadata || {});
+  const tokens = tokenInspection.tokens;
   const hasWriteScope = hasGoogleCalendarWriteScope(tokens);
   const hasRefreshToken = Boolean(tokens.refresh_token);
   const hasUsableToken = hasRefreshToken || hasUsableAccessToken(tokens);
   const connected = Boolean(calendarRow.connected) && hasWriteScope && hasUsableToken;
+  let reason = "connected";
+  if (!calendarRow.connected) {
+    reason = "disconnected";
+  } else if (tokenInspection.decryptFailed) {
+    reason = "token_decrypt_failed";
+  } else if (!Object.keys(tokens).length) {
+    reason = "missing_tokens";
+  } else if (!hasWriteScope) {
+    reason = "missing_scope";
+  } else if (!hasUsableToken) {
+    reason = hasRefreshToken ? "missing_access_token" : "missing_refresh_token";
+  }
 
   return {
     connected,
@@ -855,6 +918,9 @@ function deriveGoogleCalendarStatusFromRow(calendarRow) {
     hasRefreshToken,
     hasUsableToken,
     accountEmail: String(calendarRow.account_email || "").trim().toLowerCase(),
+    reason,
+    tokenSource: tokenInspection.source,
+    tokenDecryptFailed: tokenInspection.decryptFailed,
   };
 }
 
@@ -881,9 +947,12 @@ function applyGoogleConnectionState(items, rows) {
         ? googleCalendarItem.metadata
         : {}),
       syncStatus: googleCalendarStatus.connected ? "connected" : "disconnected",
+      connectionReason: googleCalendarStatus.reason,
       hasWriteScope: googleCalendarStatus.hasWriteScope,
       hasRefreshToken: googleCalendarStatus.hasRefreshToken,
       hasUsableToken: googleCalendarStatus.hasUsableToken,
+      tokenSource: googleCalendarStatus.tokenSource,
+      tokenDecryptFailed: googleCalendarStatus.tokenDecryptFailed,
     };
   }
 
@@ -905,6 +974,7 @@ function applyGoogleConnectionState(items, rows) {
         : {}),
       syncStatus: connectedViaCalendar ? "connected" : "pending_calendar_connection",
       connectedVia: "google-calendar",
+      connectionReason: googleCalendarStatus.reason,
     };
   }
 
@@ -979,65 +1049,131 @@ function normalizeConnectPayload(payload) {
 }
 
 async function upsertIntegration(userId, normalizedPayload, client = null) {
-  const row = await query(
+  const existing = await query(
     `
-      INSERT INTO user_integrations (
-        user_id,
-        provider,
-        account_email,
-        connected,
-        category,
-        display_name,
-        icon_text,
-        icon_bg,
-        admin_only,
-        metadata,
-        last_synced_at,
-        updated_at
-      )
-      VALUES ($1,$2,$3,TRUE,$4,$5,$6,$7,$8,$9::jsonb,NOW(),NOW())
-      ON CONFLICT (user_id, provider)
-      DO UPDATE
-      SET
-        account_email = EXCLUDED.account_email,
-        connected = TRUE,
-        category = EXCLUDED.category,
-        display_name = EXCLUDED.display_name,
-        icon_text = EXCLUDED.icon_text,
-        icon_bg = EXCLUDED.icon_bg,
-        admin_only = EXCLUDED.admin_only,
-        metadata = EXCLUDED.metadata,
-        last_synced_at = NOW(),
-        updated_at = NOW()
-      RETURNING
-        id,
-        user_id,
-        provider,
-        account_email,
-        connected,
-        category,
-        display_name,
-        icon_text,
-        icon_bg,
-        admin_only,
-        metadata,
-        last_synced_at,
-        created_at,
-        updated_at
+      SELECT id
+      FROM user_integrations
+      WHERE workspace_id = $1
+        AND provider = $2
+      ORDER BY updated_at DESC, created_at DESC, id DESC
+      LIMIT 1
     `,
-    [
-      userId,
-      normalizedPayload.provider,
-      normalizedPayload.accountEmail,
-      normalizedPayload.category,
-      normalizedPayload.displayName,
-      normalizedPayload.iconText,
-      normalizedPayload.iconBg,
-      normalizedPayload.adminOnly,
-      JSON.stringify(normalizedPayload.metadata || {}),
-    ],
+    [userId, normalizedPayload.provider],
     client
   );
+
+  const row = existing.rows[0]
+    ? await query(
+        `
+          UPDATE user_integrations
+          SET
+            user_id = $1,
+            workspace_id = $2,
+            account_email = $3,
+            connected = TRUE,
+            category = $4,
+            display_name = $5,
+            icon_text = $6,
+            icon_bg = $7,
+            admin_only = $8,
+            metadata = $9::jsonb,
+            last_synced_at = NOW(),
+            updated_at = NOW()
+          WHERE id = $10
+          RETURNING
+            id,
+            user_id,
+            workspace_id,
+            provider,
+            account_email,
+            connected,
+            category,
+            display_name,
+            icon_text,
+            icon_bg,
+            admin_only,
+            metadata,
+            last_synced_at,
+            created_at,
+            updated_at
+      `,
+        [
+          userId,
+          userId,
+          normalizedPayload.accountEmail,
+          normalizedPayload.category,
+          normalizedPayload.displayName,
+          normalizedPayload.iconText,
+          normalizedPayload.iconBg,
+          normalizedPayload.adminOnly,
+          JSON.stringify(normalizedPayload.metadata || {}),
+          existing.rows[0].id,
+        ],
+        client
+      )
+    : await query(
+        `
+          INSERT INTO user_integrations (
+            user_id,
+            workspace_id,
+            provider,
+            account_email,
+            connected,
+            category,
+            display_name,
+            icon_text,
+            icon_bg,
+            admin_only,
+            metadata,
+            last_synced_at,
+            updated_at
+          )
+          VALUES ($1,$2,$3,$4,TRUE,$5,$6,$7,$8,$9,$10::jsonb,NOW(),NOW())
+          ON CONFLICT (user_id, provider)
+          DO UPDATE
+          SET
+            workspace_id = EXCLUDED.workspace_id,
+            account_email = EXCLUDED.account_email,
+            connected = TRUE,
+            category = EXCLUDED.category,
+            display_name = EXCLUDED.display_name,
+            icon_text = EXCLUDED.icon_text,
+            icon_bg = EXCLUDED.icon_bg,
+            admin_only = EXCLUDED.admin_only,
+            metadata = EXCLUDED.metadata,
+            last_synced_at = NOW(),
+            updated_at = NOW()
+          RETURNING
+            id,
+            user_id,
+            workspace_id,
+            provider,
+            account_email,
+            connected,
+            category,
+            display_name,
+            icon_text,
+            icon_bg,
+            admin_only,
+            metadata,
+            last_synced_at,
+            created_at,
+            updated_at
+      `,
+        [
+          userId,
+          userId,
+          normalizedPayload.provider,
+          normalizedPayload.accountEmail,
+          normalizedPayload.category,
+          normalizedPayload.displayName,
+          normalizedPayload.iconText,
+          normalizedPayload.iconBg,
+          normalizedPayload.adminOnly,
+          JSON.stringify(normalizedPayload.metadata || {}),
+        ],
+        client
+      );
   return row.rows[0];
 }
 
@@ -1145,10 +1281,11 @@ async function configureIntegration(userId, provider, payload = {}) {
         connected = TRUE,
         last_synced_at = NOW(),
         updated_at = NOW()
-      WHERE user_id = $3 AND provider = $4
+      WHERE workspace_id = $3 AND provider = $4
       RETURNING
         id,
         user_id,
+        workspace_id,
         provider,
         account_email,
         connected,
@@ -1214,10 +1351,11 @@ async function setIntegrationConnection(userId, provider, connected) {
         connected = $1,
         last_synced_at = CASE WHEN $1 = TRUE THEN NOW() ELSE last_synced_at END,
         updated_at = NOW()
-      WHERE user_id = $2 AND provider = $3
+      WHERE workspace_id = $2 AND provider = $3
       RETURNING
         id,
         user_id,
+        workspace_id,
         provider,
         account_email,
         connected,
@@ -1239,7 +1377,7 @@ async function setIntegrationConnection(userId, provider, connected) {
       `
         UPDATE user_integrations
         SET connected = FALSE, updated_at = NOW()
-        WHERE user_id = $1 AND provider = 'google-meet'
+        WHERE workspace_id = $1 AND provider = 'google-meet'
       `,
       [userId]
     );
@@ -1264,7 +1402,7 @@ async function disconnectAllIntegrations(userId) {
     `
       UPDATE user_integrations
       SET connected = FALSE, updated_at = NOW()
-      WHERE user_id = $1 AND connected = TRUE
+      WHERE workspace_id = $1 AND connected = TRUE
     `,
     [userId]
   );
@@ -1276,7 +1414,7 @@ async function removeIntegration(userId, provider) {
   const result = await query(
     `
       DELETE FROM user_integrations
-      WHERE user_id = $1 AND provider = $2
+      WHERE workspace_id = $1 AND provider = $2
     `,
     [userId, safeProvider]
   );
@@ -1330,6 +1468,12 @@ async function listCalendarConnectionsForUser(userId) {
         mapped.metadata = {
           ...(mapped.metadata && typeof mapped.metadata === "object" ? mapped.metadata : {}),
           syncStatus: status.connected ? "connected" : "disconnected",
+          connectionReason: status.reason,
+          hasWriteScope: status.hasWriteScope,
+          hasRefreshToken: status.hasRefreshToken,
+          hasUsableToken: status.hasUsableToken,
+          tokenSource: status.tokenSource,
+          tokenDecryptFailed: status.tokenDecryptFailed,
         };
       }
       return mapCalendarRecord(mapped);
@@ -1343,6 +1487,12 @@ async function listCalendarConnectionsForUser(userId) {
       checkCount: 1,
       lastSync: "Never",
       syncStatus: "disconnected",
+      reason: details.provider === GOOGLE_PROVIDER_KEY ? "missing_row" : "",
+      hasWriteScope: false,
+      hasRefreshToken: false,
+      hasUsableToken: false,
+      tokenSource: "none",
+      tokenDecryptFailed: false,
     };
   });
 
@@ -1404,7 +1554,7 @@ async function syncCalendarForUser(userId, provider) {
     `
       SELECT COUNT(*)::int AS count
       FROM bookings
-      WHERE user_id = $1
+      WHERE workspace_id = $1
         AND status = 'confirmed'
         AND start_at_utc >= NOW()
         AND start_at_utc < NOW() + INTERVAL '30 days'
@@ -1421,10 +1571,11 @@ async function syncCalendarForUser(userId, provider) {
         last_synced_at = NOW(),
         metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb,
         updated_at = NOW()
-      WHERE user_id = $2 AND provider = $3
+      WHERE workspace_id = $2 AND provider = $3
       RETURNING
         id,
         user_id,
+        workspace_id,
         provider,
         account_email,
         connected,
@@ -1491,6 +1642,7 @@ async function disconnectCalendarForUser(userId, provider) {
 }
 
 // --- GOOGLE CALENDAR OAUTH ---
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { google } = require("googleapis");
 const env = require("../config/env");
@@ -1514,37 +1666,62 @@ const GOOGLE_TOKEN_FIELDS = [
   "id_token",
 ];
 
+function createGoogleOAuthTraceId() {
+  return crypto.randomBytes(6).toString("hex");
+}
+
+function shouldLogGoogleOAuth(force = false) {
+  return force || !!env.googleOAuthDebug || env.nodeEnv !== "production";
+}
+
+function maskLogValue(value, { prefix = 8, suffix = 4 } = {}) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (raw.length <= prefix + suffix) return `${raw.slice(0, Math.max(1, prefix))}…`;
+  return `${raw.slice(0, prefix)}…${raw.slice(-suffix)}`;
+}
+
+function summarizeErrorForLog(error) {
+  if (!error) return null;
+  return {
+    message: error.message || String(error),
+    code: error.code || "",
+    status: Number(error.status || 0) || undefined,
+    oauthErrorCode: error.oauthErrorCode || "",
+  };
+}
+
+function logGoogleOAuth(traceId, step, details = {}, { level = "info", force = false } = {}) {
+  if (!shouldLogGoogleOAuth(force || level === "error" || level === "warn")) {
+    return;
+  }
+
+  const payload =
+    details && typeof details === "object" && !Array.isArray(details)
+      ? JSON.stringify(details)
+      : String(details || "");
+  const prefix = `[google-calendar-oauth:${traceId || "no-trace"}] ${step}`;
+  const message = payload && payload !== "{}" ? `${prefix} ${payload}` : prefix;
+  const logger = typeof console[level] === "function" ? console[level] : console.log;
+  logger(message);
+}
+
+function createGoogleOAuthError(message, oauthErrorCode, extra = {}) {
+  const error = badRequest(message);
+  error.oauthErrorCode = oauthErrorCode;
+  Object.assign(error, extra);
+  return error;
+}
+
 function ensureGoogleOAuthConfigured() {
   if (!env.google.clientId || !env.google.clientSecret) {
     throw badRequest("Google Calendar OAuth is not configured on this server");
   }
 }
 
-function normalizeGoogleRedirectUri(raw) {
-  const value = String(raw || "").trim();
-  if (!value) return "";
-  try {
-    const url = new URL(value);
-    if (url.protocol !== "https:" && url.protocol !== "http:") return "";
-    return url.toString();
-  } catch {
-    return "";
-  }
-}
-
-function resolveGoogleRedirectUri(redirectUriCandidate = "") {
-  const candidate = normalizeGoogleRedirectUri(redirectUriCandidate);
-  if (candidate) return candidate;
-
-  const fromEnv = normalizeGoogleRedirectUri(env.google.redirectUri);
-  if (fromEnv) return fromEnv;
-
-  return `${String(env.appBaseUrl || "http://localhost:8080").replace(/\/+$/, "")}/api/integrations/google-calendar/callback`;
-}
-
 function getOAuth2Client(redirectUriCandidate = "") {
   ensureGoogleOAuthConfigured();
-  const redirectUri = resolveGoogleRedirectUri(redirectUriCandidate);
+  const redirectUri = resolveGoogleRedirectUri({ redirectUriCandidate });
   return new google.auth.OAuth2(
     env.google.clientId,
     env.google.clientSecret,
@@ -1589,8 +1766,15 @@ function stripLegacyTokenFields(metadata = {}) {
   return safe;
 }
 
-function readGoogleTokensFromMetadata(metadata = {}) {
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return {};
+function inspectGoogleTokensFromMetadata(metadata = {}) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return {
+      tokens: {},
+      source: "none",
+      hasEncryptedTokens: false,
+      decryptFailed: false,
+    };
+  }
 
   const oauthBlock =
     metadata.oauth && typeof metadata.oauth === "object" && !Array.isArray(metadata.oauth)
@@ -1603,8 +1787,36 @@ function readGoogleTokensFromMetadata(metadata = {}) {
       if (!sanitized.scope && typeof oauthBlock.scope === "string" && oauthBlock.scope.trim()) {
         sanitized.scope = oauthBlock.scope.trim();
       }
-      return sanitized;
+      return {
+        tokens: sanitized,
+        source: "oauth.encryptedTokens",
+        hasEncryptedTokens: true,
+        decryptFailed: false,
+      };
     }
+    return {
+      tokens: {},
+      source: "oauth.encryptedTokens",
+      hasEncryptedTokens: true,
+      decryptFailed: true,
+    };
+  }
+
+  const legacyOauthSanitized = sanitizeGoogleTokens(oauthBlock || {});
+  if (Object.keys(legacyOauthSanitized).length > 0) {
+    if (
+      !legacyOauthSanitized.scope &&
+      typeof oauthBlock?.scope === "string" &&
+      oauthBlock.scope.trim()
+    ) {
+      legacyOauthSanitized.scope = oauthBlock.scope.trim();
+    }
+    return {
+      tokens: legacyOauthSanitized,
+      source: "oauth.legacy",
+      hasEncryptedTokens: false,
+      decryptFailed: false,
+    };
   }
 
   // Backward compatibility for previously saved plaintext token metadata.
@@ -1612,7 +1824,16 @@ function readGoogleTokensFromMetadata(metadata = {}) {
   if (!sanitized.scope && typeof oauthBlock?.scope === "string" && oauthBlock.scope.trim()) {
     sanitized.scope = oauthBlock.scope.trim();
   }
-  return sanitized;
+  return {
+    tokens: sanitized,
+    source: Object.keys(sanitized).length > 0 ? "metadata.legacy" : "none",
+    hasEncryptedTokens: false,
+    decryptFailed: false,
+  };
+}
+
+function readGoogleTokensFromMetadata(metadata = {}) {
+  return inspectGoogleTokensFromMetadata(metadata).tokens;
 }
 
 function buildGoogleOAuthMetadata(existingMetadata = {}, tokens = {}) {
@@ -1671,21 +1892,19 @@ function hasUsableAccessToken(tokens = {}) {
   return expiry > Date.now() + 30_000;
 }
 
-function encodeGoogleOAuthState(userId) {
-  return jwt.sign(
-    {
-      purpose: GOOGLE_OAUTH_STATE_PURPOSE,
-      userId: String(userId),
-    },
-    env.jwtSecret,
-    { expiresIn: "15m" }
-  );
-}
-
-function encodeGoogleOAuthStateWithRedirect(userId, redirectUri = "") {
+function encodeGoogleOAuthStateWithRedirect({
+  userId,
+  workspaceId,
+  redirectUri = "",
+  returnPath = "",
+  traceId = "",
+}) {
   const payload = {
     purpose: GOOGLE_OAUTH_STATE_PURPOSE,
     userId: String(userId),
+    workspaceId: String(workspaceId || userId),
+    returnPath: normalizeGoogleCalendarReturnPath(returnPath),
+    traceId: String(traceId || createGoogleOAuthTraceId()),
   };
   const safeRedirectUri = normalizeGoogleRedirectUri(redirectUri);
   if (safeRedirectUri) payload.redirectUri = safeRedirectUri;
@@ -1700,17 +1919,87 @@ function decodeGoogleOAuthState(stateToken) {
     }
     return {
       userId: String(decoded.userId),
+      workspaceId: String(decoded.workspaceId || decoded.userId),
       redirectUri: normalizeGoogleRedirectUri(decoded.redirectUri || ""),
+      returnPath: normalizeGoogleCalendarReturnPath(decoded.returnPath || ""),
+      traceId: String(decoded.traceId || ""),
     };
   } catch {
-    throw badRequest("Invalid or expired OAuth state");
+    throw createGoogleOAuthError(
+      "Invalid or expired OAuth state",
+      "invalid_or_expired_oauth_state"
+    );
   }
 }
 
-async function getGoogleCalendarAuthUrl(userId, redirectUriCandidate = "") {
-  const redirectUri = resolveGoogleRedirectUri(redirectUriCandidate);
+async function ensureGoogleOAuthWorkspaceAccess(userId, workspaceId) {
+  try {
+    return await resolveWorkspaceMembership(userId, workspaceId);
+  } catch (error) {
+    throw createGoogleOAuthError(
+      "OAuth state does not match an active workspace membership",
+      "google_calendar_workspace_access_invalid",
+      { cause: error }
+    );
+  }
+}
+
+function readGoogleCalendarOAuthStateContext(stateToken) {
+  try {
+    return decodeGoogleOAuthState(stateToken);
+  } catch {
+    return null;
+  }
+}
+
+function classifyGoogleStatusVerificationError(status = {}) {
+  const reason = String(status?.reason || "").trim().toLowerCase();
+  if (reason === "missing_scope") {
+    return "google_scope_missing";
+  }
+  if (
+    reason === "missing_row" ||
+    reason === "missing_tokens" ||
+    reason === "missing_refresh_token" ||
+    reason === "missing_access_token" ||
+    reason === "token_decrypt_failed"
+  ) {
+    return "google_tokens_not_persisted";
+  }
+  return "google_status_verification_failed";
+}
+
+async function getGoogleCalendarAuthUrl(authContext, redirectUriCandidateOrOptions = "") {
+  const userId = String(authContext?.userId || "");
+  const workspaceId = String(authContext?.workspaceId || authContext?.userId || "");
+  const options =
+    redirectUriCandidateOrOptions &&
+    typeof redirectUriCandidateOrOptions === "object" &&
+    !Array.isArray(redirectUriCandidateOrOptions)
+      ? redirectUriCandidateOrOptions
+      : { redirectUriCandidate: redirectUriCandidateOrOptions };
+  const traceId = createGoogleOAuthTraceId();
+  const redirectUri = resolveGoogleRedirectUri({
+    redirectUriCandidate: options.redirectUriCandidate,
+  });
+  const returnPath = normalizeGoogleCalendarReturnPath(options.returnPath || "");
   const client = getOAuth2Client(redirectUri);
-  const state = encodeGoogleOAuthStateWithRedirect(userId, redirectUri);
+  const state = encodeGoogleOAuthStateWithRedirect({
+    userId,
+    workspaceId,
+    redirectUri,
+    returnPath,
+    traceId,
+  });
+  logGoogleOAuth(traceId, "auth_url_generated", {
+    userId,
+    workspaceId,
+    redirectUri,
+    returnPath,
+    scope: GOOGLE_CALENDAR_OAUTH_SCOPES,
+    accessType: "offline",
+    prompt: "consent",
+  });
   const authUrl = client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
@@ -1721,99 +2010,332 @@ async function getGoogleCalendarAuthUrl(userId, redirectUriCandidate = "") {
   return {
     authUrl,
     redirectUri,
+    returnPath,
+    traceId,
   };
 }
 
 async function getGoogleCalendarConnectionStatusForUser(userIdStr) {
   const existingRows = await listUserCalendarRows(userIdStr);
   const googleCal = existingRows.find((row) => row.provider === GOOGLE_PROVIDER_KEY);
-  const tokens = readGoogleTokensFromMetadata(googleCal?.metadata || {});
-  const hasRefreshToken = Boolean(tokens.refresh_token);
-  const hasWriteScope = hasGoogleCalendarWriteScope(tokens);
-  const hasUsableToken = hasRefreshToken || hasUsableAccessToken(tokens);
+  const status = deriveGoogleCalendarStatusFromRow(googleCal);
   return {
-    connected: Boolean(googleCal?.connected) && hasWriteScope && hasUsableToken,
-    hasRefreshToken,
-    hasWriteScope,
-    hasUsableToken,
+    connected: status.connected,
+    hasRefreshToken: status.hasRefreshToken,
+    hasWriteScope: status.hasWriteScope,
+    hasUsableToken: status.hasUsableToken,
     integrationId: googleCal?.id || null,
-    accountEmail: googleCal?.account_email || "",
+    accountEmail: status.accountEmail || "",
+    reason: status.reason,
+    tokenSource: status.tokenSource,
+    tokenDecryptFailed: status.tokenDecryptFailed,
   };
 }
 
-async function handleGoogleCalendarCallback(stateToken, code, redirectUriCandidate = "") {
-  const statePayload = decodeGoogleOAuthState(stateToken);
+async function getVerifiedGoogleCalendarConnectionStatus(authContext = {}) {
+  const workspaceId = String(
+    authContext?.workspaceId || authContext?.scopeId || authContext?.userId || ""
+  );
+  const userId = String(authContext?.userId || "");
+  const workspaceStatus = await getGoogleCalendarConnectionStatusForUser(workspaceId);
+  let userScopeStatus = null;
+
+  if (userId && userId !== workspaceId) {
+    userScopeStatus = await getGoogleCalendarConnectionStatusForUser(userId);
+  }
+
+  const workspaceMismatch = Boolean(
+    userScopeStatus &&
+      userScopeStatus.integrationId &&
+      (!workspaceStatus.integrationId || !workspaceStatus.connected)
+  );
+
+  return {
+    scope: "workspace",
+    workspaceId,
+    userId: userId || null,
+    connected: workspaceStatus.connected,
+    hasRefreshToken: workspaceStatus.hasRefreshToken,
+    hasWriteScope: workspaceStatus.hasWriteScope,
+    hasUsableToken: workspaceStatus.hasUsableToken,
+    integrationId: workspaceStatus.integrationId,
+    accountEmail: workspaceStatus.accountEmail,
+    reason: workspaceMismatch ? "workspace_mismatch" : workspaceStatus.reason,
+    tokenSource: workspaceStatus.tokenSource,
+    tokenDecryptFailed: workspaceStatus.tokenDecryptFailed,
+    workspaceMismatch,
+    userScopeStatus: userScopeStatus
+      ? {
+          connected: userScopeStatus.connected,
+          integrationId: userScopeStatus.integrationId,
+          accountEmail: userScopeStatus.accountEmail,
+          reason: userScopeStatus.reason,
+        }
+      : null,
+  };
+}
+
+async function handleGoogleCalendarCallback(
+  stateTokenOrPayload,
+  codeArg = "",
+  redirectUriCandidateArg = ""
+) {
+  const request =
+    stateTokenOrPayload && typeof stateTokenOrPayload === "object" && !Array.isArray(stateTokenOrPayload)
+      ? stateTokenOrPayload
+      : {
+          stateToken: stateTokenOrPayload,
+          code: codeArg,
+          redirectUriCandidate: redirectUriCandidateArg,
+        };
+
+  const incomingCode = String(request.code || "").trim();
+  const incomingState = String(request.stateToken || "").trim();
+  const preflightTraceId = createGoogleOAuthTraceId();
+
+  logGoogleOAuth(preflightTraceId, "callback_received", {
+    code: maskLogValue(incomingCode, { prefix: 10, suffix: 6 }),
+    state: maskLogValue(incomingState, { prefix: 10, suffix: 6 }),
+    redirectUriCandidate: normalizeGoogleRedirectUri(request.redirectUriCandidate || ""),
+  });
+
+  let statePayload;
+  try {
+    statePayload = decodeGoogleOAuthState(incomingState);
+  } catch (error) {
+    error.oauthTraceId = error.oauthTraceId || preflightTraceId;
+    logGoogleOAuth(preflightTraceId, "state_validation_failed", summarizeErrorForLog(error), {
+      level: "error",
+      force: true,
+    });
+    throw error;
+  }
+  const traceId = statePayload.traceId || preflightTraceId;
   const userIdStr = statePayload.userId;
-  const redirectUri = statePayload.redirectUri || resolveGoogleRedirectUri(redirectUriCandidate);
+  const workspaceId = statePayload.workspaceId || userIdStr;
+  const returnPath = normalizeGoogleCalendarReturnPath(statePayload.returnPath || "");
+  const redirectUri =
+    statePayload.redirectUri ||
+    resolveGoogleRedirectUri({ redirectUriCandidate: request.redirectUriCandidate });
+
+  logGoogleOAuth(traceId, "state_validated", {
+    userId: userIdStr,
+    workspaceId,
+    redirectUri,
+    returnPath,
+  });
+
+  try {
+    await ensureGoogleOAuthWorkspaceAccess(userIdStr, workspaceId);
+  } catch (error) {
+    error.oauthTraceId = error.oauthTraceId || traceId;
+    logGoogleOAuth(traceId, "workspace_membership_failed", summarizeErrorForLog(error), {
+      level: "error",
+      force: true,
+    });
+    throw error;
+  }
+  logGoogleOAuth(traceId, "workspace_membership_confirmed", {
+    userId: userIdStr,
+    workspaceId,
+  });
+
   const client = getOAuth2Client(redirectUri);
-  const { tokens } = await client.getToken(code);
+
+  let tokenResponse;
+  try {
+    tokenResponse = await client.getToken(incomingCode);
+  } catch (error) {
+    logGoogleOAuth(traceId, "token_exchange_failed", summarizeErrorForLog(error), {
+      level: "error",
+      force: true,
+    });
+    throw createGoogleOAuthError(
+      "Google token exchange failed",
+      "google_token_exchange_failed",
+      {
+        oauthTraceId: traceId,
+        cause: error,
+      }
+    );
+  }
+
+  const tokens = tokenResponse?.tokens || {};
   client.setCredentials(tokens);
+  logGoogleOAuth(traceId, "token_exchange_succeeded", {
+    scope: String(tokens.scope || "").trim(),
+    hasRefreshToken: Boolean(tokens.refresh_token),
+    tokenType: String(tokens.token_type || "").trim(),
+    expiryDate:
+      Number.isFinite(Number(tokens.expiry_date)) && Number(tokens.expiry_date) > 0
+        ? Number(tokens.expiry_date)
+        : null,
+  });
 
   let accountEmail = "";
   try {
     const oauth2 = google.oauth2({ auth: client, version: "v2" });
     const userInfo = await oauth2.userinfo.get();
     accountEmail = String(userInfo?.data?.email || "").trim().toLowerCase();
-  } catch (err) {
-    console.error("Could not fetch user info for Google Calendar", err);
-  }
-
-  const existingRows = await listUserCalendarRows(userIdStr);
-  const existingConnectedCount = existingRows.filter((item) => item.connected).length;
-  const existingGoogleConnected = existingRows.find(
-    (item) => item.provider === GOOGLE_PROVIDER_KEY && item.connected
-  );
-  if (!existingGoogleConnected) {
-    await assertLimit(userIdStr, "calendars_limit", existingConnectedCount);
-  }
-  const existingGoogle = existingRows.find((row) => row.provider === GOOGLE_PROVIDER_KEY);
-  const mergedTokens = mergeGoogleTokens(
-    readGoogleTokensFromMetadata(existingGoogle?.metadata || {}),
-    tokens || {}
-  );
-  if (!String(mergedTokens.scope || "").trim()) {
-    mergedTokens.scope = GOOGLE_CALENDAR_OAUTH_SCOPES.join(" ");
-  }
-  const metadata = buildGoogleOAuthMetadata(existingGoogle?.metadata || {}, mergedTokens);
-  const details = CALENDAR_PROVIDER_DETAILS[GOOGLE_PROVIDER_KEY];
-
-  await upsertIntegration(userIdStr, {
-    provider: GOOGLE_PROVIDER_KEY,
-    displayName: details.name,
-    category: details.category,
-    iconText: details.iconText,
-    iconBg: details.iconBg,
-    adminOnly: false,
-    accountEmail: accountEmail || existingGoogle?.account_email || "",
-    metadata: {
-      ...metadata,
-      syncStatus: "connected",
-      syncSource: "oauth",
-    },
-  });
-
-  const meetDetails = CATALOG_BY_KEY.get("google-meet");
-  if (meetDetails) {
-    await upsertIntegration(userIdStr, {
-      provider: "google-meet",
-      displayName: meetDetails.name,
-      category: meetDetails.category,
-      iconText: meetDetails.iconText,
-      iconBg: meetDetails.iconBg,
-      adminOnly: false,
-      accountEmail: accountEmail || existingGoogle?.account_email || "",
-      metadata: {
-        description: meetDetails.description,
-        popularRank: meetDetails.popularRank,
-        syncStatus: "connected",
-        syncSource: "google-calendar-oauth",
-      },
+    logGoogleOAuth(traceId, "userinfo_loaded", {
+      accountEmail,
+    });
+  } catch (error) {
+    logGoogleOAuth(traceId, "userinfo_lookup_failed", summarizeErrorForLog(error), {
+      level: "warn",
+      force: true,
     });
   }
 
-  const settings = await upsertCalendarSettings(userIdStr, {});
-  if (!normalizeStoredSelectedProvider(settings.selected_provider)) {
-    await upsertCalendarSettings(userIdStr, { selectedProvider: GOOGLE_PROVIDER_KEY });
+  try {
+    const existingRows = await listUserCalendarRows(workspaceId);
+    const existingConnectedCount = existingRows.filter((item) => item.connected).length;
+    const existingGoogleConnected = existingRows.find(
+      (item) => item.provider === GOOGLE_PROVIDER_KEY && item.connected
+    );
+    if (!existingGoogleConnected) {
+      await assertLimit(workspaceId, "calendars_limit", existingConnectedCount);
+    }
+    const existingGoogle = existingRows.find((row) => row.provider === GOOGLE_PROVIDER_KEY);
+    const mergedTokens = mergeGoogleTokens(
+      readGoogleTokensFromMetadata(existingGoogle?.metadata || {}),
+      tokens
+    );
+    if (!String(mergedTokens.scope || "").trim()) {
+      mergedTokens.scope = GOOGLE_CALENDAR_OAUTH_SCOPES.join(" ");
+    }
+
+    logGoogleOAuth(traceId, "tokens_prepared_for_persistence", {
+      scope: String(mergedTokens.scope || "").trim(),
+      hasRefreshToken: Boolean(mergedTokens.refresh_token),
+      existingRowId: existingGoogle?.id || null,
+      existingAccountEmail: existingGoogle?.account_email || "",
+    });
+
+    if (!hasGoogleCalendarWriteScope(mergedTokens)) {
+      throw createGoogleOAuthError(
+        "Google Calendar write scope missing from OAuth tokens",
+        "google_scope_missing",
+        {
+          oauthTraceId: traceId,
+          returnedScope: String(mergedTokens.scope || "").trim(),
+          oauthReturnPath: returnPath,
+        }
+      );
+    }
+
+    const metadata = buildGoogleOAuthMetadata(existingGoogle?.metadata || {}, mergedTokens);
+    const details = CALENDAR_PROVIDER_DETAILS[GOOGLE_PROVIDER_KEY];
+
+    const savedCalendarRow = await upsertIntegration(workspaceId, {
+      provider: GOOGLE_PROVIDER_KEY,
+      displayName: details.name,
+      category: details.category,
+      iconText: details.iconText,
+      iconBg: details.iconBg,
+      adminOnly: false,
+      accountEmail: accountEmail || existingGoogle?.account_email || "",
+      metadata: {
+        ...metadata,
+        syncStatus: "connected",
+        syncSource: "oauth",
+        workspaceId,
+        connectedByUserId: userIdStr,
+      },
+    });
+    logGoogleOAuth(traceId, "calendar_row_saved", {
+      integrationId: savedCalendarRow.id,
+      workspaceId: savedCalendarRow.workspace_id || workspaceId,
+      accountEmail: savedCalendarRow.account_email || "",
+      connected: !!savedCalendarRow.connected,
+    });
+
+    const meetDetails = CATALOG_BY_KEY.get("google-meet");
+    if (meetDetails) {
+      const savedMeetRow = await upsertIntegration(workspaceId, {
+        provider: "google-meet",
+        displayName: meetDetails.name,
+        category: meetDetails.category,
+        iconText: meetDetails.iconText,
+        iconBg: meetDetails.iconBg,
+        adminOnly: false,
+        accountEmail: accountEmail || existingGoogle?.account_email || "",
+        metadata: {
+          description: meetDetails.description,
+          popularRank: meetDetails.popularRank,
+          syncStatus: "connected",
+          syncSource: "google-calendar-oauth",
+          workspaceId,
+          connectedByUserId: userIdStr,
+        },
+      });
+      logGoogleOAuth(traceId, "meet_row_saved", {
+        integrationId: savedMeetRow.id,
+        workspaceId: savedMeetRow.workspace_id || workspaceId,
+        connected: !!savedMeetRow.connected,
+      });
+    }
+
+    const settings = await upsertCalendarSettings(workspaceId, {});
+    let finalSettings = settings;
+    if (!normalizeStoredSelectedProvider(settings.selected_provider)) {
+      finalSettings = await upsertCalendarSettings(workspaceId, {
+        selectedProvider: GOOGLE_PROVIDER_KEY,
+      });
+    }
+    logGoogleOAuth(traceId, "calendar_settings_saved", {
+      workspaceId,
+      selectedProvider: finalSettings.selected_provider || "",
+      includeBuffers: !!finalSettings.include_buffers,
+      autoSync: !!finalSettings.auto_sync,
+    });
+
+    const finalStatus = await getVerifiedGoogleCalendarConnectionStatus({
+      workspaceId,
+      userId: userIdStr,
+    });
+    logGoogleOAuth(traceId, "post_save_status_check", finalStatus, {
+      force: true,
+    });
+
+    if (!finalStatus.connected) {
+      throw createGoogleOAuthError(
+        "Google Calendar saved but verification failed",
+        classifyGoogleStatusVerificationError(finalStatus),
+        {
+          oauthTraceId: traceId,
+          oauthReturnPath: returnPath,
+          status: finalStatus,
+        }
+      );
+    }
+
+    return {
+      traceId,
+      workspaceId,
+      userId: userIdStr,
+      returnPath,
+      accountEmail: finalStatus.accountEmail || accountEmail,
+      connected: finalStatus.connected,
+    };
+  } catch (error) {
+    error.oauthTraceId = error.oauthTraceId || traceId;
+    error.oauthReturnPath = error.oauthReturnPath || returnPath;
+    logGoogleOAuth(traceId, "callback_processing_failed", summarizeErrorForLog(error), {
+      level: "error",
+      force: true,
+    });
+    if (error.oauthErrorCode) {
+      throw error;
+    }
+    throw createGoogleOAuthError(
+      "Google Calendar connection failed during persistence",
+      "google_calendar_connect_failed",
+      {
+        oauthTraceId: traceId,
+        cause: error,
+      }
+    );
   }
 }
 
@@ -1881,7 +2403,9 @@ module.exports = {
   updateCalendarSettingsForUser,
   disconnectCalendarForUser,
   getGoogleCalendarConnectionStatusForUser,
+  getVerifiedGoogleCalendarConnectionStatus,
   getGoogleCalendarAuthUrl,
   handleGoogleCalendarCallback,
+  readGoogleCalendarOAuthStateContext,
   getAuthenticatedGoogleClient,
 };

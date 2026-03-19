@@ -130,7 +130,7 @@ APP_URL=https://your-domain.com bash scripts/smoke.sh
 Expected:
 
 - health endpoint ok
-- auth/dev-login returns token
+- signup returns token
 - protected routes work with token
 - frontend pages return HTTP 200
 

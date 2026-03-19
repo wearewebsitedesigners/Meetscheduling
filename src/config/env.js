@@ -159,4 +159,27 @@ if (
   );
 }
 
+if (env.google.clientId && env.google.redirectUri) {
+  try {
+    const redirectUrl = new URL(env.google.redirectUri);
+    const redirectHost = redirectUrl.hostname.trim().toLowerCase();
+    if (redirectHost === "yourdomain.com" || redirectHost === "www.yourdomain.com") {
+      const placeholderMessage =
+        "GOOGLE_REDIRECT_URI still points to the placeholder host " +
+        `"${redirectHost}". Set it to your real production callback URL.`;
+      if (env.nodeEnv === "production") {
+        throw new Error(placeholderMessage);
+      }
+      // eslint-disable-next-line no-console
+      console.warn("[WARN] " + placeholderMessage);
+    }
+  } catch (error) {
+    if (env.nodeEnv === "production") {
+      throw error;
+    }
+    // eslint-disable-next-line no-console
+    console.warn("[WARN] Invalid GOOGLE_REDIRECT_URI:", env.google.redirectUri);
+  }
+}
+
 module.exports = env;

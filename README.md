@@ -198,9 +198,12 @@ See `DEPLOYMENT.md` for GitHub Actions -> VPS deployment steps and production ch
 
 ### Auth
 
-- `POST /api/auth/dev-login`
-  - Body: `{ "email", "username?", "displayName?", "timezone?", "plan?" }`
-  - Returns JWT token
+- `POST /api/auth/signup`
+  - Body: `{ "email", "password", "username?", "timezone?" }`
+  - Returns JWT token + user payload
+- `POST /api/auth/login`
+  - Body: `{ "email", "password", "workspaceId?" }`
+  - Returns JWT token + user payload
 - `GET /api/auth/me` (Bearer token)
 
 ### Event Types (auth required)

@@ -11,7 +11,7 @@ const {
 const { generatePublicSlots } = require("./slots.service");
 const {
   getAuthenticatedGoogleClient,
-  getGoogleCalendarConnectionStatusForUser,
+  getVerifiedGoogleCalendarConnectionStatus,
 } = require("./integrations.service");
 const { verifySlotToken } = require("../utils/booking-token");
 const { conflict, notFound } = require("../utils/http-error");
@@ -264,6 +264,15 @@ function parseGoogleErrorStatus(error) {
   return Number.isFinite(status) ? status : 0;
 }
 
+function logGoogleMeetBooking(step, details = {}, level = "info") {
+  const logger = typeof console[level] === "function" ? console[level] : console.log;
+  logger(
+    `[google-meet-booking] ${step} ${JSON.stringify(
+      details && typeof details === "object" ? details : { value: String(details || "") }
+    )}`
+  );
+}
+
 function isRetryableGoogleError(error) {
   const status = parseGoogleErrorStatus(error);
   if ([408, 409, 425, 429, 500, 502, 503, 504].includes(status)) return true;
@@ -514,16 +523,22 @@ async function createPublicBooking({
     hasRefreshToken: false,
     integrationId: null,
     accountEmail: "",
+    reason: "missing_row",
   };
   if (event.locationType === "google_meet") {
     try {
-      googleConnection = await getGoogleCalendarConnectionStatusForUser(hostWorkspaceId);
+      googleConnection = await getVerifiedGoogleCalendarConnectionStatus({
+        workspaceId: hostWorkspaceId,
+        userId: event.userId,
+        logContext: "booking.create",
+      });
     } catch (error) {
       googleConnection = {
         connected: false,
         hasRefreshToken: false,
         integrationId: null,
         accountEmail: "",
+        reason: "status_check_failed",
       };
     }
   }
@@ -704,6 +719,18 @@ async function createPublicBooking({
     }
 
     if (calendarResult) {
+      if (!calendarResult.meetingLink) {
+        logGoogleMeetBooking(
+          "generation_completed_without_link",
+          {
+            bookingId: booking.id,
+            workspaceId: hostWorkspaceId,
+            userId: event.userId,
+            calendarEventId: calendarResult.calendarEventId || "",
+          },
+          "warn"
+        );
+      }
       const nextStatus = calendarResult.meetingLink ? "ready" : "generation_failed";
       const updated = supportsExtendedColumns
         ? await query(
@@ -762,11 +789,29 @@ async function createPublicBooking({
           booking = updated.rows[0];
         }
       }
-      console.error(
-        "Failed to create Google Calendar event/Meet link:",
-        calendarError?.message || calendarError
+      logGoogleMeetBooking(
+        "generation_failed",
+        {
+          bookingId: booking.id,
+          workspaceId: hostWorkspaceId,
+          userId: event.userId,
+          integrationConnected: googleConnection.connected,
+          integrationReason: googleConnection.reason || "",
+          errorStatus,
+          authorizationIssue,
+          error: calendarError?.message || String(calendarError || ""),
+        },
+        authorizationIssue ? "warn" : "error"
       );
     }
+  } else if (event.locationType === "google_meet") {
+    logGoogleMeetBooking("generation_skipped_not_connected", {
+      bookingId: booking.id,
+      workspaceId: hostWorkspaceId,
+      userId: event.userId,
+      integrationConnected: googleConnection.connected,
+      integrationReason: googleConnection.reason || "",
+    });
   }
 
   try {
@@ -921,19 +966,33 @@ async function refreshPendingGoogleMeetLinks(scopeId, rows) {
     hasRefreshToken: false,
     integrationId: null,
     accountEmail: "",
+    reason: "missing_row",
   };
   try {
-    connectionStatus = await getGoogleCalendarConnectionStatusForUser(scopeId);
+    const scopeUserId = String(
+      pendingRows[0]?.user_id || withEventId[0]?.user_id || withoutEventId[0]?.user_id || ""
+    ).trim();
+    connectionStatus = await getVerifiedGoogleCalendarConnectionStatus({
+      workspaceId: scopeId,
+      userId: scopeUserId,
+      logContext: "booking.refresh",
+    });
   } catch {
     connectionStatus = {
       connected: false,
       hasRefreshToken: false,
       integrationId: null,
       accountEmail: "",
+      reason: "status_check_failed",
     };
   }
 
   if (!connectionStatus.connected) {
+    logGoogleMeetBooking("refresh_skipped_not_connected", {
+      scopeId,
+      reason: connectionStatus.reason || "",
+      rowCount: pendingRows.length,
+    });
     await markRowsAsPendingCalendarConnection(pendingRows);
     return rows.map((row) => resultMap.get(String(row.id)) || row);
   }
@@ -959,7 +1018,12 @@ async function refreshPendingGoogleMeetLinks(scopeId, rows) {
 
   let hostTimezone = "UTC";
   try {
-    const userRow = await query("SELECT timezone FROM users WHERE id = $1", [userId]);
+    const scopeUserId = String(
+      pendingRows[0]?.user_id || withEventId[0]?.user_id || withoutEventId[0]?.user_id || ""
+    ).trim();
+    const userRow = scopeUserId
+      ? await query("SELECT timezone FROM users WHERE id = $1", [scopeUserId])
+      : { rows: [] };
     hostTimezone = String(userRow.rows[0]?.timezone || "UTC");
   } catch {
     hostTimezone = "UTC";
@@ -1053,6 +1117,17 @@ async function refreshPendingGoogleMeetLinks(scopeId, rows) {
         notes: String(row.notes || ""),
       });
 
+      if (!calendarResult.meetingLink) {
+        logGoogleMeetBooking(
+          "refresh_completed_without_link",
+          {
+            bookingId: rowId,
+            scopeId,
+            calendarEventId: calendarResult.calendarEventId || "",
+          },
+          "warn"
+        );
+      }
       const nextStatus = calendarResult.meetingLink ? "ready" : "generation_failed";
       const updated = await query(
         `

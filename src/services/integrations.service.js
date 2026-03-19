@@ -1766,6 +1766,26 @@ function createGoogleOAuthError(message, oauthErrorCode, extra = {}) {
   return error;
 }
 
+function parseGoogleApiErrorStatus(error) {
+  const status = Number(
+    error?.code ||
+    error?.status ||
+    error?.response?.status ||
+    error?.response?.data?.error?.code ||
+    0
+  );
+  return Number.isFinite(status) ? status : 0;
+}
+
+function isGoogleCalendarAuthorizationError(error) {
+  const status = parseGoogleApiErrorStatus(error);
+  if (status === 401 || status === 403) return true;
+  const message = String(error?.message || "").toLowerCase();
+  return /not connected|authorized|authorization expired|reconnect|invalid[_ ]grant|unauthenticated/.test(
+    message
+  );
+}
+
 function ensureGoogleOAuthConfigured() {
   if (!env.google.clientId || !env.google.clientSecret) {
     throw badRequest("Google Calendar OAuth is not configured on this server");
@@ -2220,6 +2240,47 @@ async function getGoogleCalendarConnectionStatusForUser(userIdStr, diagnostics =
     tokenDecryptFailed: status.tokenDecryptFailed,
     rowFound: Boolean(googleCal),
   };
+
+  if (resolved.connected && diagnostics?.validateAccess) {
+    try {
+      await getAuthenticatedGoogleClient(scopeId);
+      if (traceId || diagnostics?.forceLog) {
+        logGoogleOAuth(
+          traceId,
+          "calendar_access_validated",
+          {
+            logContext,
+            scopeId,
+            connected: true,
+          },
+          { force: true }
+        );
+      }
+    } catch (error) {
+      const authIssue = isGoogleCalendarAuthorizationError(error);
+      if (traceId || diagnostics?.forceLog) {
+        logGoogleOAuth(
+          traceId,
+          "calendar_access_validation_failed",
+          {
+            logContext,
+            scopeId,
+            authIssue,
+            status: parseGoogleApiErrorStatus(error),
+            error: summarizeErrorForLog(error),
+          },
+          { level: authIssue ? "warn" : "error", force: true }
+        );
+      }
+      if (authIssue) {
+        resolved.connected = false;
+        resolved.hasUsableAccessToken = false;
+        resolved.hasUsableToken = false;
+        resolved.reason = "authorization_expired";
+      }
+    }
+  }
+
   if (traceId || diagnostics?.forceLog) {
     logGoogleOAuth(
       traceId,
@@ -2260,6 +2321,7 @@ async function getVerifiedGoogleCalendarConnectionStatus(authContext = {}) {
     traceId,
     forceLog,
     logContext: `${logContext}.workspace`,
+    validateAccess: true,
   });
   let userScopeStatus = null;
 

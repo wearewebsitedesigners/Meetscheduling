@@ -4,6 +4,7 @@ const env = require("../config/env");
 const { query, withTransaction } = require("../db/pool");
 const { badRequest } = require("../utils/http-error");
 const { assertEmail, assertString } = require("../utils/validation");
+const { ensureWorkspaceForUser } = require("./workspace.service");
 
 function hashToken(token) {
   return crypto.createHash("sha256").update(String(token || "")).digest("hex");
@@ -28,6 +29,9 @@ async function createPasswordResetRequest(email, meta = {}) {
   const user = userRes.rows[0] || null;
   if (!user) return null;
 
+  const workspaceContext = await ensureWorkspaceForUser(user.id);
+  const workspaceId = workspaceContext?.workspaceId || user.id;
+
   const token = generateToken();
   const tokenHash = hashToken(token);
   const ttlMinutes = Number(env.authEmail?.passwordResetTtlMinutes || 60);
@@ -49,14 +53,15 @@ async function createPasswordResetRequest(email, meta = {}) {
     `
       INSERT INTO password_reset_tokens (
         user_id,
+        workspace_id,
         token_hash,
         expires_at,
         requested_ip,
         user_agent
       )
-      VALUES ($1, $2, $3, $4, $5)
+      VALUES ($1, $2, $3, $4, $5, $6)
     `,
-    [user.id, tokenHash, expiresAt, requestedIp, userAgent]
+    [user.id, workspaceId, tokenHash, expiresAt, requestedIp, userAgent]
   );
 
   return {

@@ -3,7 +3,11 @@ const { DateTime } = require("luxon");
 const { query, withTransaction } = require("../db/pool");
 const { upsertContactFromBooking } = require("./contacts.service");
 const { sendBookingConfirmation } = require("./email.service");
-const { generateMeetingLink, isJoinableMeetingLink } = require("./meeting-link.service");
+const {
+  generateMeetingLink,
+  generateGoogleMeetLink,
+  isJoinableMeetingLink,
+} = require("./meeting-link.service");
 const { generatePublicSlots } = require("./slots.service");
 const {
   getAuthenticatedGoogleClient,
@@ -681,12 +685,12 @@ async function createPublicBooking({
 
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       try {
-        const gcal = await getAuthenticatedGoogleClient(hostWorkspaceId);
-        calendarResult = await createGoogleCalendarEventWithMeet({
-          calendarClient: gcal,
-          booking,
-          event,
-          slot,
+        calendarResult = await generateGoogleMeetLink(hostWorkspaceId, {
+          bookingId: booking.id,
+          eventTitle: event.title,
+          hostTimezone: event.hostTimezone,
+          startAtUtc: slot.startAtUtc,
+          endAtUtc: slot.endAtUtc,
           inviteeName: cleanName,
           inviteeEmail: cleanEmail,
           notes: cleanNotes,

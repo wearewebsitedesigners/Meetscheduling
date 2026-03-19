@@ -17,9 +17,17 @@ import {
   Vote,
   Wand2,
 } from "lucide-react";
-import { apiFetch, cn, copyToClipboard, GlassButton, GlassOrb } from "../shared.jsx";
+import {
+  apiFetch,
+  cn,
+  copyToClipboard,
+  GlassButton,
+  GlassOrb,
+  getStoredUser,
+} from "../shared.jsx";
 
 const schedulingTabs = ["Event types", "Single-use links", "Meeting polls"];
+const GOOGLE_CALENDAR_STATUS_CACHE_KEY = "meetscheduling_google_calendar_status";
 
 const googleCalendarStatusMessages = {
   google_calendar_connected: {
@@ -171,6 +179,42 @@ function shouldShowGoogleCalendarDiagnostics(status) {
   if (typeof window === "undefined") return false;
   const params = new URLSearchParams(window.location.search);
   return params.get("googleDebug") === "1";
+}
+
+function getGoogleCalendarStatusCacheKey() {
+  try {
+    const user = getStoredUser();
+    const workspaceId = String(user?.workspaceId || user?.id || "").trim();
+    return workspaceId
+      ? `${GOOGLE_CALENDAR_STATUS_CACHE_KEY}:${workspaceId}`
+      : GOOGLE_CALENDAR_STATUS_CACHE_KEY;
+  } catch {
+    return GOOGLE_CALENDAR_STATUS_CACHE_KEY;
+  }
+}
+
+function readCachedGoogleCalendarStatus() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(getGoogleCalendarStatusCacheKey());
+    if (!raw) return null;
+    return normalizeGoogleCalendarStatus(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedGoogleCalendarStatus(status) {
+  if (typeof window === "undefined") return;
+  try {
+    const normalized = normalizeGoogleCalendarStatus(status);
+    window.localStorage.setItem(
+      getGoogleCalendarStatusCacheKey(),
+      JSON.stringify(normalized)
+    );
+  } catch {
+    // ignore cache failures
+  }
 }
 const locationOptions = [
   { value: "google_meet", label: "Google Meet" },
@@ -567,6 +611,7 @@ function EmptyState({ title, description, action, actionLabel }) {
 }
 
 export default function SchedulingPanel({ initials = "WU", displayName = "Workspace User", avatarUrl = "" }) {
+  const cachedGoogleStatus = readCachedGoogleCalendarStatus();
   const [activeTab, setActiveTab] = useState("Event types");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -575,10 +620,11 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
   const [eventTypes, setEventTypes] = useState([]);
   const [username, setUsername] = useState("");
   const [calendars, setCalendars] = useState([]);
-  const [googleConnected, setGoogleConnected] = useState(false);
+  const [googleConnected, setGoogleConnected] = useState(Boolean(cachedGoogleStatus?.connected));
   const [googleCalendarStatus, setGoogleCalendarStatus] = useState(
-    normalizeGoogleCalendarStatus()
+    cachedGoogleStatus || normalizeGoogleCalendarStatus()
   );
+  const [googleStatusResolved, setGoogleStatusResolved] = useState(Boolean(cachedGoogleStatus));
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("create");
@@ -616,6 +662,8 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
       setGoogleCalendarStatus(verifiedGoogleStatus);
       setCalendars(nextCalendars);
       setGoogleConnected(Boolean(verifiedGoogleStatus.connected));
+      writeCachedGoogleCalendarStatus(verifiedGoogleStatus);
+      setGoogleStatusResolved(true);
     } catch (loadError) {
       setError(loadError.message || "Failed to load scheduling data.");
     } finally {
@@ -718,6 +766,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
     () => shouldShowGoogleCalendarDiagnostics(googleCalendarStatus),
     [googleCalendarStatus]
   );
+  const showGoogleStatusPending = loading && !googleStatusResolved;
 
   const selectedEvent = eventTypes.find((item) => item.id === selectedEventId) || filteredEventTypes[0] || null;
 
@@ -937,7 +986,14 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
             {[
               { label: "Total links", value: String(summary.total) },
               { label: "Active", value: String(summary.active) },
-              { label: "Google Meet", value: googleConnected ? `${summary.googleMeetCount}` : "Connect" },
+              {
+                label: "Google Meet",
+                value: showGoogleStatusPending
+                  ? "..."
+                  : googleConnected
+                    ? `${summary.googleMeetCount}`
+                    : "Connect",
+              },
             ].map((stat) => (
               <div key={stat.label} className="rounded-[24px] border border-white/50 bg-white/55 px-5 py-4 shadow-[0_18px_42px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.04]">
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{stat.label}</div>
@@ -961,7 +1017,22 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
           </div>
         ) : null}
 
-        {googleConnected ? (
+        {showGoogleStatusPending ? (
+          <div className="mt-6 flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white/80 px-5 py-5 shadow-[0_18px_42px_rgba(15,23,42,0.05)] backdrop-blur-2xl md:flex-row md:items-center md:justify-between dark:border-white/10 dark:bg-white/[0.04]">
+            <div>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                Checking Google Calendar connection...
+              </p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                Sync status is loading for this workspace.
+              </p>
+            </div>
+            <div className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+              Loading
+            </div>
+          </div>
+        ) : googleConnected ? (
           <div className="mt-6 flex flex-col gap-4 rounded-[28px] border border-emerald-200 bg-emerald-50/85 px-5 py-5 shadow-[0_18px_42px_rgba(15,23,42,0.05)] backdrop-blur-2xl md:flex-row md:items-center md:justify-between dark:border-emerald-400/20 dark:bg-emerald-500/10">
             <div>
               <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Google Calendar is connected.</p>

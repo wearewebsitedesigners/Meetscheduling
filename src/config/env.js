@@ -128,12 +128,14 @@ if (!env.databaseUrl) {
 
 // --- Google OAuth startup checks ---
 if (env.google.clientId && !env.integrationTokenSecret) {
+  const integrationSecretMessage =
+    "INTEGRATION_TOKEN_SECRET is required for Google OAuth token encryption. " +
+    "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"";
+  if (env.nodeEnv === "production") {
+    throw new Error(integrationSecretMessage);
+  }
   // eslint-disable-next-line no-console
-  console.warn(
-    "[WARN] INTEGRATION_TOKEN_SECRET is not set. Google OAuth tokens will be encrypted " +
-    "using JWT_SECRET as fallback. Set a dedicated INTEGRATION_TOKEN_SECRET for production. " +
-    "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
-  );
+  console.warn("[WARN] " + integrationSecretMessage);
 }
 
 if (env.google.clientId && !env.google.clientSecret) {

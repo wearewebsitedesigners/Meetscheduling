@@ -886,8 +886,10 @@ function deriveGoogleCalendarStatusFromRow(calendarRow, diagnostics = {}) {
   if (!calendarRow) {
     return {
       connected: false,
+      rowConnected: false,
       hasWriteScope: false,
       hasRefreshToken: false,
+      hasUsableAccessToken: false,
       hasUsableToken: false,
       accountEmail: "",
       reason: "missing_row",
@@ -898,13 +900,14 @@ function deriveGoogleCalendarStatusFromRow(calendarRow, diagnostics = {}) {
 
   const tokenInspection = inspectGoogleTokensFromMetadata(calendarRow.metadata || {}, diagnostics);
   const tokens = tokenInspection.tokens;
+  const rowConnected = Boolean(calendarRow.connected);
   const hasWriteScope = hasGoogleCalendarWriteScope(tokens);
   const hasRefreshToken = Boolean(tokens.refresh_token);
   const hasUsableAccessTokenValue = hasUsableAccessToken(tokens);
   const hasUsableToken = hasRefreshToken || hasUsableAccessTokenValue;
-  const connected = Boolean(calendarRow.connected) && hasWriteScope && hasUsableToken;
+  const connected = rowConnected && hasWriteScope && hasUsableToken;
   let reason = "connected";
-  if (!calendarRow.connected) {
+  if (!rowConnected) {
     reason = "disconnected";
   } else if (tokenInspection.decryptFailed) {
     reason = "token_decrypt_failed";
@@ -923,7 +926,7 @@ function deriveGoogleCalendarStatusFromRow(calendarRow, diagnostics = {}) {
       {
         logContext: String(diagnostics.logContext || "").trim(),
         scopeId: String(diagnostics.scopeId || "").trim(),
-        rowConnected: Boolean(calendarRow.connected),
+        rowConnected,
         scope: String(tokens.scope || "").trim(),
         hasWriteScope,
         hasRefreshToken,
@@ -944,8 +947,10 @@ function deriveGoogleCalendarStatusFromRow(calendarRow, diagnostics = {}) {
 
   return {
     connected,
+    rowConnected,
     hasWriteScope,
     hasRefreshToken,
+    hasUsableAccessToken: hasUsableAccessTokenValue,
     hasUsableToken,
     accountEmail: String(calendarRow.account_email || "").trim().toLowerCase(),
     reason,
@@ -1482,6 +1487,10 @@ async function listCalendarConnectionsForUser(workspaceId) {
     listUserCalendarRows(workspaceId),
     getCalendarSettingsRow(workspaceId),
   ]);
+  const googleCalendarStatus = await getGoogleCalendarConnectionStatusForUser(workspaceId, {
+    forceLog: true,
+    logContext: "calendars_endpoint.google",
+  });
 
   const existingByProvider = new Map(rows.map((row) => [row.provider, mapRowToItem(row, 9999)]));
   const calendars = Object.values(CALENDAR_PROVIDER_DETAILS).map((details) => {
@@ -1489,24 +1498,25 @@ async function listCalendarConnectionsForUser(workspaceId) {
     if (existing) {
       const mapped = { ...existing };
       if (details.provider === GOOGLE_PROVIDER_KEY) {
-        const row = rows.find((item) => item.provider === GOOGLE_PROVIDER_KEY) || null;
-        const status = deriveGoogleCalendarStatusFromRow(row);
-        mapped.connected = status.connected;
-        mapped.accountEmail = status.connected ? mapped.accountEmail : "";
-        mapped.lastSync = status.connected
+        mapped.connected = googleCalendarStatus.connected;
+        mapped.accountEmail = googleCalendarStatus.connected ? mapped.accountEmail : "";
+        mapped.lastSync = googleCalendarStatus.connected
           ? mapped.lastSync || "Just now"
-          : row
+          : googleCalendarStatus.rowFound
             ? "Disconnected"
             : "Never";
         mapped.metadata = {
           ...(mapped.metadata && typeof mapped.metadata === "object" ? mapped.metadata : {}),
-          syncStatus: status.connected ? "connected" : "disconnected",
-          connectionReason: status.reason,
-          hasWriteScope: status.hasWriteScope,
-          hasRefreshToken: status.hasRefreshToken,
-          hasUsableToken: status.hasUsableToken,
-          tokenSource: status.tokenSource,
-          tokenDecryptFailed: status.tokenDecryptFailed,
+          syncStatus: googleCalendarStatus.connected ? "connected" : "disconnected",
+          connectionReason: googleCalendarStatus.reason,
+          rowConnected: googleCalendarStatus.rowConnected,
+          rowFound: googleCalendarStatus.rowFound,
+          hasWriteScope: googleCalendarStatus.hasWriteScope,
+          hasRefreshToken: googleCalendarStatus.hasRefreshToken,
+          hasUsableAccessToken: googleCalendarStatus.hasUsableAccessToken,
+          hasUsableToken: googleCalendarStatus.hasUsableToken,
+          tokenSource: googleCalendarStatus.tokenSource,
+          tokenDecryptFailed: googleCalendarStatus.tokenDecryptFailed,
         };
       }
       return mapCalendarRecord(mapped);
@@ -1520,12 +1530,19 @@ async function listCalendarConnectionsForUser(workspaceId) {
       checkCount: 1,
       lastSync: "Never",
       syncStatus: "disconnected",
-      reason: details.provider === GOOGLE_PROVIDER_KEY ? "missing_row" : "",
-      hasWriteScope: false,
-      hasRefreshToken: false,
-      hasUsableToken: false,
-      tokenSource: "none",
-      tokenDecryptFailed: false,
+      reason: details.provider === GOOGLE_PROVIDER_KEY ? googleCalendarStatus.reason : "",
+      rowConnected: details.provider === GOOGLE_PROVIDER_KEY ? googleCalendarStatus.rowConnected : false,
+      rowFound: details.provider === GOOGLE_PROVIDER_KEY ? googleCalendarStatus.rowFound : false,
+      hasWriteScope: details.provider === GOOGLE_PROVIDER_KEY ? googleCalendarStatus.hasWriteScope : false,
+      hasRefreshToken:
+        details.provider === GOOGLE_PROVIDER_KEY ? googleCalendarStatus.hasRefreshToken : false,
+      hasUsableAccessToken:
+        details.provider === GOOGLE_PROVIDER_KEY ? googleCalendarStatus.hasUsableAccessToken : false,
+      hasUsableToken:
+        details.provider === GOOGLE_PROVIDER_KEY ? googleCalendarStatus.hasUsableToken : false,
+      tokenSource: details.provider === GOOGLE_PROVIDER_KEY ? googleCalendarStatus.tokenSource : "none",
+      tokenDecryptFailed:
+        details.provider === GOOGLE_PROVIDER_KEY ? googleCalendarStatus.tokenDecryptFailed : false,
     };
   });
 
@@ -1833,9 +1850,8 @@ function getTokenCryptoLogState() {
   return {
     integrationTokenSecretConfigured,
     jwtSecretConfigured,
-    tokenCryptoKeySource: integrationTokenSecretConfigured
-      ? "INTEGRATION_TOKEN_SECRET"
-      : "JWT_SECRET",
+    tokenCryptoKeySource: integrationTokenSecretConfigured ? "INTEGRATION_TOKEN_SECRET" : "missing",
+    tokenCryptoFallbackEnabled: false,
   };
 }
 
@@ -1969,7 +1985,33 @@ function inspectGoogleTokensFromMetadata(metadata = {}, diagnostics = {}) {
 }
 
 function readGoogleTokensFromMetadata(metadata = {}, diagnostics = {}) {
-  return inspectGoogleTokensFromMetadata(metadata, diagnostics).tokens;
+  const traceId = String(diagnostics?.traceId || "").trim();
+  const scopeId = String(diagnostics?.scopeId || "").trim();
+  const logContext = String(diagnostics?.logContext || "").trim();
+  const inspection = inspectGoogleTokensFromMetadata(metadata, diagnostics);
+  if (traceId || diagnostics?.forceLog) {
+    logGoogleOAuth(
+      traceId,
+      "token_read_resolved",
+      {
+        logContext,
+        scopeId,
+        source: inspection.source,
+        decryptFailed: inspection.decryptFailed,
+        scope: String(inspection.tokens.scope || "").trim(),
+        hasRefreshToken: Boolean(inspection.tokens.refresh_token),
+        hasAccessToken: Boolean(inspection.tokens.access_token),
+        expiryDate:
+          Number.isFinite(Number(inspection.tokens.expiry_date)) &&
+          Number(inspection.tokens.expiry_date) > 0
+            ? Number(inspection.tokens.expiry_date)
+            : null,
+        hasUsableAccessToken: hasUsableAccessToken(inspection.tokens),
+      },
+      { force: true }
+    );
+  }
+  return inspection.tokens;
 }
 
 function buildGoogleOAuthMetadata(existingMetadata = {}, tokens = {}) {
@@ -2166,8 +2208,10 @@ async function getGoogleCalendarConnectionStatusForUser(userIdStr, diagnostics =
   });
   const resolved = {
     connected: status.connected,
+    rowConnected: status.rowConnected,
     hasRefreshToken: status.hasRefreshToken,
     hasWriteScope: status.hasWriteScope,
+    hasUsableAccessToken: status.hasUsableAccessToken,
     hasUsableToken: status.hasUsableToken,
     integrationId: googleCal?.id || null,
     accountEmail: status.accountEmail || "",
@@ -2186,8 +2230,10 @@ async function getGoogleCalendarConnectionStatusForUser(userIdStr, diagnostics =
         rowFound: resolved.rowFound,
         integrationId: resolved.integrationId,
         connected: resolved.connected,
+        rowConnected: resolved.rowConnected,
         hasWriteScope: resolved.hasWriteScope,
         hasRefreshToken: resolved.hasRefreshToken,
+        hasUsableAccessToken: resolved.hasUsableAccessToken,
         hasUsableToken: resolved.hasUsableToken,
         accountEmail: resolved.accountEmail,
         reason: resolved.reason,
@@ -2237,8 +2283,10 @@ async function getVerifiedGoogleCalendarConnectionStatus(authContext = {}) {
     userId: userId || null,
     connected: workspaceStatus.connected,
     rowFound: workspaceStatus.rowFound,
+    rowConnected: workspaceStatus.rowConnected,
     hasRefreshToken: workspaceStatus.hasRefreshToken,
     hasWriteScope: workspaceStatus.hasWriteScope,
+    hasUsableAccessToken: workspaceStatus.hasUsableAccessToken,
     hasUsableToken: workspaceStatus.hasUsableToken,
     integrationId: workspaceStatus.integrationId,
     accountEmail: workspaceStatus.accountEmail,
@@ -2439,6 +2487,12 @@ async function handleGoogleCalendarCallback(
       workspaceId: savedCalendarRow.workspace_id || workspaceId,
       accountEmail: savedCalendarRow.account_email || "",
       connected: !!savedCalendarRow.connected,
+      hasOauthBlock: summarizeGoogleTokenStorage(savedCalendarRow.metadata || metadata).hasOauthBlock,
+      hasEncryptedTokens: summarizeGoogleTokenStorage(savedCalendarRow.metadata || metadata)
+        .hasEncryptedTokens,
+      storedScope: summarizeGoogleTokenStorage(savedCalendarRow.metadata || metadata).storedScope,
+      storedHasRefreshTokenFlag: summarizeGoogleTokenStorage(savedCalendarRow.metadata || metadata)
+        .storedHasRefreshTokenFlag,
     });
 
     const readbackRows = await listUserCalendarRows(workspaceId);
@@ -2462,9 +2516,13 @@ async function handleGoogleCalendarCallback(
       {
         rowFound: Boolean(readbackGoogleRow),
         rowConnected: Boolean(readbackGoogleRow?.connected),
+        connected: readbackStatus.connected,
         accountEmail: String(readbackGoogleRow?.account_email || "").trim().toLowerCase(),
+        hasMetadata: readbackStorage.hasMetadata,
         hasOauthBlock: readbackStorage.hasOauthBlock,
         hasEncryptedTokens: readbackStorage.hasEncryptedTokens,
+        storedScope: readbackStorage.storedScope,
+        storedHasRefreshTokenFlag: readbackStorage.storedHasRefreshTokenFlag,
         decryptedScope: String(readbackTokens.scope || "").trim(),
         decryptedHasRefreshToken: Boolean(readbackTokens.refresh_token),
         decryptedHasAccessToken: Boolean(readbackTokens.access_token),
@@ -2476,6 +2534,7 @@ async function handleGoogleCalendarCallback(
         decryptedHasUsableAccessToken: hasUsableAccessToken(readbackTokens),
         hasWriteScope: readbackStatus.hasWriteScope,
         hasRefreshToken: readbackStatus.hasRefreshToken,
+        hasUsableAccessToken: readbackStatus.hasUsableAccessToken,
         hasUsableToken: readbackStatus.hasUsableToken,
         tokenDecryptFailed: readbackStatus.tokenDecryptFailed,
         reason: readbackStatus.reason,

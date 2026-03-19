@@ -76,8 +76,11 @@ function normalizeGoogleCalendarStatus(status = {}) {
   if (!status || typeof status !== "object" || Array.isArray(status)) {
     return {
       connected: false,
+      rowFound: false,
+      rowConnected: false,
       hasWriteScope: false,
       hasRefreshToken: false,
+      hasUsableAccessToken: false,
       hasUsableToken: false,
       accountEmail: "",
       reason: "missing_row",
@@ -93,8 +96,11 @@ function normalizeGoogleCalendarStatus(status = {}) {
 
   return {
     connected: Boolean(status.connected),
+    rowFound: Boolean(status.rowFound),
+    rowConnected: Boolean(status.rowConnected),
     hasWriteScope: Boolean(status.hasWriteScope),
     hasRefreshToken: Boolean(status.hasRefreshToken),
+    hasUsableAccessToken: Boolean(status.hasUsableAccessToken),
     hasUsableToken: Boolean(status.hasUsableToken),
     accountEmail: String(status.accountEmail || "").trim(),
     reason: String(status.reason || "").trim() || "missing_row",
@@ -125,8 +131,11 @@ function mergeGoogleCalendarStatus(calendars, status) {
       accountEmail: nextStatus.connected ? nextStatus.accountEmail || item.accountEmail || "" : "",
       syncStatus: nextStatus.connected ? "connected" : "disconnected",
       reason: nextStatus.reason,
+      rowFound: nextStatus.rowFound,
+      rowConnected: nextStatus.rowConnected,
       hasWriteScope: nextStatus.hasWriteScope,
       hasRefreshToken: nextStatus.hasRefreshToken,
+      hasUsableAccessToken: nextStatus.hasUsableAccessToken,
       hasUsableToken: nextStatus.hasUsableToken,
       tokenSource: nextStatus.tokenSource,
       tokenDecryptFailed: nextStatus.tokenDecryptFailed,
@@ -144,9 +153,13 @@ function buildGoogleCalendarDebugFacts(status) {
   const nextStatus = normalizeGoogleCalendarStatus(status);
   return [
     `${nextStatus.scope}-scoped status`,
+    `row found: ${nextStatus.rowFound ? "yes" : "no"}`,
+    `row connected: ${nextStatus.rowConnected ? "yes" : "no"}`,
     `write scope: ${nextStatus.hasWriteScope ? "yes" : "no"}`,
     `refresh token: ${nextStatus.hasRefreshToken ? "yes" : "no"}`,
+    `usable access token: ${nextStatus.hasUsableAccessToken ? "yes" : "no"}`,
     `usable token: ${nextStatus.hasUsableToken ? "yes" : "no"}`,
+    `decrypt failed: ${nextStatus.tokenDecryptFailed ? "yes" : "no"}`,
   ].join(" · ");
 }
 const locationOptions = [

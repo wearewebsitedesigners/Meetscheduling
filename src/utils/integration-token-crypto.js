@@ -10,37 +10,19 @@ function buildKey(secret) {
   return crypto.createHash("sha256").update(secret).digest();
 }
 
-function getKeyCandidates() {
-  const candidates = [];
-  const integrationSecret = String(env.integrationTokenSecret || "").trim();
-  const jwtSecret = String(env.jwtSecret || "").trim();
-
-  if (integrationSecret) {
-    candidates.push({
-      source: "INTEGRATION_TOKEN_SECRET",
-      key: buildKey(integrationSecret),
-    });
+function getRequiredIntegrationTokenSecret() {
+  const secret = String(env.integrationTokenSecret || "").trim();
+  if (!secret) {
+    throw new Error("INTEGRATION_TOKEN_SECRET is required for Google token encryption/decryption");
   }
-
-  if (jwtSecret && jwtSecret !== integrationSecret) {
-    candidates.push({
-      source: "JWT_SECRET",
-      key: buildKey(jwtSecret),
-    });
-  }
-
-  if (!candidates.length) {
-    candidates.push({
-      source: "JWT_SECRET",
-      key: buildKey(jwtSecret),
-    });
-  }
-
-  return candidates;
+  return secret;
 }
 
 function getPrimaryKeyCandidate() {
-  return getKeyCandidates()[0];
+  return {
+    source: "INTEGRATION_TOKEN_SECRET",
+    key: buildKey(getRequiredIntegrationTokenSecret()),
+  };
 }
 
 function safeJsonParse(raw) {
@@ -74,7 +56,18 @@ function encryptTokenPayload(payload) {
 }
 
 function decryptTokenPayloadDetailed(encryptedValue) {
-  const attemptedKeySources = getKeyCandidates().map((candidate) => candidate.source);
+  let candidates;
+  try {
+    candidates = [getPrimaryKeyCandidate()];
+  } catch (error) {
+    return {
+      payload: null,
+      keySource: "",
+      attemptedKeySources: [],
+      failureReason: error.message || "missing_integration_token_secret",
+    };
+  }
+  const attemptedKeySources = candidates.map((candidate) => candidate.source);
   if (!encryptedValue || typeof encryptedValue !== "object" || Array.isArray(encryptedValue)) {
     return {
       payload: null,
@@ -114,7 +107,7 @@ function decryptTokenPayloadDetailed(encryptedValue) {
     };
   }
 
-  for (const candidate of getKeyCandidates()) {
+  for (const candidate of candidates) {
     try {
       const decipher = crypto.createDecipheriv(ALGORITHM, candidate.key, iv, {
         authTagLength: TAG_BYTES,

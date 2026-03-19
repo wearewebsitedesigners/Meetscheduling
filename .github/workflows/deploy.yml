@@ -17,7 +17,8 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Check SSH reachability
+      - name: Detect SSH route
+        id: detect_ssh
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
@@ -26,49 +27,127 @@ jobs:
           host="${VPS_HOST:?VPS_HOST secret is required}"
           port="${VPS_PORT:-22}"
 
-          python3 - "$host" "$port" <<'PY'
+          python3 - "$host" "$port" "$GITHUB_OUTPUT" <<'PY'
           import socket
           import sys
 
           host = sys.argv[1]
           port = int(sys.argv[2])
-          errors = []
+          output_path = sys.argv[3]
+          attempts = []
 
-          for family, socktype, proto, _, sockaddr in socket.getaddrinfo(
-              host,
-              port,
-              family=socket.AF_INET,
-              type=socket.SOCK_STREAM,
+          for family, label, ssh_flag in (
+              (socket.AF_INET, "ipv4", "-4"),
+              (socket.AF_INET6, "ipv6", "-6"),
           ):
-              sock = socket.socket(family, socktype, proto)
-              sock.settimeout(10)
               try:
-                  sock.connect(sockaddr)
-                  print(f"SSH reachability OK via IPv4: {sockaddr[0]}:{sockaddr[1]}")
-                  sock.close()
-                  break
+                  addrinfo = socket.getaddrinfo(
+                      host,
+                      port,
+                      family=family,
+                      type=socket.SOCK_STREAM,
+                  )
               except OSError as exc:
-                  errors.append(str(exc))
-                  sock.close()
-          else:
-              joined = "; ".join(errors) if errors else "no IPv4 address resolved"
-              raise SystemExit(
-                  f"Unable to reach {host}:{port} over IPv4 from the GitHub runner: {joined}"
-              )
+                  attempts.append(f"{label}: resolution failed: {exc}")
+                  continue
+
+              for _, socktype, proto, _, sockaddr in addrinfo:
+                  sock = socket.socket(family, socktype, proto)
+                  sock.settimeout(10)
+                  address = sockaddr[0]
+                  display = f"{address}:{sockaddr[1]}"
+                  if family == socket.AF_INET6:
+                      flow = sockaddr[2] if len(sockaddr) > 2 else 0
+                      scope = sockaddr[3] if len(sockaddr) > 3 else 0
+                      display = f"[{address}]:{sockaddr[1]} (flow={flow}, scope={scope})"
+                  try:
+                      sock.connect(sockaddr)
+                      print(f"SSH reachability OK via {label}: {display}")
+                      with open(output_path, "a", encoding="utf-8") as output:
+                          output.write(f"ssh_flag={ssh_flag}\n")
+                          output.write(f"ssh_label={label}\n")
+                      raise SystemExit(0)
+                  except OSError as exc:
+                      attempts.append(f"{label} {display} -> {exc}")
+                  finally:
+                      sock.close()
+
+          joined = "; ".join(attempts) if attempts else "no address resolved"
+          raise SystemExit(
+              f"Unable to reach {host}:{port} from the GitHub runner over IPv4 or IPv6: {joined}"
+          )
           PY
 
+      - name: Prepare SSH key
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          key="${VPS_SSH_KEY:-${VPS_SSH_PRIVATE_KEY:-}}"
+          [ -n "$key" ] || { echo "VPS_SSH_KEY or VPS_SSH_PRIVATE_KEY secret is required" >&2; exit 1; }
+          printf '%s\n' "$key" > ~/.ssh/meetscheduling_deploy_key
+          chmod 600 ~/.ssh/meetscheduling_deploy_key
+
+      - name: Load SSH key
+        env:
+          VPS_SSH_PASSPHRASE: ${{ secrets.VPS_SSH_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          eval "$(ssh-agent -s)"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+
+          if [ -n "${VPS_SSH_PASSPHRASE:-}" ]; then
+            askpass="$(mktemp)"
+            printf '%s\n' '#!/bin/sh' 'printf "%s\n" "$VPS_SSH_PASSPHRASE"' > "$askpass"
+            chmod 700 "$askpass"
+            DISPLAY=:0 SSH_ASKPASS="$askpass" SSH_ASKPASS_REQUIRE=force ssh-add ~/.ssh/meetscheduling_deploy_key </dev/null
+            rm -f "$askpass"
+          else
+            ssh-add ~/.ssh/meetscheduling_deploy_key
+          fi
+
+      - name: Trust VPS host key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
+          SSH_FLAG: ${{ steps.detect_ssh.outputs.ssh_flag }}
+        run: |
+          set -euo pipefail
+          host="${VPS_HOST:?VPS_HOST secret is required}"
+          port="${VPS_PORT:-22}"
+          keyscan_flag="${SSH_FLAG:-}"
+          ssh-keyscan $keyscan_flag -p "$port" "$host" >> ~/.ssh/known_hosts 2>/dev/null
+
       - name: Run production deploy over SSH
-        uses: appleboy/ssh-action@v1.2.4
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          port: ${{ secrets.VPS_SSH_PORT || '22' }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY || secrets.VPS_SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          protocol: tcp6
-          timeout: 60s
-          command_timeout: 30m
-          script: |
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          SSH_FLAG: ${{ steps.detect_ssh.outputs.ssh_flag }}
+          SSH_LABEL: ${{ steps.detect_ssh.outputs.ssh_label }}
+        run: |
+          set -euo pipefail
+          host="${VPS_HOST:?VPS_HOST secret is required}"
+          port="${VPS_PORT:-22}"
+          user="${VPS_USER:?VPS_USER secret is required}"
+          flag="${SSH_FLAG:-}"
+          echo "Deploying over ${SSH_LABEL:-unknown}"
+
+          ssh_cmd=(
+            ssh
+            "$flag"
+            -i ~/.ssh/meetscheduling_deploy_key
+            -p "$port"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+          )
+
+          "${ssh_cmd[@]}" "$user@$host" '
             set -euo pipefail
             export DEPLOY_ENV=production
             export APP_DIR=/home/meetscheduling/htdocs/www.meetscheduling.com
@@ -78,6 +157,7 @@ jobs:
 
             cd /home/meetscheduling/htdocs/www.meetscheduling.com
             bash scripts/deploy.sh
+          '
 
       - name: Verify public health endpoint
         run: |

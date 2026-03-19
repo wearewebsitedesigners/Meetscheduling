@@ -65,7 +65,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY || secrets.VPS_SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          protocol: tcp4
+          protocol: tcp6
           timeout: 60s
           command_timeout: 30m
           script: |

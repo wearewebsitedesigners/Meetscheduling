@@ -876,7 +876,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
 
   const handleConnectGoogle = async () => {
     try {
-      const returnPath = `${window.location.pathname}${window.location.search}${window.location.hash || ""}`;
+      const returnPath = `${window.location.pathname}${window.location.search}`;
       const payload = await apiFetch(
         `/api/integrations/google-calendar/auth-url?returnPath=${encodeURIComponent(returnPath)}`
       );

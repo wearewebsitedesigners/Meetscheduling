@@ -94,6 +94,39 @@ const PREVIEW_CALENDARS = [
   },
 ];
 
+const googleCalendarStatusMessages = {
+  google_calendar_connected: {
+    notice: "Google Calendar connected successfully.",
+  },
+  google_oauth_denied: {
+    error: "Google Calendar connection was cancelled or denied in Google.",
+  },
+  missing_oauth_params: {
+    error: "Google Calendar connection could not be completed. Missing OAuth parameters.",
+  },
+  invalid_or_expired_oauth_state: {
+    error: "Google Calendar connection expired. Please try connecting again.",
+  },
+  google_calendar_workspace_access_invalid: {
+    error: "Google Calendar callback could not be matched to an active workspace. Sign in again and retry.",
+  },
+  google_token_exchange_failed: {
+    error: "Google Calendar token exchange failed on the server. Check the server logs and Google OAuth configuration.",
+  },
+  google_scope_missing: {
+    error: "Google returned successfully, but the required Google Calendar write scope was missing.",
+  },
+  google_tokens_not_persisted: {
+    error: "Google returned successfully, but the server could not persist usable Google Calendar tokens for this workspace.",
+  },
+  google_status_verification_failed: {
+    error: "Google returned successfully, but the server could not verify the saved Google Calendar status for this workspace.",
+  },
+  google_calendar_connect_failed: {
+    error: "Google Calendar connection failed. Please try again.",
+  },
+};
+
 function normalizeTime(value, fallback = "09:00") {
   if (!value) return fallback;
   return String(value).slice(0, 5);
@@ -391,9 +424,12 @@ export default function AvailabilityPanel() {
     setNotice("");
   };
 
-  const loadPanel = async () => {
+  const loadPanel = async ({ preserveMessages = false } = {}) => {
     setLoading(true);
-    setError("");
+    if (!preserveMessages) {
+      setError("");
+      setNotice("");
+    }
     const token = getAuthToken();
     if (!token) {
       applyPreviewState();
@@ -444,8 +480,23 @@ export default function AvailabilityPanel() {
     if (typeof window === "undefined") return undefined;
 
     const params = new URLSearchParams(window.location.search);
-    if (!params.get("success") && !params.get("error") && !params.get("trace")) {
+    const successKey = params.get("success");
+    const errorKey = params.get("error");
+    const traceId = params.get("trace");
+    const statusConfig = googleCalendarStatusMessages[successKey || errorKey];
+
+    if (!statusConfig) {
       return undefined;
+    }
+
+    if (statusConfig.notice) {
+      setNotice(traceId ? `${statusConfig.notice} Reference: ${traceId}.` : statusConfig.notice);
+      setError("");
+    }
+
+    if (statusConfig.error) {
+      setError(traceId ? `${statusConfig.error} Reference: ${traceId}.` : statusConfig.error);
+      setNotice("");
     }
 
     params.delete("success");
@@ -454,6 +505,7 @@ export default function AvailabilityPanel() {
     const nextSearch = params.toString();
     const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash || ""}`;
     window.history.replaceState({}, "", nextUrl);
+    loadPanel({ preserveMessages: true });
     return undefined;
   }, []);
 
@@ -699,7 +751,7 @@ export default function AvailabilityPanel() {
         setNotice("Preview mode: Google Calendar connection is disabled locally.");
         return;
       }
-      const returnPath = `${window.location.pathname}${window.location.search}${window.location.hash || ""}`;
+      const returnPath = `${window.location.pathname}${window.location.search}`;
       const payload = await apiFetch(
         `/api/integrations/google-calendar/auth-url?returnPath=${encodeURIComponent(returnPath)}`
       );

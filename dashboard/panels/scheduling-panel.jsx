@@ -162,6 +162,16 @@ function buildGoogleCalendarDebugFacts(status) {
     `decrypt failed: ${nextStatus.tokenDecryptFailed ? "yes" : "no"}`,
   ].join(" · ");
 }
+
+function shouldShowGoogleCalendarDiagnostics(status) {
+  const nextStatus = normalizeGoogleCalendarStatus(status);
+  if (nextStatus.reason === "missing_row" && !nextStatus.workspaceMismatch) {
+    return false;
+  }
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get("googleDebug") === "1";
+}
 const locationOptions = [
   { value: "google_meet", label: "Google Meet" },
   { value: "zoom", label: "Zoom" },
@@ -704,6 +714,11 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
     [googleCalendarStatus]
   );
 
+  const showGoogleDiagnostics = useMemo(
+    () => shouldShowGoogleCalendarDiagnostics(googleCalendarStatus),
+    [googleCalendarStatus]
+  );
+
   const selectedEvent = eventTypes.find((item) => item.id === selectedEventId) || filteredEventTypes[0] || null;
 
   const openCreateModal = (preset = null) => {
@@ -964,9 +979,12 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
             <div>
               <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Google Calendar is not connected.</p>
               <p className="mt-1 text-sm text-amber-700/90 dark:text-amber-100/80">
-                Connect it before creating Google Meet event types so booking confirmations can generate real meeting links.
+                New workspaces start disconnected. Connect it when you want to sync your Google Calendar, block busy time, and generate real Google Meet links.
               </p>
-              {googleDebugMessage ? (
+              <p className="mt-2 text-xs font-medium text-amber-700/80 dark:text-amber-100/70">
+                Your users can click Connect Google Calendar and sign in with their own Google account from here.
+              </p>
+              {showGoogleDiagnostics && googleDebugMessage ? (
                 <div className="mt-3 rounded-2xl border border-amber-200/70 bg-white/65 px-3 py-3 text-xs text-amber-900/90 shadow-inner dark:border-amber-300/10 dark:bg-white/[0.05] dark:text-amber-100/85">
                   <p>{googleDebugMessage}</p>
                   <p className="mt-1">{googleDebugFacts}</p>

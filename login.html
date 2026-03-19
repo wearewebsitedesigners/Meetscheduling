@@ -7,6 +7,15 @@
   <title>Log in | MeetScheduling</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
   <link rel="shortcut icon" href="/assets/favicon.svg" />
+  <script>
+    document.documentElement.classList.add("auth-pending");
+  </script>
+  <style>
+    html.auth-pending body {
+      visibility: hidden;
+      opacity: 0;
+    }
+  </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -14,6 +23,97 @@
     rel="stylesheet" />
   <link rel="stylesheet" href="/styles/tokens.css" />
   <link rel="stylesheet" href="/login.css" />
+  <script>
+    (() => {
+      const AUTH_TOKEN_KEY = "meetscheduling_auth_token";
+      const AUTH_USER_KEY = "meetscheduling_auth_user";
+      const POST_LOGIN_REDIRECT_KEY = "meetscheduling_post_login_redirect";
+
+      const revealLogin = () => {
+        document.documentElement.classList.remove("auth-pending");
+      };
+
+      const clearStoredAuth = () => {
+        try {
+          localStorage.removeItem(AUTH_TOKEN_KEY);
+          localStorage.removeItem(AUTH_USER_KEY);
+        } catch {
+          // ignore
+        }
+      };
+
+      const readRedirectTarget = () => {
+        try {
+          const raw = String(sessionStorage.getItem(POST_LOGIN_REDIRECT_KEY) || "").trim();
+          if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+        } catch {
+          // ignore
+        }
+        return "/dashboard";
+      };
+
+      const redirectToDashboard = () => {
+        window.location.replace(readRedirectTarget());
+      };
+
+      const params = new URLSearchParams(window.location.search);
+      const tokenFromUrl = String(params.get("token") || "").trim();
+
+      if (tokenFromUrl) {
+        try {
+          localStorage.setItem(AUTH_TOKEN_KEY, tokenFromUrl);
+        } catch {
+          // ignore
+        }
+        params.delete("token");
+        const nextSearch = params.toString();
+        const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash || ""}`;
+        window.history.replaceState({}, document.title, nextUrl);
+      }
+
+      let token = "";
+      try {
+        token = String(localStorage.getItem(AUTH_TOKEN_KEY) || "").trim();
+      } catch {
+        token = "";
+      }
+
+      if (!token) {
+        revealLogin();
+        return;
+      }
+
+      fetch("/api/auth/me", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+        credentials: "same-origin",
+        cache: "no-store",
+      })
+        .then(async (response) => {
+          const payload = await response.json().catch(() => null);
+          if (!response.ok || !payload?.user) {
+            const error = new Error("Login session validation failed.");
+            error.status = response.status;
+            throw error;
+          }
+          try {
+            localStorage.setItem(AUTH_USER_KEY, JSON.stringify(payload.user));
+          } catch {
+            // ignore
+          }
+          redirectToDashboard();
+        })
+        .catch((error) => {
+          if (Number(error?.status || 0) === 401) {
+            clearStoredAuth();
+          }
+          revealLogin();
+        });
+    })();
+  </script>
 </head>
 
 <body class="auth-page login-page">
@@ -117,7 +217,7 @@
     </div>
   </footer>
 
-  <script src="/login.js?v=2"></script>
+  <script src="/login.js?v=3"></script>
 </body>
 
 </html>

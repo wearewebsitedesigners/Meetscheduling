@@ -137,16 +137,24 @@ if (tokenFromUrl) {
   fetch("/api/auth/me", {
     headers: { Authorization: `Bearer ${tokenFromUrl}` }
   })
-    .then(res => res.json())
+    .then(async (res) => {
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.user) {
+        throw new Error("Session validation failed.");
+      }
+      return data;
+    })
     .then(data => {
       if (data.user) {
         localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user));
       }
       redirectToDashboard();
     })
-    .catch(() => redirectToDashboard());
-} else if (hasSession()) {
-  redirectToDashboard();
+    .catch(() => {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      localStorage.removeItem(AUTH_USER_KEY);
+      setFeedback("Session expired. Please log in again.");
+    });
 }
 
 function getFormData() {

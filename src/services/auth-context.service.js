@@ -24,6 +24,7 @@ function buildUserPayload(user) {
     timezone: user.timezone,
     plan: user.plan,
     avatarUrl: user.avatar_url || user.avatarUrl || "",
+    emailVerified: Boolean(user.email_verified_at || user.emailVerifiedAt),
   };
 }
 

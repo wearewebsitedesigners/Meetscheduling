@@ -4,7 +4,7 @@ Production-focused backend for a meeting scheduling SaaS, built with:
 
 - Node.js + Express
 - PostgreSQL
-- JWT auth middleware
+- server-managed auth sessions
 - Server-side slot generation with timezone conversion
 - Booking management APIs
 - Plan enforcement (`free` vs `pro`)
@@ -148,6 +148,10 @@ Copy and fill:
 cp .env.example .env
 ```
 
+Do not commit `.env`, `.env.local`, private key files, or provider credentials. This repo
+only commits `.env.example` placeholders; real values must stay in local env files or your
+deployment secret manager.
+
 Required for backend:
 
 - `DATABASE_URL`
@@ -158,6 +162,12 @@ Optional:
 
 - SMTP vars for confirmation emails
 - Google vars for future calendar integration depth
+
+Run the tracked-file secret scan before pushing changes:
+
+```bash
+npm run security:scan-secrets
+```
 
 ---
 
@@ -200,11 +210,11 @@ See `DEPLOYMENT.md` for GitHub Actions -> VPS deployment steps and production ch
 
 - `POST /api/auth/signup`
   - Body: `{ "email", "password", "username?", "timezone?" }`
-  - Returns JWT token + user payload
+  - Returns user payload and starts a server-managed session after verification/login
 - `POST /api/auth/login`
   - Body: `{ "email", "password", "workspaceId?" }`
-  - Returns JWT token + user payload
-- `GET /api/auth/me` (Bearer token)
+  - Returns user payload and session metadata
+- `GET /api/auth/me` (session cookie)
 
 ### Event Types (auth required)
 

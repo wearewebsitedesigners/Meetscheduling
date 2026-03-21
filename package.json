@@ -11,7 +11,9 @@
     "start": "node src/server.js",
     "dev": "node src/server.js",
     "dev:preview": "npm run build:dashboard-ui && sh -c 'PORT=${PORT:-8081}; APP_BASE_URL=${APP_BASE_URL:-http://127.0.0.1:$PORT}; HOST=127.0.0.1 PREVIEW_MODE=true SKIP_DB_MIGRATIONS=true RUN_SEED_ON_BOOT=false PORT=$PORT APP_BASE_URL=$APP_BASE_URL HOST=$HOST node src/server.js'",
+    "check-env": "node check-env.js",
     "migrate": "node scripts/migrate.js",
+    "security:scan-secrets": "bash scripts/scan-secrets.sh",
     "seed": "node scripts/seed.js",
     "paypal:catalog": "node scripts/create-paypal-catalog.js"
   },

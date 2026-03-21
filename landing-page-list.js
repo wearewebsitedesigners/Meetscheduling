@@ -1,5 +1,4 @@
 (function landingPageListController() {
-  const AUTH_TOKEN_KEY = "meetscheduling_auth_token";
   const rootEl = document.getElementById("lp-list-root");
   const statusEl = document.getElementById("lp-list-status");
   const refreshBtn = document.getElementById("lp-refresh-btn");
@@ -20,30 +19,19 @@
       .replace(/'/g, "&#39;");
   }
 
-  function token() {
-    return String(localStorage.getItem(AUTH_TOKEN_KEY) || "").trim();
-  }
-
   function clearSession() {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem("meetscheduling_auth_user");
   }
 
   async function apiRequest(path, options) {
-    const authToken = token();
-    if (!authToken) {
-      window.location.replace("/login");
-      throw new Error("Session expired. Please log in again.");
-    }
-
     const headers = new Headers(options && options.headers ? options.headers : {});
-    headers.set("Authorization", `Bearer ${authToken}`);
     if (!headers.has("Content-Type") && options && options.body) {
       headers.set("Content-Type", "application/json");
     }
 
     const response = await fetch(path, {
       ...(options || {}),
+      credentials: "same-origin",
       headers,
     });
 

@@ -1,6 +1,11 @@
 const { query, withTransaction } = require("../db/pool");
 const { badRequest } = require("../utils/http-error");
-const { assertEmail, assertOptionalString } = require("../utils/validation");
+const {
+  assertBoolean,
+  assertEmail,
+  assertJsonObject,
+  assertOptionalString,
+} = require("../utils/validation");
 const { assertFeature, assertLimit } = require("./entitlements.service");
 const { resolveWorkspaceMembership } = require("./workspace.service");
 const {
@@ -1059,9 +1064,7 @@ function normalizeConnectPayload(payload) {
   });
   const accountEmail = accountEmailRaw ? assertEmail(accountEmailRaw, "accountEmail") : "";
   const metadata =
-    payload.metadata && typeof payload.metadata === "object" && !Array.isArray(payload.metadata)
-      ? payload.metadata
-      : {};
+    payload.metadata === undefined ? {} : assertJsonObject(payload.metadata, "metadata");
 
   return {
     provider,
@@ -1306,9 +1309,7 @@ async function configureIntegration(workspaceId, provider, payload = {}) {
   });
   const accountEmail = accountEmailRaw ? assertEmail(accountEmailRaw, "accountEmail") : "";
   const metadata =
-    payload.metadata && typeof payload.metadata === "object" && !Array.isArray(payload.metadata)
-      ? payload.metadata
-      : {};
+    payload.metadata === undefined ? {} : assertJsonObject(payload.metadata, "metadata");
 
   const result = await query(
     `
@@ -1666,10 +1667,10 @@ async function updateCalendarSettingsForUser(workspaceId, payload = {}) {
     updates.selectedProvider = payload.selectedProvider;
   }
   if (Object.prototype.hasOwnProperty.call(payload, "includeBuffers")) {
-    updates.includeBuffers = !!payload.includeBuffers;
+    updates.includeBuffers = assertBoolean(payload.includeBuffers, "includeBuffers");
   }
   if (Object.prototype.hasOwnProperty.call(payload, "autoSync")) {
-    updates.autoSync = !!payload.autoSync;
+    updates.autoSync = assertBoolean(payload.autoSync, "autoSync");
   }
 
   const settings = await upsertCalendarSettings(workspaceId, updates);
@@ -2729,7 +2730,7 @@ async function getAuthenticatedGoogleClient(userIdStr) {
 
   // Pass the configured redirect URI explicitly so token refreshes use the
   // same URI that was registered with Google during the initial OAuth flow.
-  const client = getOAuth2Client(process.env.GOOGLE_REDIRECT_URI || "");
+  const client = getOAuth2Client(env.google.redirectUri || "");
   client.setCredentials(tokens);
 
   client.on("tokens", async (nextTokens) => {

@@ -2,6 +2,7 @@ const fs = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
 const { badRequest } = require("../utils/http-error");
+const { assertOptionalString, assertSafeFileName } = require("../utils/validation");
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MIME_EXT = Object.freeze({
@@ -47,7 +48,39 @@ function parseImageDataUrl(dataUrl) {
     throw badRequest("Unsupported image format.");
   }
 
+  const inferredMimeType = detectMimeType(buffer);
+  if (!inferredMimeType || inferredMimeType !== mimeType) {
+    throw badRequest("Image content does not match the declared file type.");
+  }
+
   return { buffer, extension };
+}
+
+function detectMimeType(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 12) return "";
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return "image/jpeg";
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+  if (buffer.toString("ascii", 0, 6) === "GIF87a" || buffer.toString("ascii", 0, 6) === "GIF89a") {
+    return "image/gif";
+  }
+  if (
+    buffer.toString("ascii", 0, 4) === "RIFF" &&
+    buffer.toString("ascii", 8, 12) === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  return "";
 }
 
 function safeSegment(value, fallback = "user") {
@@ -58,6 +91,10 @@ function safeSegment(value, fallback = "user") {
 
 async function uploadImageForUser(userId, payload = {}) {
   if (!userId) throw badRequest("User id is required");
+  const alt = assertOptionalString(payload.alt, "alt", { max: 300 });
+  const fileName = payload.fileName
+    ? assertSafeFileName(payload.fileName, "fileName", { max: 220 })
+    : "";
   const { buffer, extension } = parseImageDataUrl(payload.dataUrl);
 
   const projectRoot = path.resolve(__dirname, "..", "..");
@@ -69,13 +106,15 @@ async function uploadImageForUser(userId, payload = {}) {
   const unique = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
   const filename = `${unique}.${extension}`;
   const absolutePath = path.join(absoluteDirectory, filename);
-  await fs.writeFile(absolutePath, buffer, { mode: 0o644 });
+  await fs.writeFile(absolutePath, buffer, { mode: 0o640 });
 
   return {
     ok: true,
     url: `/${relativeDirectory.split(path.sep).join("/")}/${filename}`,
     bytes: buffer.length,
     contentType: `image/${extension === "jpg" ? "jpeg" : extension}`,
+    alt,
+    originalName: fileName || filename,
   };
 }
 

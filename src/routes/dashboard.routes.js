@@ -1,7 +1,13 @@
 const express = require("express");
 const asyncHandler = require("../middleware/async-handler");
 const { requireAuth, requirePermission } = require("../middleware/auth");
-const { assertIsoDate, assertInteger, assertOptionalString, assertTimezone } = require("../utils/validation");
+const {
+  assertEnum,
+  assertIsoDate,
+  assertInteger,
+  assertOptionalString,
+  assertTimezone,
+} = require("../utils/validation");
 const {
   listBookingsForUser,
   listUpcomingBookingsForUser,
@@ -32,10 +38,11 @@ router.get(
       : "UTC";
     const fromDate = req.query.from ? assertIsoDate(req.query.from, "from") : null;
     const toDate = req.query.to ? assertIsoDate(req.query.to, "to") : null;
+    const statusQuery = assertOptionalString(req.query.status, "status", { max: 20 });
     const status =
-      req.query.status === "confirmed" || req.query.status === "canceled"
-        ? req.query.status
-        : "all";
+      !statusQuery || statusQuery === "all"
+        ? "all"
+        : assertEnum(statusQuery, "status", ["confirmed", "canceled"]);
 
     const bookings = await listBookingsForUser(req.auth.workspaceId, {
       fromDate,

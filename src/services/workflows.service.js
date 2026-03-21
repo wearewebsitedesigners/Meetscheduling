@@ -1,8 +1,9 @@
 const { query } = require("../db/pool");
 const { badRequest, notFound } = require("../utils/http-error");
-const { assertOptionalString, assertString } = require("../utils/validation");
+const { assertIsoDateTime, assertOptionalString, assertString } = require("../utils/validation");
 const { sendWorkflowBroadcastEmail } = require("./email.service");
 const { assertFeature } = require("./entitlements.service");
+const { getWorkspaceOwnerUser } = require("./workspace.service");
 
 const WORKFLOW_FILTERS = new Set(["all", "active", "paused", "draft"]);
 const WORKFLOW_STATUS = new Set(["active", "paused", "draft"]);
@@ -134,6 +135,7 @@ function mapWorkflowRow(row) {
   return {
     id: row.id,
     userId: row.user_id,
+    workspaceId: row.workspace_id || row.user_id,
     name: row.name,
     trigger: row.trigger,
     channel: row.channel,
@@ -170,27 +172,17 @@ function listWorkflowTemplates() {
 }
 
 async function loadWorkflowRecipients(userId) {
-  const [ownerResult, contactsResult] = await Promise.all([
-    query(
-      `
-        SELECT email, display_name, username
-        FROM users
-        WHERE id = $1
-        LIMIT 1
-      `,
-      [userId]
-    ),
+  const [owner, contactsResult] = await Promise.all([
+    getWorkspaceOwnerUser(userId),
     query(
       `
         SELECT email, name
         FROM contacts
-        WHERE user_id = $1
+        WHERE workspace_id = $1
       `,
       [userId]
     ),
   ]);
-
-  const owner = ownerResult.rows[0] || null;
   const recipients = [];
 
   if (owner?.email) {
@@ -221,7 +213,7 @@ async function listWorkflowsForUser(userId, { search = "", filter = "all" } = {}
   const safeSearch = assertOptionalString(search, "search", { max: 200 });
 
   const params = [userId];
-  const conditions = ["user_id = $1"];
+  const conditions = ["workspace_id = $1"];
   if (safeFilter !== "all") {
     params.push(safeFilter);
     conditions.push(`status = $${params.length}`);
@@ -239,6 +231,7 @@ async function listWorkflowsForUser(userId, { search = "", filter = "all" } = {}
       SELECT
         id,
         user_id,
+        workspace_id,
         name,
         trigger,
         channel,
@@ -287,10 +280,12 @@ async function createWorkflowForUser(userId, payload = {}) {
       : normalizeStatus(payload.status);
 
   await assertFeature(userId, requiredFeatureForChannel(channel));
+  const owner = await getWorkspaceOwnerUser(userId);
 
   const result = await query(
     `
       INSERT INTO workflows (
+        workspace_id,
         user_id,
         name,
         trigger,
@@ -299,10 +294,11 @@ async function createWorkflowForUser(userId, payload = {}) {
         status,
         updated_at
       )
-      VALUES ($1,$2,$3,$4,$5,$6,NOW())
+      VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
       RETURNING
         id,
         user_id,
+        workspace_id,
         name,
         trigger,
         channel,
@@ -312,7 +308,7 @@ async function createWorkflowForUser(userId, payload = {}) {
         created_at,
         updated_at
     `,
-    [userId, name, trigger, channel, offset, status]
+    [userId, owner.ownerUserId, name, trigger, channel, offset, status]
   );
   return mapWorkflowRow(result.rows[0]);
 }
@@ -323,6 +319,7 @@ async function updateWorkflowForUser(userId, workflowId, payload = {}) {
       SELECT
         id,
         user_id,
+        workspace_id,
         name,
         trigger,
         channel,
@@ -330,7 +327,7 @@ async function updateWorkflowForUser(userId, workflowId, payload = {}) {
         status,
         last_run_at
       FROM workflows
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1 AND workspace_id = $2
       LIMIT 1
     `,
     [workflowId, userId]
@@ -363,7 +360,7 @@ async function updateWorkflowForUser(userId, workflowId, payload = {}) {
       payload.lastRun === undefined
         ? existing.last_run_at
         : payload.lastRun
-        ? new Date(payload.lastRun)
+        ? assertIsoDateTime(payload.lastRun, "lastRun")
         : null,
   };
 
@@ -380,10 +377,11 @@ async function updateWorkflowForUser(userId, workflowId, payload = {}) {
         status = $5,
         last_run_at = $6,
         updated_at = NOW()
-      WHERE id = $7 AND user_id = $8
+      WHERE id = $7 AND workspace_id = $8
       RETURNING
         id,
         user_id,
+        workspace_id,
         name,
         trigger,
         channel,
@@ -415,10 +413,11 @@ async function runWorkflowForUser(userId, workflowId) {
         last_run_at = NOW(),
         status = CASE WHEN status = 'draft' THEN 'active' ELSE status END,
         updated_at = NOW()
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1 AND workspace_id = $2
       RETURNING
         id,
         user_id,
+        workspace_id,
         name,
         trigger,
         channel,
@@ -458,7 +457,7 @@ async function duplicateWorkflowForUser(userId, workflowId) {
         channel,
         offset_label
       FROM workflows
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1 AND workspace_id = $2
       LIMIT 1
     `,
     [workflowId, userId]
@@ -481,7 +480,7 @@ async function deleteWorkflowForUser(userId, workflowId) {
   const result = await query(
     `
       DELETE FROM workflows
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1 AND workspace_id = $2
     `,
     [workflowId, userId]
   );

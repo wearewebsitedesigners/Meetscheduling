@@ -1,9 +1,6 @@
 (function pageBuilderController() {
   const renderer = window.BookingPageRenderer;
   if (!renderer) return;
-deplpy kar doo sab yes yes click kar dena mai laptop se dur jaa raha huu  ineed it to be deployed live
-
-   const AUTH_TOKEN_KEY = "meetscheduling_auth_token";
 
   const pageMetaEl = document.getElementById("pbuilder-page-meta");
   const saveStatusEl = document.getElementById("pbuilder-save-status");
@@ -128,12 +125,7 @@ deplpy kar doo sab yes yes click kar dena mai laptop se dur jaa raha huu  ineed 
     initialized: false,
   };
 
-  function getToken() {
-    return String(localStorage.getItem(AUTH_TOKEN_KEY) || "").trim();
-  }
-
   function clearSession() {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem("meetscheduling_auth_user");
   }
 
@@ -151,20 +143,14 @@ deplpy kar doo sab yes yes click kar dena mai laptop se dur jaa raha huu  ineed 
   }
 
   async function apiRequest(path, options) {
-    const token = getToken();
-    if (!token) {
-      window.location.replace("/login");
-      throw new Error("Session expired. Please log in again.");
-    }
-
     const headers = new Headers(options && options.headers ? options.headers : {});
-    headers.set("Authorization", `Bearer ${token}`);
     if (!headers.has("Content-Type") && options && options.body) {
       headers.set("Content-Type", "application/json");
     }
 
     const response = await fetch(path, {
       ...(options || {}),
+      credentials: "same-origin",
       headers,
     });
 

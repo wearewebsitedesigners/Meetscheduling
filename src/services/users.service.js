@@ -1,6 +1,15 @@
+const crypto = require("crypto");
 const { query } = require("../db/pool");
 const { badRequest, conflict, notFound } = require("../utils/http-error");
-const { assertEmail, assertOptionalString, assertSlug, assertString, assertTimezone } = require("../utils/validation");
+const {
+  assertEmail,
+  assertOptionalString,
+  assertRelativeOrHttpUrl,
+  assertSlug,
+  assertString,
+  assertTimezone,
+} = require("../utils/validation");
+const { hashBackupCode } = require("./password-auth.service");
 const { activatePendingWorkspaceInvitesForUser, ensureWorkspaceForUser } = require("./workspace.service");
 
 const RESERVED_USERNAMES = new Set([
@@ -53,7 +62,9 @@ function assertPublicUsername(value) {
 async function getUserById(userId, client = null) {
   const result = await query(
     `
-      SELECT id, email, username, display_name, timezone, plan, avatar_url, two_factor_enabled, two_factor_secret, created_at, updated_at
+      SELECT id, email, username, display_name, timezone, plan, avatar_url,
+             two_factor_enabled, two_factor_secret, email_verified_at, last_login_at,
+             created_at, updated_at
       FROM users
       WHERE id = $1
     `,
@@ -66,7 +77,8 @@ async function getUserById(userId, client = null) {
 async function getUserByUsername(username, client = null) {
   const result = await query(
     `
-      SELECT id, email, username, display_name, timezone, plan, avatar_url, two_factor_enabled, created_at, updated_at
+      SELECT id, email, username, display_name, timezone, plan, avatar_url,
+             two_factor_enabled, email_verified_at, last_login_at, created_at, updated_at
       FROM users
       WHERE username = $1
     `,
@@ -79,7 +91,8 @@ async function getUserByUsername(username, client = null) {
 async function getUserByEmail(email, client = null) {
   const result = await query(
     `
-      SELECT id, email, username, display_name, timezone, plan, avatar_url, two_factor_enabled, created_at, updated_at
+      SELECT id, email, username, display_name, timezone, plan, avatar_url,
+             two_factor_enabled, email_verified_at, last_login_at, created_at, updated_at
       FROM users
       WHERE email = $1
     `,
@@ -92,7 +105,9 @@ async function getUserByEmail(email, client = null) {
 async function getUserByEmailWithPassword(email, client = null) {
   const result = await query(
     `
-      SELECT id, email, username, display_name, timezone, plan, avatar_url, password_hash, two_factor_enabled, two_factor_secret, two_factor_backup_codes, created_at, updated_at
+      SELECT id, email, username, display_name, timezone, plan, avatar_url,
+             password_hash, two_factor_enabled, two_factor_secret, two_factor_backup_codes,
+             email_verified_at, last_login_at, created_at, updated_at
       FROM users
       WHERE email = $1
     `,
@@ -109,6 +124,7 @@ async function createUser({
   timezone = "UTC",
   plan = "free",
   passwordHash = null,
+  emailVerifiedAt = null,
 }, client = null) {
   const cleanEmail = assertEmail(email);
   const cleanUsername = assertSlug(username, "username");
@@ -121,11 +137,12 @@ async function createUser({
 
   const result = await query(
     `
-      INSERT INTO users (email, username, display_name, timezone, plan, password_hash)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, email, username, display_name, timezone, plan, avatar_url, created_at, updated_at
+      INSERT INTO users (email, username, display_name, timezone, plan, password_hash, email_verified_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, email, username, display_name, timezone, plan, avatar_url,
+                email_verified_at, last_login_at, created_at, updated_at
     `,
-    [cleanEmail, cleanUsername, cleanDisplayName, cleanTimezone, cleanPlan, passwordHash],
+    [cleanEmail, cleanUsername, cleanDisplayName, cleanTimezone, cleanPlan, passwordHash, emailVerifiedAt],
     client
   );
 
@@ -183,7 +200,11 @@ async function updateUserProfile(userId, payload = {}, client = null) {
   }
 
   if (payload.avatarUrl !== undefined) {
-    values.push(assertOptionalString(payload.avatarUrl, "avatarUrl", { max: 2000 }));
+    values.push(
+      payload.avatarUrl
+        ? assertRelativeOrHttpUrl(payload.avatarUrl, "avatarUrl", { max: 2000 })
+        : ""
+    );
     updates.push(`avatar_url = $${values.length}`);
   }
 
@@ -204,7 +225,8 @@ async function updateUserProfile(userId, payload = {}, client = null) {
         UPDATE users
         SET ${updates.join(", ")}, updated_at = NOW()
         WHERE id = $${values.length}
-        RETURNING id, email, username, display_name, timezone, plan, avatar_url, two_factor_enabled, created_at, updated_at
+        RETURNING id, email, username, display_name, timezone, plan, avatar_url,
+                  two_factor_enabled, email_verified_at, last_login_at, created_at, updated_at
       `,
       values,
       client
@@ -222,23 +244,18 @@ async function updateUserProfile(userId, payload = {}, client = null) {
 function generateBackupCodes() {
   const codes = [];
   for (let i = 0; i < 10; i++) {
-    // Generate an 8-character random alphanumeric string
-    const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-    codes.push(code);
+    let code = "";
+    while (code.length < 8) {
+      code += crypto.randomBytes(6).toString("base64url").replace(/[^A-Za-z0-9]/g, "");
+    }
+    codes.push(code.slice(0, 8).toUpperCase());
   }
   return codes;
 }
 
 async function enableUser2FA(userId, secret, client = null) {
   const backupCodes = generateBackupCodes();
-  // In a real production app we'd hash the backup codes (like bcrypt), 
-  // but for this implementation we store them in the DB directly as strings 
-  // since the db structure uses TEXT[]. Wait, it is better to hash them.
-  // Actually, standard is to store bcrypt hashes of backup codes. 
-  // Let's stick to plain strings for simplicity in this MVP, 
-  // or use bcrypt if needed. Let's use bcrypt to be safe.
-  const bcrypt = require("bcrypt");
-  const hashedCodes = await Promise.all(backupCodes.map(c => bcrypt.hash(c, 10)));
+  const hashedCodes = await Promise.all(backupCodes.map((code) => hashBackupCode(code)));
 
   const result = await query(
     `
@@ -295,6 +312,38 @@ async function removeBackupCode(userId, hashToRemove, client = null) {
   return result.rowCount > 0;
 }
 
+async function updateUserPasswordHash(userId, passwordHash, client = null) {
+  const result = await query(
+    `
+      UPDATE users
+      SET password_hash = $1,
+          password_updated_at = NOW(),
+          updated_at = NOW()
+      WHERE id = $2
+      RETURNING id, email, username, display_name, timezone, plan, avatar_url,
+                two_factor_enabled, email_verified_at, last_login_at, created_at, updated_at
+    `,
+    [passwordHash, userId],
+    client
+  );
+  return result.rows[0] || null;
+}
+
+async function touchUserLastLogin(userId, client = null) {
+  const result = await query(
+    `
+      UPDATE users
+      SET last_login_at = NOW(),
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING id, email, username, display_name, timezone, plan, avatar_url,
+                two_factor_enabled, email_verified_at, last_login_at, created_at, updated_at
+    `,
+    [userId],
+    client
+  );
+  return result.rows[0] || null;
+}
 
 module.exports = {
   getUserById,
@@ -308,5 +357,7 @@ module.exports = {
   enableUser2FA,
   disableUser2FA,
   getBackupCodes,
-  removeBackupCode
+  removeBackupCode,
+  updateUserPasswordHash,
+  touchUserLastLogin,
 };

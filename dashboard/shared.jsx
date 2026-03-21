@@ -1,6 +1,5 @@
 import React from "react";
 
-export const AUTH_TOKEN_KEY = "meetscheduling_auth_token";
 export const USER_KEY = "meetscheduling_auth_user";
 const PREVIEW_STATE_KEY = "meetscheduling_dashboard_preview_state_v1";
 const PREVIEW_HOSTS = new Set(["localhost", "127.0.0.1"]);
@@ -97,14 +96,6 @@ export function getInitials(value) {
     .join("") || "WU";
 }
 
-export function getAuthToken() {
-  try {
-    return localStorage.getItem(AUTH_TOKEN_KEY) || "";
-  } catch {
-    return "";
-  }
-}
-
 export function getStoredUser() {
   try {
     return JSON.parse(localStorage.getItem(USER_KEY) || "null");
@@ -127,7 +118,6 @@ export function setStoredUser(user) {
 
 function clearStoredAuth() {
   try {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     window.dispatchEvent(new CustomEvent("meetscheduling-auth-invalid"));
   } catch {
@@ -860,12 +850,6 @@ export async function apiFetch(path, options = {}) {
     return handlePreviewApi(path, options);
   }
 
-  const token = getAuthToken();
-
-  if (token && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-
   const isJsonBody =
     options.body &&
     typeof options.body === "object" &&
@@ -879,6 +863,7 @@ export async function apiFetch(path, options = {}) {
 
   const response = await fetch(path, {
     ...options,
+    credentials: "same-origin",
     headers,
     body: isJsonBody ? JSON.stringify(options.body) : options.body,
   });

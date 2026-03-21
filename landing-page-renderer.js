@@ -63,10 +63,21 @@
       raw.startsWith("mailto:") ||
       raw.startsWith("tel:")
     ) {
+      if (/\s|\\/.test(raw) || raw.startsWith("//")) {
+        return "";
+      }
       return raw;
     }
     try {
-      return new URL(raw, window.location.origin).toString();
+      const parsed = new URL(raw, window.location.origin);
+      const protocol = parsed.protocol.toLowerCase();
+      const origin = window.location.origin;
+      if (parsed.username || parsed.password) return "";
+      if (protocol === "https:") return parsed.toString();
+      if (protocol === window.location.protocol && parsed.origin === origin) {
+        return parsed.toString();
+      }
+      return "";
     } catch {
       return "";
     }

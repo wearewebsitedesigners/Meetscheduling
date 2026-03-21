@@ -1,8 +1,11 @@
 const { query } = require("../db/pool");
 const { badRequest, notFound } = require("../utils/http-error");
 const {
+  assertBoolean,
   assertEmail,
   assertOptionalString,
+  assertRelativeOrHttpUrl,
+  assertSlug,
   assertString,
 } = require("../utils/validation");
 
@@ -45,7 +48,15 @@ function normalizeLandingGallery(value) {
     }
     const url = assertString(item.url, `gallery[${index}].url`, { min: 3, max: 1000 });
     const alt = assertOptionalString(item.alt, `gallery[${index}].alt`, { max: 160 });
-    return { url, alt };
+    return {
+      url: assertRelativeOrHttpUrl(url, `gallery[${index}].url`, {
+        allowHttp: false,
+        allowHttps: true,
+        allowRelative: true,
+        max: 1000,
+      }),
+      alt,
+    };
   });
 }
 
@@ -86,6 +97,7 @@ function mapLead(row) {
   return {
     id: row.id,
     userId: row.user_id,
+    workspaceId: row.workspace_id,
     eventTypeId: row.event_type_id,
     eventTypeTitle: row.event_type_title || "",
     name: row.name,
@@ -100,10 +112,11 @@ function mapLead(row) {
   };
 }
 
-async function ensureLandingPageRow(userId) {
+async function ensureLandingPageRow(workspaceId) {
   await query(
     `
       INSERT INTO user_landing_pages (
+        workspace_id,
         user_id,
         headline,
         subheadline,
@@ -111,6 +124,7 @@ async function ensureLandingPageRow(userId) {
         cta_label
       )
       SELECT
+        u.id,
         u.id,
         CONCAT('Book time with ', u.display_name),
         'Turn website visitors into booked meetings',
@@ -120,11 +134,11 @@ async function ensureLandingPageRow(userId) {
       WHERE u.id = $1
       ON CONFLICT (user_id) DO NOTHING
     `,
-    [userId]
+    [workspaceId]
   );
 }
 
-async function listEventTypesForUser(userId) {
+async function listEventTypesForUser(workspaceId) {
   const result = await query(
     `
       SELECT
@@ -135,17 +149,17 @@ async function listEventTypesForUser(userId) {
         duration_minutes,
         location_type
       FROM event_types
-      WHERE user_id = $1
+      WHERE workspace_id = $1
         AND is_active = TRUE
       ORDER BY created_at ASC
     `,
-    [userId]
+    [workspaceId]
   );
   return result.rows.map(mapEventType);
 }
 
-async function getLandingPageRowByUserId(userId) {
-  await ensureLandingPageRow(userId);
+async function getLandingPageRowByUserId(workspaceId) {
+  await ensureLandingPageRow(workspaceId);
   const result = await query(
     `
       SELECT
@@ -153,6 +167,7 @@ async function getLandingPageRowByUserId(userId) {
         u.username,
         u.display_name,
         u.timezone,
+        lp.workspace_id,
         lp.headline,
         lp.subheadline,
         lp.about_text,
@@ -168,11 +183,11 @@ async function getLandingPageRowByUserId(userId) {
         lp.created_at,
         lp.updated_at
       FROM users u
-      LEFT JOIN user_landing_pages lp ON lp.user_id = u.id
+      LEFT JOIN user_landing_pages lp ON lp.workspace_id = u.id
       WHERE u.id = $1
       LIMIT 1
     `,
-    [userId]
+    [workspaceId]
   );
   const row = result.rows[0];
   if (!row) throw notFound("User not found");
@@ -182,6 +197,7 @@ async function getLandingPageRowByUserId(userId) {
 function mapLandingRowToPayload(row, eventTypes) {
   return {
     userId: row.user_id,
+    workspaceId: row.workspace_id || row.user_id,
     username: row.username,
     displayName: row.display_name,
     timezone: row.timezone,
@@ -203,13 +219,13 @@ function mapLandingRowToPayload(row, eventTypes) {
   };
 }
 
-async function getLandingPageForUser(userId) {
-  const row = await getLandingPageRowByUserId(userId);
-  const eventTypes = await listEventTypesForUser(userId);
+async function getLandingPageForUser(workspaceId) {
+  const row = await getLandingPageRowByUserId(workspaceId);
+  const eventTypes = await listEventTypesForUser(workspaceId);
   return mapLandingRowToPayload(row, eventTypes);
 }
 
-async function resolveFeaturedEventType(userId, featuredEventTypeId) {
+async function resolveFeaturedEventType(workspaceId, featuredEventTypeId) {
   if (featuredEventTypeId === undefined) return undefined;
   if (featuredEventTypeId === null || featuredEventTypeId === "") return null;
   const safeId = assertString(featuredEventTypeId, "featuredEventTypeId", {
@@ -221,10 +237,10 @@ async function resolveFeaturedEventType(userId, featuredEventTypeId) {
       SELECT id
       FROM event_types
       WHERE id = $1
-        AND user_id = $2
+        AND workspace_id = $2
       LIMIT 1
     `,
-    [safeId, userId]
+    [safeId, workspaceId]
   );
   if (!result.rows[0]) {
     throw badRequest("featuredEventTypeId is invalid");
@@ -232,11 +248,14 @@ async function resolveFeaturedEventType(userId, featuredEventTypeId) {
   return safeId;
 }
 
-async function updateLandingPageForUser(userId, payload = {}) {
-  const current = await getLandingPageRowByUserId(userId);
+async function updateLandingPageForUser(workspaceId, payload = {}) {
+  const current = await getLandingPageRowByUserId(workspaceId);
   const services = normalizeLandingServices(payload.services);
   const gallery = normalizeLandingGallery(payload.gallery);
-  const featuredEventTypeId = await resolveFeaturedEventType(userId, payload.featuredEventTypeId);
+  const featuredEventTypeId = await resolveFeaturedEventType(
+    workspaceId,
+    payload.featuredEventTypeId
+  );
 
   const next = {
     headline:
@@ -258,11 +277,15 @@ async function updateLandingPageForUser(userId, payload = {}) {
     profileImageUrl:
       payload.profileImageUrl === undefined
         ? current.profile_image_url
-        : assertOptionalString(payload.profileImageUrl, "profileImageUrl", { max: 1000 }),
+        : payload.profileImageUrl
+          ? assertRelativeOrHttpUrl(payload.profileImageUrl, "profileImageUrl", { max: 1000 })
+          : "",
     coverImageUrl:
       payload.coverImageUrl === undefined
         ? current.cover_image_url
-        : assertOptionalString(payload.coverImageUrl, "coverImageUrl", { max: 1000 }),
+        : payload.coverImageUrl
+          ? assertRelativeOrHttpUrl(payload.coverImageUrl, "coverImageUrl", { max: 1000 })
+          : "",
     primaryColor:
       payload.primaryColor === undefined
         ? normalizeColor(current.primary_color)
@@ -276,9 +299,11 @@ async function updateLandingPageForUser(userId, payload = {}) {
     contactFormEnabled:
       payload.contactFormEnabled === undefined
         ? !!current.contact_form_enabled
-        : !!payload.contactFormEnabled,
+        : assertBoolean(payload.contactFormEnabled, "contactFormEnabled"),
     isPublished:
-      payload.isPublished === undefined ? !!current.is_published : !!payload.isPublished,
+      payload.isPublished === undefined
+        ? !!current.is_published
+        : assertBoolean(payload.isPublished, "isPublished"),
   };
 
   await query(
@@ -298,7 +323,7 @@ async function updateLandingPageForUser(userId, payload = {}) {
         contact_form_enabled = $11,
         is_published = $12,
         updated_at = NOW()
-      WHERE user_id = $13
+      WHERE workspace_id = $13
     `,
     [
       next.headline,
@@ -313,14 +338,14 @@ async function updateLandingPageForUser(userId, payload = {}) {
       next.featuredEventTypeId,
       next.contactFormEnabled,
       next.isPublished,
-      userId,
+      workspaceId,
     ]
   );
 
-  return getLandingPageForUser(userId);
+  return getLandingPageForUser(workspaceId);
 }
 
-async function listLandingPageLeadsForUser(userId, { status = "all", limit = 100 } = {}) {
+async function listLandingPageLeadsForUser(workspaceId, { status = "all", limit = 100 } = {}) {
   const safeLimit = Math.max(1, Math.min(300, Number(limit) || 100));
   const safeStatus = String(status || "all")
     .trim()
@@ -329,7 +354,7 @@ async function listLandingPageLeadsForUser(userId, { status = "all", limit = 100
     throw badRequest("status filter is invalid");
   }
 
-  const params = [userId];
+  const params = [workspaceId];
   let statusClause = "";
   if (safeStatus !== "all") {
     params.push(safeStatus);
@@ -342,6 +367,7 @@ async function listLandingPageLeadsForUser(userId, { status = "all", limit = 100
       SELECT
         l.id,
         l.user_id,
+        l.workspace_id,
         l.event_type_id,
         l.name,
         l.email,
@@ -355,7 +381,7 @@ async function listLandingPageLeadsForUser(userId, { status = "all", limit = 100
         e.title AS event_type_title
       FROM landing_page_leads l
       LEFT JOIN event_types e ON e.id = l.event_type_id
-      WHERE l.user_id = $1
+      WHERE l.workspace_id = $1
       ${statusClause}
       ORDER BY l.created_at DESC
       LIMIT $${params.length}
@@ -365,7 +391,7 @@ async function listLandingPageLeadsForUser(userId, { status = "all", limit = 100
   return result.rows.map(mapLead);
 }
 
-async function updateLandingLeadStatusForUser(userId, leadId, status) {
+async function updateLandingLeadStatusForUser(workspaceId, leadId, status) {
   const safeStatus = String(status || "")
     .trim()
     .toLowerCase();
@@ -380,10 +406,11 @@ async function updateLandingLeadStatusForUser(userId, leadId, status) {
         status = $1,
         updated_at = NOW()
       WHERE id = $2
-        AND user_id = $3
+        AND workspace_id = $3
       RETURNING
         id,
         user_id,
+        workspace_id,
         event_type_id,
         name,
         email,
@@ -395,7 +422,7 @@ async function updateLandingLeadStatusForUser(userId, leadId, status) {
         created_at,
         updated_at
     `,
-    [safeStatus, leadId, userId]
+    [safeStatus, leadId, workspaceId]
   );
   const row = result.rows[0];
   if (!row) throw notFound("Lead not found");
@@ -403,13 +430,14 @@ async function updateLandingLeadStatusForUser(userId, leadId, status) {
 }
 
 async function createLandingLeadForUsername(username, payload = {}, meta = {}) {
-  const safeUsername = assertString(username, "username", { min: 2, max: 80 }).toLowerCase();
+  const safeUsername = assertSlug(username, "username");
   const userResult = await query(
     `
       SELECT
         u.id,
         u.username,
         u.display_name,
+        COALESCE(lp.workspace_id, u.id) AS workspace_id,
         COALESCE(lp.contact_form_enabled, TRUE) AS contact_form_enabled,
         COALESCE(lp.is_published, TRUE) AS is_published
       FROM users u
@@ -444,11 +472,11 @@ async function createLandingLeadForUsername(username, payload = {}, meta = {}) {
         SELECT id
         FROM event_types
         WHERE id = $1
-          AND user_id = $2
+          AND workspace_id = $2
           AND is_active = TRUE
         LIMIT 1
       `,
-      [requestedEventTypeId, user.id]
+      [requestedEventTypeId, user.workspace_id]
     );
     if (!eventResult.rows[0]) {
       throw badRequest("eventTypeId is invalid");
@@ -456,11 +484,19 @@ async function createLandingLeadForUsername(username, payload = {}, meta = {}) {
     eventTypeId = requestedEventTypeId;
   }
 
-  const sourceUrl = assertOptionalString(meta.sourceUrl, "sourceUrl", { max: 2000 });
+  const sourceUrl = meta.sourceUrl
+    ? assertRelativeOrHttpUrl(meta.sourceUrl, "sourceUrl", {
+      allowHttp: true,
+      allowHttps: true,
+      allowRelative: true,
+      max: 2000,
+    })
+    : "";
 
   const result = await query(
     `
       INSERT INTO landing_page_leads (
+        workspace_id,
         user_id,
         event_type_id,
         name,
@@ -470,10 +506,11 @@ async function createLandingLeadForUsername(username, payload = {}, meta = {}) {
         query,
         source_url
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
       RETURNING
         id,
         user_id,
+        workspace_id,
         event_type_id,
         name,
         email,
@@ -485,7 +522,7 @@ async function createLandingLeadForUsername(username, payload = {}, meta = {}) {
         created_at,
         updated_at
     `,
-    [user.id, eventTypeId, name, email, company, phone, queryText, sourceUrl]
+    [user.workspace_id, user.id, eventTypeId, name, email, company, phone, queryText, sourceUrl]
   );
 
   await query(
@@ -537,7 +574,7 @@ async function createLandingLeadForUsername(username, payload = {}, meta = {}) {
         ),
         updated_at = NOW()
     `,
-    [user.id, user.id, name, email, company, `Landing page query: ${queryText}`]
+    [user.workspace_id, user.id, name, email, company, `Landing page query: ${queryText}`]
   );
 
   return mapLead(result.rows[0]);
@@ -552,6 +589,7 @@ async function getPublicLandingPageByUsername(username) {
         u.username,
         u.display_name,
         u.timezone,
+        COALESCE(lp.workspace_id, u.id) AS workspace_id,
         lp.headline,
         lp.subheadline,
         lp.about_text,
@@ -576,7 +614,7 @@ async function getPublicLandingPageByUsername(username) {
     throw notFound("Landing page not found");
   }
 
-  const eventTypes = await listEventTypesForUser(row.user_id);
+  const eventTypes = await listEventTypesForUser(row.workspace_id || row.user_id);
   const featured =
     eventTypes.find((item) => item.id === row.featured_event_type_id) || eventTypes[0] || null;
 

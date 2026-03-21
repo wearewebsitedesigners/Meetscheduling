@@ -43,7 +43,6 @@ const LandingPageBuilder = lazy(() => import("./dashboard/landing-builder/Landin
 const COLLAPSE_KEY = "meetscheduling_react_sidebar_collapsed_v1";
 const THEME_KEY = "meetscheduling_react_theme_v1";
 const USER_KEY = "meetscheduling_auth_user";
-const AUTH_TOKEN_KEY = "meetscheduling_auth_token";
 const defaultSectionKey = "dashboard";
 
 const accountMenuItems = [
@@ -322,14 +321,6 @@ function getUserEmail(user) {
 
 function getUserAvatarUrl(user) {
   return user?.avatarUrl || user?.avatar_url || "";
-}
-
-function readStoredToken() {
-  try {
-    return localStorage.getItem(AUTH_TOKEN_KEY) || "";
-  } catch {
-    return "";
-  }
 }
 
 function writeStoredUser(user) {
@@ -734,11 +725,17 @@ function App() {
   useEffect(() => {
     const handlePopState = () => setPathname(window.location.pathname);
     const handleStorage = () => setUser(previewMode ? getLocalPreviewUser() : readStoredUser());
-    const handleAuthInvalid = () => setUser(previewMode ? getLocalPreviewUser() : readStoredUser());
+    const handleAuthInvalid = () => {
+      if (previewMode) {
+        setUser(getLocalPreviewUser());
+        return;
+      }
+      setUser(null);
+      window.location.replace("/login.html");
+    };
 
     if (previewMode) {
       try {
-        localStorage.removeItem(AUTH_TOKEN_KEY);
         writeStoredUser(getLocalPreviewUser());
       } catch {}
       setUser(getLocalPreviewUser());
@@ -759,10 +756,7 @@ function App() {
 
     let cancelled = false;
 
-    async function hydrateUserFromToken() {
-      const token = readStoredToken();
-      if (!token) return;
-
+    async function hydrateUserFromSession() {
       try {
         const payload = await apiFetch("/api/auth/me");
         if (cancelled || !payload?.user) return;
@@ -770,14 +764,13 @@ function App() {
       } catch (error) {
         if (error?.status !== 401 || cancelled) return;
         try {
-          localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem(USER_KEY);
         } catch {}
         setUser(null);
       }
     }
 
-    hydrateUserFromToken();
+    hydrateUserFromSession();
 
     return () => {
       cancelled = true;
@@ -906,24 +899,17 @@ function App() {
     }
     setInviteSubmitting(true);
     showInviteFeedback("", "");
-    const token = readStoredToken();
     try {
-      if (!token) {
+      if (previewMode) {
         showInviteFeedback(`Preview mode: ${email} added as ${inviteRole}. No email is sent in preview.`, "");
         setInviteEmail("");
         setInviteRole("member");
         return;
       }
-      const response = await fetch("/api/workspace/members/invite", {
+      const payload = await apiFetch("/api/workspace/members/invite", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ email, role: inviteRole }),
+        body: { email, role: inviteRole },
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload?.error || "Failed to send invite");
       if (payload?.emailStatus?.sent) {
         showInviteFeedback(`Invite email sent to ${email} as ${inviteRole}.`, "");
       } else {
@@ -946,11 +932,14 @@ function App() {
     if (action === "account-settings") return navigate("admin");
     if (action === "billing") return navigate("upgrade");
     if (action === "logout") {
-      try {
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-        localStorage.removeItem(USER_KEY);
-      } catch {}
-      window.location.href = "/login.html";
+      apiFetch("/api/auth/logout", { method: "POST" })
+        .catch(() => null)
+        .finally(() => {
+          try {
+            localStorage.removeItem(USER_KEY);
+          } catch {}
+          window.location.href = "/login.html";
+        });
     }
   };
 
@@ -985,41 +974,23 @@ function App() {
     showAvatarFeedback("Uploading photo...", "");
 
     try {
-      const token = readStoredToken();
-      if (!token) {
-        throw new Error("Sign in again to update your photo.");
-      }
       const dataUrl = await readFileAsDataUrl(file);
-      const uploadResponse = await fetch("/api/uploads/images", {
+      const uploadPayload = await apiFetch("/api/uploads/images", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ dataUrl }),
+        body: { dataUrl },
       });
-      const uploadPayload = await uploadResponse.json().catch(() => ({}));
-      if (!uploadResponse.ok || !uploadPayload?.url) {
-        throw new Error(uploadPayload?.error || "Photo upload failed.");
-      }
+      if (!uploadPayload?.url) throw new Error("Photo upload failed.");
 
       let nextUser = {
         ...(user || {}),
         avatarUrl: uploadPayload.url,
       };
 
-      const profileResponse = await fetch("/api/auth/me", {
+      const profilePayload = await apiFetch("/api/auth/me", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ avatarUrl: uploadPayload.url }),
+        body: { avatarUrl: uploadPayload.url },
       });
-      const profilePayload = await profileResponse.json().catch(() => ({}));
-      if (!profileResponse.ok || !profilePayload?.user) {
-        throw new Error(profilePayload?.error || "Profile update failed.");
-      }
+      if (!profilePayload?.user) throw new Error("Profile update failed.");
       nextUser = profilePayload.user;
 
       syncUserState(nextUser);

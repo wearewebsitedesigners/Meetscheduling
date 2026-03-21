@@ -18,6 +18,8 @@ const router = express.Router();
 router.get(
   "/paypal/client-config",
   asyncHandler(async (_req, res) => {
+    // PayPal's browser SDK requires a publishable client id. Never expose the
+    // corresponding secret or any other server-side billing credential here.
     res.json({
       clientId: env.paypal.clientId || "",
       env: env.paypal.env,

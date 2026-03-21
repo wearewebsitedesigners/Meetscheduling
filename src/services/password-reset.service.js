@@ -1,9 +1,10 @@
 const crypto = require("crypto");
-const bcrypt = require("bcrypt");
 const env = require("../config/env");
 const { query, withTransaction } = require("../db/pool");
 const { badRequest } = require("../utils/http-error");
 const { assertEmail, assertString } = require("../utils/validation");
+const { hashPassword } = require("./password-auth.service");
+const { updateUserPasswordHash } = require("./users.service");
 const { ensureWorkspaceForUser } = require("./workspace.service");
 
 function hashToken(token) {
@@ -78,9 +79,8 @@ async function createPasswordResetRequest(email, meta = {}) {
 
 async function resetPasswordWithToken({ token, password }) {
   const rawToken = assertString(token, "token", { min: 24, max: 300 });
-  const cleanPassword = assertString(password, "password", { min: 8, max: 200 });
   const tokenHash = hashToken(rawToken);
-  const passwordHash = await bcrypt.hash(cleanPassword, 10);
+  const passwordHash = await hashPassword(password);
 
   return withTransaction(async (client) => {
     const tokenRes = await query(
@@ -101,16 +101,7 @@ async function resetPasswordWithToken({ token, password }) {
       throw badRequest("Reset link is invalid or expired.");
     }
 
-    await query(
-      `
-        UPDATE users
-        SET password_hash = $1,
-            updated_at = NOW()
-        WHERE id = $2
-      `,
-      [passwordHash, tokenRow.user_id],
-      client
-    );
+    await updateUserPasswordHash(tokenRow.user_id, passwordHash, client);
 
     await query(
       `

@@ -1,6 +1,7 @@
 const express = require("express");
 const asyncHandler = require("../middleware/async-handler");
 const publicRateLimit = require("../middleware/public-rate-limit");
+const { assertSlug } = require("../utils/validation");
 const { getPublishedPageBySlug } = require("../services/landing-builder.service");
 
 const router = express.Router();
@@ -9,7 +10,7 @@ router.use(publicRateLimit);
 router.get(
   "/:slug",
   asyncHandler(async (req, res) => {
-    const payload = await getPublishedPageBySlug(req.params.slug);
+    const payload = await getPublishedPageBySlug(assertSlug(req.params.slug, "slug"));
     res.json(payload);
   })
 );

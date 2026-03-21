@@ -7,6 +7,7 @@ const {
   assertInteger,
   assertBoolean,
   assertHexColor,
+  assertNavigationUrl,
   normalizeLocationType,
 } = require("../utils/validation");
 
@@ -51,7 +52,7 @@ function normalizeEventTypeInput(input, { partial = false } = {}) {
   maybe("slug", (value) => assertSlug(value, "slug"));
   maybe("locationType", (value) => normalizeLocationType(value));
   maybe("customLocation", (value) =>
-    assertOptionalString(value, "customLocation", { max: 500 })
+    value ? assertNavigationUrl(value, "customLocation", { max: 500 }) : ""
   );
   maybe("bufferBeforeMin", (value) =>
     assertInteger(value, "bufferBeforeMin", { min: 0, max: 240 })

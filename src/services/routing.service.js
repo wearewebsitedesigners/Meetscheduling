@@ -1,6 +1,7 @@
 const { query } = require("../db/pool");
 const { badRequest, notFound } = require("../utils/http-error");
 const {
+  assertBoolean,
   assertEmail,
   assertInteger,
   assertOptionalString,
@@ -33,6 +34,7 @@ function mapRoutingFormRow(row) {
   return {
     id: row.id,
     userId: row.user_id,
+    workspaceId: row.workspace_id,
     name: row.name,
     destination: row.destination,
     priority: row.priority,
@@ -48,6 +50,7 @@ function mapRoutingLeadRow(row) {
   return {
     id: row.id,
     userId: row.user_id,
+    workspaceId: row.workspace_id,
     formId: row.form_id,
     name: row.name,
     email: row.email,
@@ -60,14 +63,14 @@ function mapRoutingLeadRow(row) {
   };
 }
 
-async function listRoutingDataForUser(userId, { search = "", filter = "all" } = {}) {
+async function listRoutingDataForUser(workspaceId, { search = "", filter = "all" } = {}) {
   const safeFilter = ROUTING_FILTERS.has(String(filter || "").toLowerCase())
     ? String(filter || "").toLowerCase()
     : "all";
   const safeSearch = assertOptionalString(search, "search", { max: 200 });
 
-  const formParams = [userId];
-  const formConditions = ["user_id = $1"];
+  const formParams = [workspaceId];
+  const formConditions = ["workspace_id = $1"];
 
   if (safeFilter === "active") formConditions.push("active = TRUE");
   if (safeFilter === "paused") formConditions.push("active = FALSE");
@@ -78,8 +81,8 @@ async function listRoutingDataForUser(userId, { search = "", filter = "all" } = 
     formConditions.push(`(name ILIKE $${idx} OR destination ILIKE $${idx})`);
   }
 
-  const leadParams = [userId];
-  const leadConditions = ["user_id = $1"];
+  const leadParams = [workspaceId];
+  const leadConditions = ["workspace_id = $1"];
   if (safeSearch) {
     leadParams.push(`%${safeSearch}%`);
     const idx = leadParams.length;
@@ -94,6 +97,7 @@ async function listRoutingDataForUser(userId, { search = "", filter = "all" } = 
         SELECT
           id,
           user_id,
+          workspace_id,
           name,
           destination,
           priority,
@@ -113,6 +117,7 @@ async function listRoutingDataForUser(userId, { search = "", filter = "all" } = 
         SELECT
           id,
           user_id,
+          workspace_id,
           form_id,
           name,
           email,
@@ -138,14 +143,14 @@ async function listRoutingDataForUser(userId, { search = "", filter = "all" } = 
   };
 }
 
-async function createRoutingFormForUser(userId, payload = {}) {
+async function createRoutingFormForUser(workspaceId, actorUserId, payload = {}) {
   const name = assertString(payload.name, "name", { min: 2, max: 140 });
   const destination = assertString(payload.destination || "Sales Team", "destination", {
     min: 2,
     max: 140,
   });
   const priority = normalizePriority(payload.priority || "normal");
-  const active = payload.active === undefined ? true : !!payload.active;
+  const active = payload.active === undefined ? true : assertBoolean(payload.active, "active");
   const submissionsToday =
     payload.submissionsToday === undefined
       ? 0
@@ -161,6 +166,7 @@ async function createRoutingFormForUser(userId, payload = {}) {
   const result = await query(
     `
       INSERT INTO routing_forms (
+        workspace_id,
         user_id,
         name,
         destination,
@@ -170,10 +176,11 @@ async function createRoutingFormForUser(userId, payload = {}) {
         conversion_rate,
         updated_at
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
       RETURNING
         id,
         user_id,
+        workspace_id,
         name,
         destination,
         priority,
@@ -183,17 +190,18 @@ async function createRoutingFormForUser(userId, payload = {}) {
         created_at,
         updated_at
     `,
-    [userId, name, destination, priority, active, submissionsToday, conversionRate]
+    [workspaceId, actorUserId, name, destination, priority, active, submissionsToday, conversionRate]
   );
   return mapRoutingFormRow(result.rows[0]);
 }
 
-async function updateRoutingFormForUser(userId, formId, payload = {}) {
+async function updateRoutingFormForUser(workspaceId, formId, payload = {}) {
   const existingResult = await query(
     `
       SELECT
         id,
         user_id,
+        workspace_id,
         name,
         destination,
         priority,
@@ -201,10 +209,10 @@ async function updateRoutingFormForUser(userId, formId, payload = {}) {
         submissions_today,
         conversion_rate
       FROM routing_forms
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1 AND workspace_id = $2
       LIMIT 1
     `,
-    [formId, userId]
+    [formId, workspaceId]
   );
   const existing = existingResult.rows[0];
   if (!existing) throw notFound("Routing form not found");
@@ -223,7 +231,9 @@ async function updateRoutingFormForUser(userId, formId, payload = {}) {
         ? existing.priority
         : normalizePriority(payload.priority),
     active:
-      payload.active === undefined ? existing.active : !!payload.active,
+      payload.active === undefined
+        ? existing.active
+        : assertBoolean(payload.active, "active"),
     submissionsToday:
       payload.submissionsToday === undefined
         ? existing.submissions_today
@@ -248,10 +258,11 @@ async function updateRoutingFormForUser(userId, formId, payload = {}) {
         submissions_today = $5,
         conversion_rate = $6,
         updated_at = NOW()
-      WHERE id = $7 AND user_id = $8
+      WHERE id = $7 AND workspace_id = $8
       RETURNING
         id,
         user_id,
+        workspace_id,
         name,
         destination,
         priority,
@@ -269,25 +280,25 @@ async function updateRoutingFormForUser(userId, formId, payload = {}) {
       next.submissionsToday,
       next.conversionRate,
       formId,
-      userId,
+      workspaceId,
     ]
   );
   return mapRoutingFormRow(result.rows[0]);
 }
 
-async function deleteRoutingFormForUser(userId, formId) {
+async function deleteRoutingFormForUser(workspaceId, formId) {
   const result = await query(
     `
       DELETE FROM routing_forms
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1 AND workspace_id = $2
     `,
-    [formId, userId]
+    [formId, workspaceId]
   );
   if (!result.rowCount) throw notFound("Routing form not found");
   return { deleted: true };
 }
 
-async function createRoutingLeadForUser(userId, payload = {}) {
+async function createRoutingLeadForUser(workspaceId, actorUserId, payload = {}) {
   const formId =
     payload.formId === undefined || payload.formId === null || payload.formId === ""
       ? null
@@ -297,6 +308,21 @@ async function createRoutingLeadForUser(userId, payload = {}) {
   const company = assertOptionalString(payload.company, "company", { max: 160 });
   const status = normalizeLeadStatus(payload.status || "New");
   const routeTo = assertOptionalString(payload.routeTo, "routeTo", { max: 160 }) || "Unassigned";
+
+  if (formId) {
+    const formResult = await query(
+      `
+        SELECT id
+        FROM routing_forms
+        WHERE id = $1 AND workspace_id = $2
+        LIMIT 1
+      `,
+      [formId, workspaceId]
+    );
+    if (!formResult.rows[0]) {
+      throw badRequest("formId is invalid");
+    }
+  }
 
   let submittedAt = null;
   if (payload.submittedAt !== undefined && payload.submittedAt !== null && payload.submittedAt !== "") {
@@ -310,6 +336,7 @@ async function createRoutingLeadForUser(userId, payload = {}) {
   const result = await query(
     `
       INSERT INTO routing_leads (
+        workspace_id,
         user_id,
         form_id,
         name,
@@ -320,10 +347,11 @@ async function createRoutingLeadForUser(userId, payload = {}) {
         submitted_at,
         updated_at
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,COALESCE($8::timestamptz, NOW()),NOW())
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,COALESCE($9::timestamptz, NOW()),NOW())
       RETURNING
         id,
         user_id,
+        workspace_id,
         form_id,
         name,
         email,
@@ -334,17 +362,18 @@ async function createRoutingLeadForUser(userId, payload = {}) {
         created_at,
         updated_at
     `,
-    [userId, formId, name, email, company, status, routeTo, submittedAt]
+    [workspaceId, actorUserId, formId, name, email, company, status, routeTo, submittedAt]
   );
   return mapRoutingLeadRow(result.rows[0]);
 }
 
-async function updateRoutingLeadForUser(userId, leadId, payload = {}) {
+async function updateRoutingLeadForUser(workspaceId, leadId, payload = {}) {
   const existingResult = await query(
     `
       SELECT
         id,
         user_id,
+        workspace_id,
         form_id,
         name,
         email,
@@ -353,10 +382,10 @@ async function updateRoutingLeadForUser(userId, leadId, payload = {}) {
         route_to,
         submitted_at
       FROM routing_leads
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1 AND workspace_id = $2
       LIMIT 1
     `,
-    [leadId, userId]
+    [leadId, workspaceId]
   );
   const existing = existingResult.rows[0];
   if (!existing) throw notFound("Routing lead not found");
@@ -400,6 +429,21 @@ async function updateRoutingLeadForUser(userId, leadId, payload = {}) {
           })(),
   };
 
+  if (next.formId) {
+    const formResult = await query(
+      `
+        SELECT id
+        FROM routing_forms
+        WHERE id = $1 AND workspace_id = $2
+        LIMIT 1
+      `,
+      [next.formId, workspaceId]
+    );
+    if (!formResult.rows[0]) {
+      throw badRequest("formId is invalid");
+    }
+  }
+
   const result = await query(
     `
       UPDATE routing_leads
@@ -412,10 +456,11 @@ async function updateRoutingLeadForUser(userId, leadId, payload = {}) {
         route_to = $6,
         submitted_at = $7::timestamptz,
         updated_at = NOW()
-      WHERE id = $8 AND user_id = $9
+      WHERE id = $8 AND workspace_id = $9
       RETURNING
         id,
         user_id,
+        workspace_id,
         form_id,
         name,
         email,
@@ -435,13 +480,13 @@ async function updateRoutingLeadForUser(userId, leadId, payload = {}) {
       next.routeTo,
       next.submittedAt,
       leadId,
-      userId,
+      workspaceId,
     ]
   );
   return mapRoutingLeadRow(result.rows[0]);
 }
 
-async function routeLeadForUser(userId, leadId, routeTo) {
+async function routeLeadForUser(workspaceId, leadId, routeTo) {
   const safeRouteTo = assertString(routeTo, "routeTo", { min: 2, max: 160 });
   const result = await query(
     `
@@ -450,10 +495,11 @@ async function routeLeadForUser(userId, leadId, routeTo) {
         route_to = $1,
         status = 'Routed',
         updated_at = NOW()
-      WHERE id = $2 AND user_id = $3
+      WHERE id = $2 AND workspace_id = $3
       RETURNING
         id,
         user_id,
+        workspace_id,
         form_id,
         name,
         email,
@@ -464,19 +510,19 @@ async function routeLeadForUser(userId, leadId, routeTo) {
         created_at,
         updated_at
     `,
-    [safeRouteTo, leadId, userId]
+    [safeRouteTo, leadId, workspaceId]
   );
   if (!result.rows[0]) throw notFound("Routing lead not found");
   return mapRoutingLeadRow(result.rows[0]);
 }
 
-async function deleteRoutingLeadForUser(userId, leadId) {
+async function deleteRoutingLeadForUser(workspaceId, leadId) {
   const result = await query(
     `
       DELETE FROM routing_leads
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1 AND workspace_id = $2
     `,
-    [leadId, userId]
+    [leadId, workspaceId]
   );
   if (!result.rowCount) throw notFound("Routing lead not found");
   return { deleted: true };
@@ -492,4 +538,3 @@ module.exports = {
   routeLeadForUser,
   deleteRoutingLeadForUser,
 };
-

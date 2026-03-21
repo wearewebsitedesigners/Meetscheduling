@@ -3,7 +3,6 @@ const signupForm = document.getElementById("signup-form");
 const activeForm = loginForm || signupForm;
 const feedback = document.getElementById("form-feedback");
 
-const AUTH_TOKEN_KEY = "meetscheduling_auth_token";
 const AUTH_USER_KEY = "meetscheduling_auth_user";
 const POST_LOGIN_REDIRECT_KEY = "meetscheduling_post_login_redirect";
 const POST_LOGIN_PLAN_KEY = "meetscheduling_post_login_plan";
@@ -17,7 +16,6 @@ const PLAN_NAMES = Object.freeze({
 });
 
 const urlParams = new URLSearchParams(window.location.search);
-const tokenFromUrl = String(urlParams.get("token") || "").trim();
 
 function normalizePlanKey(value) {
   const key = String(value || "")
@@ -108,7 +106,7 @@ function redirectToDashboard() {
 }
 
 function hasSession() {
-  return Boolean(localStorage.getItem(AUTH_TOKEN_KEY));
+  return Boolean(localStorage.getItem(AUTH_USER_KEY));
 }
 
 function setFeedback(message, ok = false) {
@@ -122,39 +120,15 @@ if (pendingUpgradePlan) {
   persistUpgradePlanIntent(pendingUpgradePlan);
   preserveUpgradeIntentLinks(pendingUpgradePlan);
 
-  if (!tokenFromUrl && !hasSession()) {
+  if (!hasSession()) {
     setFeedback(`Log in or sign up to continue with the ${planLabel(pendingUpgradePlan)} plan upgrade.`);
   }
 }
 
-if (tokenFromUrl) {
-  localStorage.setItem(AUTH_TOKEN_KEY, tokenFromUrl);
-
-  // Wipe the token from the URL bar so it isn't copied/shared by accident
-  window.history.replaceState({}, document.title, window.location.pathname);
-
-  // Try to pre-fetch user info so we have it for the dashboard, then redirect
-  fetch("/api/auth/me", {
-    headers: { Authorization: `Bearer ${tokenFromUrl}` }
-  })
-    .then(async (res) => {
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data?.user) {
-        throw new Error("Session validation failed.");
-      }
-      return data;
-    })
-    .then(data => {
-      if (data.user) {
-        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user));
-      }
-      redirectToDashboard();
-    })
-    .catch(() => {
-      localStorage.removeItem(AUTH_TOKEN_KEY);
-      localStorage.removeItem(AUTH_USER_KEY);
-      setFeedback("Session expired. Please log in again.");
-    });
+if (urlParams.get("verified") === "1") {
+  setFeedback("Email verified. Log in to continue.", true);
+} else if (urlParams.get("error") === "verification_failed") {
+  setFeedback("Verification link is invalid or expired. Request a new one and try again.");
 }
 
 function getFormData() {
@@ -202,15 +176,25 @@ if (activeForm && feedback) {
 
       if (data.requires2FA) {
         setFeedback("2FA Required. Redirecting...", true);
-        localStorage.setItem("temp2faToken", data.tempToken);
         window.setTimeout(() => {
-          window.location.replace(`/verify-2fa.html?tempToken=${data.tempToken}`);
+          window.location.replace("/verify-2fa.html");
         }, 320);
         return;
       }
 
-      localStorage.setItem(AUTH_TOKEN_KEY, data.token);
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user));
+      if (data.emailVerificationRequired) {
+        setFeedback(
+          data.message ||
+            "Account created. Check your email to verify your address before logging in.",
+          true
+        );
+        activeForm.reset();
+        return;
+      }
+
+      if (data.user) {
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user));
+      }
 
       const planAfterAuth = readUpgradePlanIntent();
       if (planAfterAuth) {

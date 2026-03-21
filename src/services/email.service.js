@@ -1,4 +1,7 @@
+const crypto = require("crypto");
+const fs = require("fs/promises");
 const nodemailer = require("nodemailer");
+const path = require("path");
 const env = require("../config/env");
 
 let transport = null;
@@ -166,9 +169,37 @@ function buildSaasTemplate({
 
 async function sendAuthLifecycleEmail({ toEmail, subject, text, html }) {
   const mailer = getTransport();
-  if (!mailer) return { sent: false, reason: "SMTP not configured" };
   const to = normalizeEmail(toEmail);
   if (!to) return { sent: false, reason: "Recipient email missing" };
+
+  if (!mailer) {
+    if (env.nodeEnv === "production") {
+      return { sent: false, reason: "SMTP not configured" };
+    }
+
+    const outboxDir = env.authEmail?.outboxDir || "/tmp/meetscheduling-email-outbox";
+    await fs.mkdir(outboxDir, { recursive: true });
+    const filePath = path.join(
+      outboxDir,
+      `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.json`
+    );
+    await fs.writeFile(
+      filePath,
+      JSON.stringify(
+        {
+          to,
+          subject,
+          text,
+          html,
+          createdAt: new Date().toISOString(),
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+    return { sent: true, mode: "file", path: filePath };
+  }
 
   await mailer.sendMail({
     from: env.smtp.from,
@@ -260,6 +291,58 @@ async function sendWelcomeEmail({ toEmail, displayName, username = "" }) {
     ctaLabel: "Open your booking link",
     ctaHref: bookingLink,
     footerLine: "You received this email because a MeetScheduling account was created with this address.",
+  });
+
+  return sendAuthLifecycleEmail({
+    toEmail,
+    subject,
+    text: textLines.join("\n"),
+    html,
+  });
+}
+
+async function sendEmailVerificationEmail({
+  toEmail,
+  displayName,
+  verifyUrl,
+  expiresAt,
+}) {
+  const appUrl = env.appBaseUrl || "https://meetscheduling.com";
+  const name = safeName(displayName);
+  const safeVerifyUrl = String(verifyUrl || "").trim();
+  if (!safeVerifyUrl) return { sent: false, reason: "Verification URL missing" };
+  const expiresText = formatLoginTime(expiresAt || new Date());
+  const supportEmail = env.authEmail?.supportEmail || env.smtp.from || "support@meetscheduling.com";
+  const subject = "Verify your MeetScheduling email";
+
+  const textLines = [
+    `Hi ${name},`,
+    "",
+    "Verify your email address to activate your MeetScheduling account.",
+    "Open the secure link below:",
+    safeVerifyUrl,
+    "",
+    `This link expires on ${expiresText}.`,
+    "",
+    "If you did not create this account, you can ignore this email.",
+    `Need help? Contact ${supportEmail}.`,
+    "",
+    "Thanks,",
+    "MeetScheduling Security",
+  ];
+
+  const html = buildSaasTemplate({
+    preheader: "Verify your MeetScheduling email address.",
+    title: "Verify your email",
+    subtitle:
+      "Confirm this email address to activate your account and continue securely.",
+    bodyHtml: `<p style="margin:0 0 12px;">For your security, this verification link expires on <strong>${escapeHtml(
+      expiresText
+    )}</strong>.</p>
+      <p style="margin:0;">If you did not sign up for MeetScheduling, no action is required.</p>`,
+    ctaLabel: "Verify email",
+    ctaHref: safeVerifyUrl,
+    footerLine: `Need help? Visit ${appUrl}/login.html or contact support.`,
   });
 
   return sendAuthLifecycleEmail({
@@ -727,6 +810,7 @@ module.exports = {
   sendBookingConfirmation,
   sendReminderMail,
   sendWelcomeEmail,
+  sendEmailVerificationEmail,
   sendWorkspaceInviteEmail,
   sendLoginNotificationEmail,
   sendPasswordResetEmail,

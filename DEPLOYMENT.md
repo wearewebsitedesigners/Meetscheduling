@@ -68,7 +68,9 @@ cd /var/www/meetscheduling
 git clone <your-repo-ssh-url> .
 cp .env.example .env
 npm ci
-pm2 start src/server.js --name meetscheduling --time
+mkdir -p logs/pm2
+chmod 600 .env
+pm2 start ecosystem.config.js --env production
 pm2 save
 ```
 
@@ -76,15 +78,35 @@ Then set real production values in `.env`:
 
 - `NODE_ENV=production`
 - `APP_BASE_URL=https://your-domain.com`
-- `DATABASE_URL=postgresql://...`
+- `HOST=127.0.0.1`
+- `TRUST_PROXY=1`
+- `FORCE_HTTPS=true`
+- `DATABASE_URL=postgresql://...` or a private/internal PostgreSQL URL
+- `DATABASE_SSL_ENABLED=true`
+- `DATABASE_SSL_REJECT_UNAUTHORIZED=true`
+- `DATABASE_PRIVATE_NETWORK_REQUIRED=true`
+- `DATABASE_PRIVATE_NETWORK_ASSERTED=true` only after confirming the DB is reachable only through private networking or strict firewall allowlists
 - `JWT_SECRET=<long-random-secret>`
 - `PUBLIC_BOOKING_SIGNING_SECRET=<long-random-secret>`
+- `INTEGRATION_TOKEN_SECRET=<long-random-secret>` when Google OAuth is enabled
 
 Optional:
 
 - `HOST_DEFAULT_TIMEZONE`, `SLOT_INTERVAL_MINUTES`
 - SMTP vars (`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`)
 - Google vars (`GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CALENDAR_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`)
+
+Never commit `.env`, `.env.local`, certificate files, OAuth client secrets, SMTP passwords,
+or provider tokens. Keep them only in the server environment, your host secret manager,
+or GitHub Actions encrypted secrets where appropriate.
+
+Before the first production start, validate the deployment configuration:
+
+```bash
+npm run check-env -- --production
+```
+
+This fails fast when HTTPS, loopback binding, database TLS, or private-database assertions are unsafe.
 
 ## 4) Manual VPS deploy (optional fallback)
 
@@ -100,6 +122,7 @@ Equivalent manual commands on a CloudPanel-style VPS:
 cd /home/meetscheduling/htdocs/www.meetscheduling.com
 git config --global --add safe.directory /home/meetscheduling/htdocs/www.meetscheduling.com
 git pull --ff-only origin main
+npm run check-env -- --production
 pm2 restart meetscheduling --update-env
 pm2 save
 ```
@@ -110,7 +133,28 @@ Optional overrides:
 - `DEPLOY_PATH` (default `/var/www/meetscheduling`)
 - `DEPLOY_REF` (default `main`)
 
-## 5) SSH timeout troubleshooting
+## 5) TLS proxy and network exposure
+
+Terminate TLS at Nginx/Caddy/Cloudflare and proxy traffic to `127.0.0.1:8080`. A ready-to-adapt
+Nginx example is included at [`deploy/nginx/meetscheduling.conf`](/Users/divyanshu/Downloads/Meetscheduling-fixed/deploy/nginx/meetscheduling.conf).
+
+Minimum network rules:
+
+- Allow inbound `80/tcp` and `443/tcp` to the reverse proxy only.
+- Do not expose `8080/tcp` publicly; keep the Node app bound to `127.0.0.1`.
+- Do not expose `5432/tcp` publicly; allow PostgreSQL only from the app host or a private network.
+- If your database provider uses a hostname, enforce provider firewall allowlists or private VPC networking before setting `DATABASE_PRIVATE_NETWORK_ASSERTED=true`.
+
+Example UFW policy on the VPS:
+
+```bash
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw deny 8080/tcp
+ufw deny 5432/tcp
+```
+
+## 6) SSH timeout troubleshooting
 
 If GitHub Actions fails with `dial tcp ... i/o timeout`, the runner could not open a TCP connection to the SSH host. That happens before key authentication, so the usual causes are:
 
@@ -121,7 +165,7 @@ If GitHub Actions fails with `dial tcp ... i/o timeout`, the runner could not op
 
 For the most stable setup, use the VPS public IP or a direct DNS A record for `VPS_HOST`, and verify that the SSH port is reachable from outside your local network.
 
-## 6) Post-deploy smoke checks
+## 7) Post-deploy smoke checks
 
 ```bash
 APP_URL=https://your-domain.com bash scripts/smoke.sh
@@ -130,13 +174,21 @@ APP_URL=https://your-domain.com bash scripts/smoke.sh
 Expected:
 
 - health endpoint ok
-- signup returns token
-- protected routes work with token
+- signup requires email verification
+- protected routes work with the session cookie
 - frontend pages return HTTP 200
 
-## 7) Production checklist
+## 8) Production checklist
 
 - Replace all placeholder secrets.
+- Keep `.env` server-side only and never commit it.
+- Restrict `.env` permissions to the app user only (`chmod 600 .env`).
+- Run `npm run check-env -- --production` before every production restart.
+- Do not expose server-only vars through `NEXT_PUBLIC_`, `REACT_APP_`, `VITE_`, or other browser build-time env prefixes.
+- Run `npm run security:scan-secrets` before deploying or pushing secret-related changes.
+- Terminate TLS at Nginx/Caddy/Cloudflare and proxy to `127.0.0.1:8080`.
+- Restrict PostgreSQL to private networking or firewall allowlists only. Do not expose port `5432` publicly.
+- Enable structured log shipping for auth attempts, API errors, and repeated 429/404 traffic.
 - Configure SMTP for booking confirmation emails.
 - Configure Google credentials for calendar sync.
 - Enable PostgreSQL backups.

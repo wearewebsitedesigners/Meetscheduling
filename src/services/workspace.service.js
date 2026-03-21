@@ -266,6 +266,70 @@ async function getAuthContextForUser(userId, preferredWorkspaceId = "", client =
   };
 }
 
+async function getWorkspaceOwnerUser(workspaceId, client = null) {
+  try {
+    const result = await query(
+      `
+        SELECT
+          w.id AS workspace_id,
+          w.owner_user_id,
+          u.id,
+          u.email,
+          u.username,
+          u.display_name,
+          u.timezone
+        FROM workspaces w
+        JOIN users u ON u.id = w.owner_user_id
+        WHERE w.id = $1
+        LIMIT 1
+      `,
+      [workspaceId],
+      client
+    );
+
+    const row = result.rows[0];
+    if (row) {
+      return {
+        workspaceId: row.workspace_id,
+        ownerUserId: row.owner_user_id,
+        id: row.id,
+        email: row.email,
+        username: row.username,
+        display_name: row.display_name,
+        timezone: row.timezone,
+      };
+    }
+  } catch (error) {
+    if (!error || error.code !== "42P01") {
+      throw error;
+    }
+  }
+
+  const fallback = await query(
+    `
+      SELECT id, email, username, display_name, timezone
+      FROM users
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [workspaceId],
+    client
+  );
+
+  const row = fallback.rows[0];
+  if (!row) throw notFound("Workspace owner not found");
+
+  return {
+    workspaceId,
+    ownerUserId: row.id,
+    id: row.id,
+    email: row.email,
+    username: row.username,
+    display_name: row.display_name,
+    timezone: row.timezone,
+  };
+}
+
 async function listWorkspaceMembers(workspaceId, client = null) {
   const result = await query(
     `
@@ -585,6 +649,7 @@ module.exports = {
   ensureWorkspaceForUser,
   resolveWorkspaceMembership,
   getAuthContextForUser,
+  getWorkspaceOwnerUser,
   listWorkspaceMembers,
   activatePendingWorkspaceInvitesForUser,
   inviteWorkspaceMember,

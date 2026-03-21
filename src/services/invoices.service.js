@@ -1,6 +1,13 @@
 const { query, withTransaction } = require("../db/pool");
 const { badRequest, conflict, notFound } = require("../utils/http-error");
-const { assertInteger, assertOptionalString, assertString } = require("../utils/validation");
+const {
+  assertEmail,
+  assertInteger,
+  assertIsoDate,
+  assertJsonObject,
+  assertOptionalString,
+  assertString,
+} = require("../utils/validation");
 
 const INVOICE_STATUSES = new Set(["draft", "issued", "paid", "void", "overdue"]);
 
@@ -142,6 +149,11 @@ function mapInvoiceEventRow(row) {
   };
 }
 
+function normalizeDueDate(value, field = "dueDate") {
+  if (value === undefined || value === null || value === "") return null;
+  return assertIsoDate(value, field);
+}
+
 async function ensureInvoice(workspaceId, invoiceId, client = null) {
   const result = await query(
     `
@@ -234,6 +246,8 @@ async function logInvoiceEvent(
   eventType,
   payload = {}
 ) {
+  const safePayload =
+    payload === undefined || payload === null ? {} : assertJsonObject(payload, "payload");
   await query(
     `
       INSERT INTO invoice_events (
@@ -246,7 +260,7 @@ async function logInvoiceEvent(
       )
       VALUES ($1,$2,$3,$4,$5::jsonb,NOW())
     `,
-    [invoiceId, workspaceId, actorUserId, eventType, JSON.stringify(payload)],
+    [invoiceId, workspaceId, actorUserId, eventType, JSON.stringify(safePayload)],
     client
   );
 }
@@ -321,22 +335,18 @@ async function listInvoices(workspaceId, { status = "all", search = "", limit = 
 
 async function createInvoice(workspaceId, userId, payload = {}) {
   const customerName = assertString(payload.customerName, "customerName", { min: 2, max: 180 });
-  const customerEmail = assertString(payload.customerEmail, "customerEmail", { min: 3, max: 320 });
+  const customerEmail = assertEmail(payload.customerEmail, "customerEmail");
   const customerCompany = assertOptionalString(payload.customerCompany, "customerCompany", {
     max: 180,
   });
   const currency = normalizeCurrency(payload.currency || "USD");
-  const dueDate = payload.dueDate ? new Date(payload.dueDate) : null;
+  const dueDate = normalizeDueDate(payload.dueDate, "dueDate");
   const notes = assertOptionalString(payload.notes, "notes", { max: 5000 });
   const status = normalizeStatus(payload.status || "draft");
   const invoiceNumber =
     assertOptionalString(payload.invoiceNumber, "invoiceNumber", { max: 80 }) ||
     buildInvoiceNumber();
   const templateId = assertOptionalString(payload.templateId, "templateId", { max: 80 }) || null;
-
-  if (dueDate && Number.isNaN(dueDate.getTime())) {
-    throw badRequest("dueDate is invalid");
-  }
 
   const normalizedItems = normalizeInvoiceItems(payload.items || []);
   const totals = summarizeItems(normalizedItems);
@@ -399,7 +409,7 @@ async function createInvoice(workspaceId, userId, payload = {}) {
           totals.subtotal,
           totals.tax,
           totals.total,
-          dueDate ? dueDate.toISOString().slice(0, 10) : null,
+          dueDate,
           status,
           notes,
         ],
@@ -481,7 +491,7 @@ async function updateInvoice(workspaceId, userId, invoiceId, payload = {}) {
     const customerEmail =
       payload.customerEmail === undefined
         ? current.customer_email
-        : assertString(payload.customerEmail, "customerEmail", { min: 3, max: 320 });
+        : assertEmail(payload.customerEmail, "customerEmail");
 
     const customerCompany =
       payload.customerCompany === undefined
@@ -496,13 +506,9 @@ async function updateInvoice(workspaceId, userId, invoiceId, payload = {}) {
     const dueDate =
       payload.dueDate === undefined
         ? current.due_date
-        : payload.dueDate
-          ? new Date(payload.dueDate)
-          : null;
-
-    if (dueDate && Number.isNaN(new Date(dueDate).getTime())) {
-      throw badRequest("dueDate is invalid");
-    }
+          ? String(current.due_date).slice(0, 10)
+          : null
+        : normalizeDueDate(payload.dueDate, "dueDate");
 
     const notes =
       payload.notes === undefined
@@ -621,7 +627,7 @@ async function updateInvoice(workspaceId, userId, invoiceId, payload = {}) {
           totals.subtotal,
           totals.tax,
           totals.total,
-          dueDate ? new Date(dueDate).toISOString().slice(0, 10) : null,
+          dueDate,
           status,
           notes,
           workspaceId,

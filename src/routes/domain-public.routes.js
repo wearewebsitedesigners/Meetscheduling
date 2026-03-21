@@ -1,7 +1,9 @@
 const express = require("express");
 const asyncHandler = require("../middleware/async-handler");
 const publicRateLimit = require("../middleware/public-rate-limit");
+const { createRateLimiter } = require("../middleware/rate-limit");
 const { badRequest, notFound } = require("../utils/http-error");
+const { getRequestIp, logSecurityEvent } = require("../utils/security-log");
 const {
   getPublicEventTypeByUsernameAndSlug,
 } = require("../services/event-types.service");
@@ -58,6 +60,27 @@ function requireLandingTarget(domain) {
 const router = express.Router();
 router.use(publicRateLimit);
 router.use(requireResolvedDomain);
+
+const publicWriteRateLimit = createRateLimiter({
+  key: "domain-public-write",
+  windowMs: 10 * 60 * 1000,
+  maxRequests: 10,
+  blockMs: 20 * 60 * 1000,
+  errorMessage: "Too many form submissions. Please try again later.",
+  keyFn: (req) => {
+    const email = String(req.body?.email || "").trim().toLowerCase().slice(0, 320);
+    return `${String(req.hostname || "").trim().toLowerCase() || "unknown-host"}:${getRequestIp(req)}:${req.path}:${email || "anon"}`;
+  },
+  onLimit: (req, meta) => {
+    logSecurityEvent("traffic.domain_public_write_rate_limited", {
+      requestId: req.id || "",
+      ip: getRequestIp(req),
+      host: String(req.hostname || "").trim().toLowerCase() || "unknown-host",
+      path: req.originalUrl || req.url || "",
+      retryAfterSeconds: meta.retryAfterSeconds,
+    }, { level: "warn" });
+  },
+});
 
 router.get(
   "/booking",
@@ -158,6 +181,7 @@ router.get(
 
 router.post(
   "/booking/bookings",
+  publicWriteRateLimit,
   asyncHandler(async (req, res) => {
     const domain = req.customDomain;
     requireBookingTarget(domain);

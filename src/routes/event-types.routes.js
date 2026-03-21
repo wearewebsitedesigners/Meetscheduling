@@ -1,7 +1,7 @@
 const express = require("express");
 const asyncHandler = require("../middleware/async-handler");
 const { requireAuth } = require("../middleware/auth");
-const { assertBoolean } = require("../utils/validation");
+const { assertBoolean, assertOptionalBooleanString } = require("../utils/validation");
 const { assertFeature } = require("../services/entitlements.service");
 const {
   listEventTypesByUser,
@@ -18,7 +18,11 @@ router.use(requireAuth);
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const includeInactive = req.query.includeInactive !== "false";
+    const includeInactiveQuery = assertOptionalBooleanString(
+      req.query.includeInactive,
+      "includeInactive"
+    );
+    const includeInactive = includeInactiveQuery === undefined ? true : includeInactiveQuery;
     const eventTypes = await listEventTypesByUser(req.auth.workspaceId, {
       includeInactive,
     });

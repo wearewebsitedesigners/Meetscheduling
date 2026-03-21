@@ -34,8 +34,24 @@
   function safeUrl(value) {
     const raw = String(value || "").trim();
     if (!raw) return "";
+    if (raw.startsWith("/")) {
+      if (raw.startsWith("//") || /\s|\\/.test(raw)) return "";
+      return raw;
+    }
+    if (raw.startsWith("#")) {
+      if (/\s|\\/.test(raw)) return "";
+      return raw;
+    }
     try {
-      return new URL(raw, window.location.origin).toString();
+      const parsed = new URL(raw, window.location.origin);
+      const protocol = parsed.protocol.toLowerCase();
+      const origin = window.location.origin;
+      if (parsed.username || parsed.password) return "";
+      if (protocol === "https:") return parsed.toString();
+      if (protocol === window.location.protocol && parsed.origin === origin) {
+        return parsed.toString();
+      }
+      return "";
     } catch {
       return "";
     }

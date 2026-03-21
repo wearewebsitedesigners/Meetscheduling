@@ -91,22 +91,6 @@
     <!-- Script to handle 2FA verification logic -->
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const tempToken = urlParams.get("tempToken");
-
-            if (!tempToken) {
-                // Check localStorage as fallback if sent via json response instead of redirect
-                const storedToken = localStorage.getItem("temp2faToken");
-                if (!storedToken) {
-                    window.location.href = "/login.html";
-                    return;
-                }
-            } else {
-                localStorage.setItem("temp2faToken", tempToken);
-                // Clean up URL
-                window.history.replaceState({}, document.title, "/verify-2fa.html");
-            }
-
             const form = document.getElementById("verify-form");
             const codeInput = document.getElementById("code");
             const toggleBackup = document.getElementById("toggle-backup");
@@ -160,14 +144,13 @@
                 // Temporary lock UI
                 submitBtn.disabled = true;
                 submitBtn.textContent = "Verifying...";
-                const tokenToUse = tempToken || localStorage.getItem("temp2faToken");
 
                 try {
                     const response = await fetch("/api/auth/2fa/verify-login", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
+                        credentials: "same-origin",
                         body: JSON.stringify({
-                            tempToken: tokenToUse,
                             code: code
                         })
                     });
@@ -181,10 +164,10 @@
                         codeInput.value = "";
                         codeInput.focus();
                     } else {
-                        // Success -> we have a standard token.
-                        localStorage.removeItem("temp2faToken"); // Cleanup
-                        localStorage.setItem("meetscheduling_token", data.token);
-                        window.location.href = `/dashboard?token=${data.token}`;
+                        if (data.user) {
+                            localStorage.setItem("meetscheduling_auth_user", JSON.stringify(data.user));
+                        }
+                        window.location.href = "/dashboard";
                     }
 
                 } catch (error) {

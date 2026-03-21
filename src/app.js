@@ -1,5 +1,6 @@
 const path = require("path");
 const express = require("express");
+const env = require("./config/env");
 const authRoutes = require("./routes/auth.routes");
 const auth2FaRoutes = require("./routes/2fa.routes");
 const eventTypesRoutes = require("./routes/event-types.routes");
@@ -27,6 +28,16 @@ const landingPageRoutes = require("./routes/landing-page.routes");
 const uploadsRoutes = require("./routes/uploads.routes");
 const billingRoutes = require("./routes/billing.routes");
 const billingWebhookRoutes = require("./routes/billing-webhook.routes");
+const { protectedApiRateLimit } = require("./middleware/api-abuse-protection");
+const {
+  apiRateLimit,
+  applySecurityHeaders,
+  assignRequestId,
+  auditApiRequests,
+  detectSuspiciousTraffic,
+  enforceHttps,
+  sanitizeIncomingRequest,
+} = require("./middleware/request-security");
 const resolveCustomDomain = require("./middleware/resolve-custom-domain");
 const { notFoundHandler, errorHandler } = require("./middleware/error-handler");
 
@@ -91,13 +102,15 @@ function buildApp() {
   };
 
   app.disable("x-powered-by");
+  if (env.security.trustProxy) {
+    app.set("trust proxy", env.security.trustProxy);
+  }
 
-  app.use((req, res, next) => {
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("X-Frame-Options", "DENY");
-    res.setHeader("Referrer-Policy", "same-origin");
-    next();
-  });
+  app.use(assignRequestId);
+  app.use(detectSuspiciousTraffic);
+  app.use(enforceHttps);
+  app.use(applySecurityHeaders);
+  app.use(auditApiRequests);
 
   app.use(resolveCustomDomain);
 
@@ -110,6 +123,7 @@ function buildApp() {
 
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: false, limit: "10mb" }));
+  app.use(sanitizeIncomingRequest);
 
   app.get("/api/health", (req, res) => {
     res.json({
@@ -121,34 +135,35 @@ function buildApp() {
 
   const passport = require("./passport-setup");
 
+  app.use(passport.initialize());
+  app.use("/api", apiRateLimit);
   app.use("/api/auth", authRoutes);
   app.use("/api/auth/2fa", auth2FaRoutes);
-  app.use(passport.initialize());
 
-  app.use("/api/domains", domainsRoutes);
-  app.use("/api/event-types", eventTypesRoutes);
+  app.use("/api/domains", protectedApiRateLimit, domainsRoutes);
+  app.use("/api/event-types", protectedApiRateLimit, eventTypesRoutes);
   app.use("/api/public/domain", domainPublicRoutes);
   app.use("/api", pagePublicRoutes);
-  app.use("/api/dashboard/pages", landingBuilderRoutes);
-  app.use("/api/availability", availabilityRoutes);
+  app.use("/api/dashboard/pages", protectedApiRateLimit, landingBuilderRoutes);
+  app.use("/api/availability", protectedApiRateLimit, availabilityRoutes);
   app.use("/api/public/page", landingPublicRoutes);
   app.use("/api/public", publicRoutes);
-  app.use("/api/dashboard", dashboardRoutes);
-  app.use("/api/integrations", integrationsRoutes);
-  app.use("/api/contacts", contactsRoutes);
-  app.use("/api/workflows", workflowsRoutes);
-  app.use("/api/routing", routingRoutes);
-  app.use("/api/workspace", workspaceRoutes);
-  app.use("/api/chat", chatRoutes);
-  app.use("/api/inbox", inboxRoutes);
-  app.use("/api/files", filesRoutes);
-  app.use("/api/gallery", galleryRoutes);
-  app.use("/api/posts", postsRoutes);
-  app.use("/api/invoices", invoicesRoutes);
-  app.use("/api/invoice-templates", invoiceTemplatesRoutes);
-  app.use("/api/landing-page", landingPageRoutes);
-  app.use("/api/uploads", uploadsRoutes);
-  app.use("/api/billing", billingRoutes);
+  app.use("/api/dashboard", protectedApiRateLimit, dashboardRoutes);
+  app.use("/api/integrations", protectedApiRateLimit, integrationsRoutes);
+  app.use("/api/contacts", protectedApiRateLimit, contactsRoutes);
+  app.use("/api/workflows", protectedApiRateLimit, workflowsRoutes);
+  app.use("/api/routing", protectedApiRateLimit, routingRoutes);
+  app.use("/api/workspace", protectedApiRateLimit, workspaceRoutes);
+  app.use("/api/chat", protectedApiRateLimit, chatRoutes);
+  app.use("/api/inbox", protectedApiRateLimit, inboxRoutes);
+  app.use("/api/files", protectedApiRateLimit, filesRoutes);
+  app.use("/api/gallery", protectedApiRateLimit, galleryRoutes);
+  app.use("/api/posts", protectedApiRateLimit, postsRoutes);
+  app.use("/api/invoices", protectedApiRateLimit, invoicesRoutes);
+  app.use("/api/invoice-templates", protectedApiRateLimit, invoiceTemplatesRoutes);
+  app.use("/api/landing-page", protectedApiRateLimit, landingPageRoutes);
+  app.use("/api/uploads", protectedApiRateLimit, uploadsRoutes);
+  app.use("/api/billing", protectedApiRateLimit, billingRoutes);
 
   app.get("/favicon.ico", (req, res) => {
     res.sendFile(path.join(staticRoot, "assets", "favicon.svg"));

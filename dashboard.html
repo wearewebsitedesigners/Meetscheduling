@@ -26,8 +26,6 @@
 
         window.__MEETSCHEDULING_LOCAL_PREVIEW__ = true;
 
-        localStorage.removeItem("meetscheduling_auth_token");
-
         const previewStateKey = "meetscheduling_dashboard_preview_state_v1";
         const userKey = "meetscheduling_auth_user";
         const fallbackUser = {
@@ -61,25 +59,6 @@
   </script>
   <script>
     (() => {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get("token");
-        if (!token || window.__MEETSCHEDULING_LOCAL_PREVIEW__) return;
-
-        localStorage.setItem("meetscheduling_auth_token", token);
-        params.delete("token");
-
-        const nextQuery = params.toString();
-        const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash || ""}`;
-        window.history.replaceState({}, "", nextUrl);
-      } catch {
-        // ignore token bootstrap failures
-      }
-    })();
-  </script>
-  <script>
-    (() => {
-      const AUTH_TOKEN_KEY = "meetscheduling_auth_token";
       const AUTH_USER_KEY = "meetscheduling_auth_user";
       const POST_LOGIN_REDIRECT_KEY = "meetscheduling_post_login_redirect";
       const LOGIN_PATH = "/login.html";
@@ -90,7 +69,6 @@
 
       const clearStoredAuth = () => {
         try {
-          localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem(AUTH_USER_KEY);
         } catch {
           // ignore
@@ -112,23 +90,9 @@
         return;
       }
 
-      let token = "";
-      try {
-        token = String(localStorage.getItem(AUTH_TOKEN_KEY) || "").trim();
-      } catch {
-        token = "";
-      }
-
-      if (!token) {
-        clearStoredAuth();
-        redirectToLogin();
-        return;
-      }
-
       fetch("/api/auth/me", {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`,
           Accept: "application/json",
         },
         credentials: "same-origin",

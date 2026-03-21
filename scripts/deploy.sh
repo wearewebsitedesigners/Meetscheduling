@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+umask 077
 
 APP_DIR="${APP_DIR:-/home/meetscheduling/htdocs/www.meetscheduling.com}"
 PM2_APP_NAME="${PM2_APP_NAME:-meetscheduling}"
@@ -43,7 +44,11 @@ git rev-parse --verify "origin/$BRANCH" >/dev/null 2>&1 || fail "Remote branch o
 git reset --hard "origin/$BRANCH"
 
 log "Installing dependencies"
-npm install
+npm ci --omit=dev
+
+if [ -f .env ]; then
+  chmod 600 .env
+fi
 
 if node -e "const pkg=require('./package.json'); process.exit(pkg.scripts && pkg.scripts.build ? 0 : 1)"; then
   log "Running build"
@@ -53,6 +58,14 @@ else
 fi
 
 mkdir -p logs/pm2
+chmod 700 logs logs/pm2
+
+if node -e "const pkg=require('./package.json'); process.exit(pkg.scripts && pkg.scripts['check-env'] ? 0 : 1)"; then
+  log "Validating production environment"
+  npm run check-env -- --production
+else
+  log "No check-env script found, skipping environment validation"
+fi
 
 app_exists="$(
   pm2 jlist 2>/dev/null | node -e '

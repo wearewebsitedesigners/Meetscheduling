@@ -21,6 +21,12 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: process.env.PORT || 8080,
+        HOST: process.env.HOST || "127.0.0.1",
+        TRUST_PROXY: process.env.TRUST_PROXY || "1",
+        FORCE_HTTPS: process.env.FORCE_HTTPS || "true",
+        HSTS_MAX_AGE_SECONDS: process.env.HSTS_MAX_AGE_SECONDS || 31536000,
+        DATABASE_PRIVATE_NETWORK_REQUIRED:
+          process.env.DATABASE_PRIVATE_NETWORK_REQUIRED || "true",
       },
     },
   ],

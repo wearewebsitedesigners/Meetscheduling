@@ -3,6 +3,39 @@ const buildApp = require("./app");
 const { migrate } = require("./db/migrate");
 const { seedDefaults } = require("./db/seed");
 const { pool } = require("./db/pool");
+const { logSecurityEvent } = require("./utils/security-log");
+
+function summarizeRuntimeError(error) {
+  if (!error) return { message: "Unknown runtime error" };
+  if (error instanceof Error) {
+    return {
+      name: error.name || "Error",
+      message: error.message || "Unhandled runtime error",
+      stack: error.stack ? String(error.stack).split("\n").slice(0, 8) : [],
+    };
+  }
+  return {
+    message: typeof error === "string" ? error : JSON.stringify(error),
+  };
+}
+
+process.on("unhandledRejection", (reason) => {
+  logSecurityEvent("runtime.unhandled_rejection", summarizeRuntimeError(reason), {
+    level: "error",
+  });
+});
+
+process.on("uncaughtException", async (error) => {
+  logSecurityEvent("runtime.uncaught_exception", summarizeRuntimeError(error), {
+    level: "error",
+  });
+  try {
+    await pool.end();
+  } catch {
+    // ignore shutdown errors
+  }
+  process.exit(1);
+});
 
 async function startServer() {
   const skipMigrations = /^(1|true|yes)$/i.test(

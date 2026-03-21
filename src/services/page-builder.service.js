@@ -4,12 +4,16 @@ const { generatePublicSlots, assertDate, assertZone } = require("./slots.service
 const { createPublicBooking } = require("./bookings.service");
 const { badRequest, notFound } = require("../utils/http-error");
 const {
+  assertJsonObject,
   assertOptionalString,
+  assertNavigationUrl,
+  assertRelativeOrHttpUrl,
   assertSlug,
   assertString,
   assertEmail,
 } = require("../utils/validation");
 const { assertFeature, assertLimit } = require("./entitlements.service");
+const { getWorkspaceOwnerUser } = require("./workspace.service");
 
 const HISTORY_LIMIT = 10;
 const ALLOWED_SECTION_TYPES = new Set([
@@ -54,6 +58,38 @@ function safeText(value, fallback = "", max = 5000) {
   const str = String(value).trim();
   if (!str) return fallback;
   return str.slice(0, max);
+}
+
+function validateConfigUrlFields(value, field) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => validateConfigUrlFields(item, `${field}[${index}]`));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+
+  Object.entries(value).forEach(([key, entry]) => {
+    const nextField = `${field}.${key}`;
+    const lower = key.toLowerCase();
+
+    if (typeof entry === "string" && entry.trim()) {
+      if (lower.endsWith("href") || lower === "link") {
+        assertNavigationUrl(entry, nextField, { max: 2000 });
+        return;
+      }
+      if (lower.endsWith("url")) {
+        assertRelativeOrHttpUrl(entry, nextField, { max: 2000 });
+        return;
+      }
+    }
+
+    validateConfigUrlFields(entry, nextField);
+  });
+}
+
+function assertPageBuilderConfigPayload(value, field = "config") {
+  const config = assertJsonObject(value, field);
+  validateConfigUrlFields(config, field);
+  return config;
 }
 
 function mapServiceRow(row) {
@@ -385,19 +421,13 @@ function toHistoryPayload(row) {
 }
 
 async function getUserForPageBuilder(userId, client = null) {
-  const result = await query(
-    `
-      SELECT id, username, display_name, timezone
-      FROM users
-      WHERE id = $1
-      LIMIT 1
-    `,
-    [userId],
-    client
-  );
-  const row = result.rows[0];
-  if (!row) throw notFound("User not found");
-  return row;
+  const owner = await getWorkspaceOwnerUser(userId, client);
+  return {
+    id: owner.id,
+    username: owner.username,
+    display_name: owner.display_name,
+    timezone: owner.timezone,
+  };
 }
 
 async function listServicesForUser(userId, client = null) {
@@ -414,7 +444,7 @@ async function listServicesForUser(userId, client = null) {
         buffer_after_min,
         max_bookings_per_day
       FROM event_types
-      WHERE user_id = $1
+      WHERE workspace_id = $1
         AND is_active = TRUE
       ORDER BY created_at ASC
     `,
@@ -456,9 +486,9 @@ async function ensureBookingPageForUser(userId, client = null) {
 
   let pageResult = await query(
     `
-      SELECT id, user_id, slug, title, created_at, updated_at
+      SELECT id, user_id, workspace_id, slug, title, created_at, updated_at
       FROM booking_pages
-      WHERE user_id = $1
+      WHERE workspace_id = $1
       LIMIT 1
     `,
     [userId],
@@ -471,7 +501,7 @@ async function ensureBookingPageForUser(userId, client = null) {
       `
         SELECT COUNT(*)::int AS count
         FROM booking_pages
-        WHERE user_id = $1
+        WHERE workspace_id = $1
       `,
       [userId],
       client
@@ -486,11 +516,11 @@ async function ensureBookingPageForUser(userId, client = null) {
     const slug = await createUniquePageSlug(`${user.username}-book`, client);
     const created = await query(
       `
-        INSERT INTO booking_pages (user_id, slug, title)
-        VALUES ($1, $2, $3)
-        RETURNING id, user_id, slug, title, created_at, updated_at
+        INSERT INTO booking_pages (workspace_id, user_id, slug, title)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, user_id, workspace_id, slug, title, created_at, updated_at
       `,
-      [userId, slug, `${user.display_name} booking page`],
+      [userId, user.id, slug, `${user.display_name} booking page`],
       client
     );
     page = created.rows[0];
@@ -506,14 +536,15 @@ async function ensureBookingPageForUser(userId, client = null) {
     `
       INSERT INTO booking_page_versions (
         booking_page_id,
+        workspace_id,
         status,
         version_number,
         config_json
       )
-      VALUES ($1, 'draft', 1, $2::jsonb)
+      VALUES ($1, $2, 'draft', 1, $3::jsonb)
       ON CONFLICT (booking_page_id, status) DO NOTHING
     `,
-    [page.id, JSON.stringify(defaultConfig)],
+    [page.id, userId, JSON.stringify(defaultConfig)],
     client
   );
 
@@ -521,14 +552,15 @@ async function ensureBookingPageForUser(userId, client = null) {
     `
       INSERT INTO booking_page_versions (
         booking_page_id,
+        workspace_id,
         status,
         version_number,
         config_json
       )
-      VALUES ($1, 'published', 1, $2::jsonb)
+      VALUES ($1, $2, 'published', 1, $3::jsonb)
       ON CONFLICT (booking_page_id, status) DO NOTHING
     `,
-    [page.id, JSON.stringify(defaultConfig)],
+    [page.id, userId, JSON.stringify(defaultConfig)],
     client
   );
 
@@ -548,10 +580,10 @@ async function resolvePageForUser(userId, pageId, client = null) {
 
   const result = await query(
     `
-      SELECT id, user_id, slug, title, created_at, updated_at
+      SELECT id, user_id, workspace_id, slug, title, created_at, updated_at
       FROM booking_pages
       WHERE id = $1
-        AND user_id = $2
+        AND workspace_id = $2
       LIMIT 1
     `,
     [normalizedPageId, userId],
@@ -562,12 +594,13 @@ async function resolvePageForUser(userId, pageId, client = null) {
   return row;
 }
 
-async function loadVersionRows(pageId, client = null) {
+async function loadVersionRows(workspaceId, pageId, client = null) {
   const result = await query(
     `
       SELECT
         id,
         booking_page_id,
+        workspace_id,
         status,
         version_number,
         config_json,
@@ -575,9 +608,10 @@ async function loadVersionRows(pageId, client = null) {
         updated_at
       FROM booking_page_versions
       WHERE booking_page_id = $1
+        AND workspace_id = $2
       ORDER BY status ASC
     `,
-    [pageId],
+    [pageId, workspaceId],
     client
   );
   const byStatus = new Map(result.rows.map((row) => [row.status, row]));
@@ -587,7 +621,7 @@ async function loadVersionRows(pageId, client = null) {
   };
 }
 
-async function loadHistory(pageId, limit = HISTORY_LIMIT, client = null) {
+async function loadHistory(workspaceId, pageId, limit = HISTORY_LIMIT, client = null) {
   const safeLimit = clamp(limit, 1, 50, HISTORY_LIMIT);
   const result = await query(
     `
@@ -600,16 +634,17 @@ async function loadHistory(pageId, limit = HISTORY_LIMIT, client = null) {
         created_at
       FROM booking_page_version_history
       WHERE booking_page_id = $1
+        AND workspace_id = $2
       ORDER BY created_at DESC
-      LIMIT $2
+      LIMIT $3
     `,
-    [pageId, safeLimit],
+    [pageId, workspaceId, safeLimit],
     client
   );
   return result.rows.map(toHistoryPayload);
 }
 
-async function trimHistory(pageId, limit = HISTORY_LIMIT, client = null) {
+async function trimHistory(workspaceId, pageId, limit = HISTORY_LIMIT, client = null) {
   const safeLimit = clamp(limit, 1, 100, HISTORY_LIMIT);
   await query(
     `
@@ -618,11 +653,12 @@ async function trimHistory(pageId, limit = HISTORY_LIMIT, client = null) {
         SELECT id
         FROM booking_page_version_history
         WHERE booking_page_id = $1
+          AND workspace_id = $2
         ORDER BY created_at DESC
-        OFFSET $2
+        OFFSET $3
       )
     `,
-    [pageId, safeLimit],
+    [pageId, workspaceId, safeLimit],
     client
   );
 }
@@ -631,6 +667,7 @@ function buildPagePayload(page, user) {
   return {
     id: page.id,
     userId: page.user_id,
+    workspaceId: page.workspace_id || page.user_id,
     slug: page.slug,
     title: page.title,
     username: user.username,
@@ -678,9 +715,9 @@ async function listPagesForUser(userId) {
   const user = ensured.user;
   const result = await query(
     `
-      SELECT id, user_id, slug, title, created_at, updated_at
+      SELECT id, user_id, workspace_id, slug, title, created_at, updated_at
       FROM booking_pages
-      WHERE user_id = $1
+      WHERE workspace_id = $1
       ORDER BY created_at ASC
     `,
     [userId]
@@ -693,7 +730,7 @@ async function getPageDraftByIdForUser(userId, pageId) {
     const page = await resolvePageForUser(userId, pageId, client);
     const user = await getUserForPageBuilder(userId, client);
     const services = await listServicesForUser(userId, client);
-    const versions = await loadVersionRows(page.id, client);
+    const versions = await loadVersionRows(userId, page.id, client);
 
     const fallbackConfig = createDefaultConfig({
       businessName: user.display_name,
@@ -707,7 +744,7 @@ async function getPageDraftByIdForUser(userId, pageId) {
       normalizeConfig(versions.published?.config_json, fallbackConfig),
       services
     );
-    const history = await loadHistory(page.id, HISTORY_LIMIT, client);
+    const history = await loadHistory(userId, page.id, HISTORY_LIMIT, client);
 
     return {
       page: buildPagePayload(page, user),
@@ -721,16 +758,17 @@ async function getPageDraftByIdForUser(userId, pageId) {
 }
 
 async function updatePageDraftByIdForUser(userId, pageId, payload = {}) {
+  const safePayload = assertJsonObject(payload || {}, "payload");
   const configPayload =
-    payload && typeof payload === "object" && payload.config && typeof payload.config === "object"
-      ? payload.config
-      : payload;
+    safePayload.config !== undefined
+      ? assertPageBuilderConfigPayload(safePayload.config, "config")
+      : assertPageBuilderConfigPayload(safePayload, "config");
 
   return withTransaction(async (client) => {
     const page = await resolvePageForUser(userId, pageId, client);
     const user = await getUserForPageBuilder(userId, client);
     const services = await listServicesForUser(userId, client);
-    const versions = await loadVersionRows(page.id, client);
+    const versions = await loadVersionRows(userId, page.id, client);
     const fallbackConfig = createDefaultConfig({
       businessName: user.display_name,
       services,
@@ -747,17 +785,19 @@ async function updatePageDraftByIdForUser(userId, pageId, payload = {}) {
           version_number = $2,
           updated_at = NOW()
         WHERE booking_page_id = $3
+          AND workspace_id = $4
           AND status = 'draft'
         RETURNING
           id,
           booking_page_id,
+          workspace_id,
           status,
           version_number,
           config_json,
           created_at,
           updated_at
       `,
-      [JSON.stringify(nextConfig), nextVersionNumber, page.id],
+      [JSON.stringify(nextConfig), nextVersionNumber, page.id, userId],
       client
     );
     const draft = updated.rows[0];
@@ -767,19 +807,20 @@ async function updatePageDraftByIdForUser(userId, pageId, payload = {}) {
       `
         INSERT INTO booking_page_version_history (
           booking_page_id,
+          workspace_id,
           source_status,
           version_number,
           config_json
         )
-        VALUES ($1, 'draft', $2, $3::jsonb)
+        VALUES ($1, $2, 'draft', $3, $4::jsonb)
       `,
-      [page.id, draft.version_number, JSON.stringify(nextConfig)],
+      [page.id, userId, draft.version_number, JSON.stringify(nextConfig)],
       client
     );
-    await trimHistory(page.id, HISTORY_LIMIT, client);
+    await trimHistory(userId, page.id, HISTORY_LIMIT, client);
 
     const publishedConfig = normalizeConfig(versions.published?.config_json, fallbackConfig);
-    const history = await loadHistory(page.id, HISTORY_LIMIT, client);
+    const history = await loadHistory(userId, page.id, HISTORY_LIMIT, client);
 
     return {
       page: buildPagePayload(page, user),
@@ -797,7 +838,7 @@ async function publishPageByIdForUser(userId, pageId) {
     const page = await resolvePageForUser(userId, pageId, client);
     const user = await getUserForPageBuilder(userId, client);
     const services = await listServicesForUser(userId, client);
-    const versions = await loadVersionRows(page.id, client);
+    const versions = await loadVersionRows(userId, page.id, client);
     if (!versions.draft) throw notFound("Draft version not found");
 
     const fallbackConfig = createDefaultConfig({
@@ -814,20 +855,21 @@ async function publishPageByIdForUser(userId, pageId) {
       `
         INSERT INTO booking_page_versions (
           booking_page_id,
+          workspace_id,
           status,
           version_number,
           config_json,
           created_at,
           updated_at
         )
-        VALUES ($1, 'published', $2, $3::jsonb, NOW(), NOW())
+        VALUES ($1, $2, 'published', $3, $4::jsonb, NOW(), NOW())
         ON CONFLICT (booking_page_id, status)
         DO UPDATE SET
           version_number = EXCLUDED.version_number,
           config_json = EXCLUDED.config_json,
           updated_at = NOW()
       `,
-      [page.id, nextVersionNumber, JSON.stringify(nextConfig)],
+      [page.id, userId, nextVersionNumber, JSON.stringify(nextConfig)],
       client
     );
 
@@ -835,19 +877,20 @@ async function publishPageByIdForUser(userId, pageId) {
       `
         INSERT INTO booking_page_version_history (
           booking_page_id,
+          workspace_id,
           source_status,
           version_number,
           config_json
         )
-        VALUES ($1, 'published', $2, $3::jsonb)
+        VALUES ($1, $2, 'published', $3, $4::jsonb)
       `,
-      [page.id, nextVersionNumber, JSON.stringify(nextConfig)],
+      [page.id, userId, nextVersionNumber, JSON.stringify(nextConfig)],
       client
     );
-    await trimHistory(page.id, HISTORY_LIMIT, client);
+    await trimHistory(userId, page.id, HISTORY_LIMIT, client);
 
-    const refreshed = await loadVersionRows(page.id, client);
-    const history = await loadHistory(page.id, HISTORY_LIMIT, client);
+    const refreshed = await loadVersionRows(userId, page.id, client);
+    const history = await loadHistory(userId, page.id, HISTORY_LIMIT, client);
 
     return {
       page: buildPagePayload(page, user),
@@ -865,9 +908,10 @@ async function restorePageVersionByHistoryIdForUser(userId, pageId, historyId) {
     const page = await resolvePageForUser(userId, pageId, client);
     const user = await getUserForPageBuilder(userId, client);
     const services = await listServicesForUser(userId, client);
+    const versions = await loadVersionRows(userId, page.id, client);
     const historyResult = await query(
       `
-        SELECT
+      SELECT
           id,
           booking_page_id,
           source_status,
@@ -877,15 +921,15 @@ async function restorePageVersionByHistoryIdForUser(userId, pageId, historyId) {
         FROM booking_page_version_history
         WHERE id = $1
           AND booking_page_id = $2
+          AND workspace_id = $3
         LIMIT 1
       `,
-      [historyId, page.id],
+      [historyId, page.id, userId],
       client
     );
     const historyRow = historyResult.rows[0];
     if (!historyRow) throw notFound("Version history entry not found");
 
-    const versions = await loadVersionRows(page.id, client);
     const fallbackConfig = createDefaultConfig({
       businessName: user.display_name,
       services,
@@ -904,9 +948,10 @@ async function restorePageVersionByHistoryIdForUser(userId, pageId, historyId) {
           version_number = $2,
           updated_at = NOW()
         WHERE booking_page_id = $3
+          AND workspace_id = $4
           AND status = 'draft'
       `,
-      [JSON.stringify(restoredConfig), nextVersionNumber, page.id],
+      [JSON.stringify(restoredConfig), nextVersionNumber, page.id, userId],
       client
     );
 
@@ -914,19 +959,20 @@ async function restorePageVersionByHistoryIdForUser(userId, pageId, historyId) {
       `
         INSERT INTO booking_page_version_history (
           booking_page_id,
+          workspace_id,
           source_status,
           version_number,
           config_json
         )
-        VALUES ($1, 'draft', $2, $3::jsonb)
+        VALUES ($1, $2, 'draft', $3, $4::jsonb)
       `,
-      [page.id, nextVersionNumber, JSON.stringify(restoredConfig)],
+      [page.id, userId, nextVersionNumber, JSON.stringify(restoredConfig)],
       client
     );
-    await trimHistory(page.id, HISTORY_LIMIT, client);
+    await trimHistory(userId, page.id, HISTORY_LIMIT, client);
 
-    const refreshed = await loadVersionRows(page.id, client);
-    const history = await loadHistory(page.id, HISTORY_LIMIT, client);
+    const refreshed = await loadVersionRows(userId, page.id, client);
+    const history = await loadHistory(userId, page.id, HISTORY_LIMIT, client);
 
     return {
       page: buildPagePayload(page, user),
@@ -946,6 +992,7 @@ async function getPublishedPageBySlug(slug) {
       SELECT
         bp.id,
         bp.user_id,
+        bp.workspace_id,
         bp.slug,
         bp.title,
         bp.created_at,
@@ -955,8 +1002,12 @@ async function getPublishedPageBySlug(slug) {
         u.timezone,
         v.config_json
       FROM booking_pages bp
-      JOIN users u ON u.id = bp.user_id
-      JOIN booking_page_versions v ON v.booking_page_id = bp.id AND v.status = 'published'
+      JOIN workspaces w ON w.id = bp.workspace_id
+      JOIN users u ON u.id = w.owner_user_id
+      JOIN booking_page_versions v
+        ON v.booking_page_id = bp.id
+       AND v.workspace_id = bp.workspace_id
+       AND v.status = 'published'
       WHERE bp.slug = $1
       LIMIT 1
     `,
@@ -966,7 +1017,7 @@ async function getPublishedPageBySlug(slug) {
   const page = pageResult.rows[0];
   if (!page) throw notFound("Published page not found");
 
-  const services = await listServicesForUser(page.user_id);
+  const services = await listServicesForUser(page.workspace_id || page.user_id);
   const fallbackConfig = createDefaultConfig({
     businessName: page.display_name,
     services,
@@ -977,6 +1028,7 @@ async function getPublishedPageBySlug(slug) {
     page: {
       id: page.id,
       userId: page.user_id,
+      workspaceId: page.workspace_id || page.user_id,
       slug: page.slug,
       title: page.title,
       username: page.username,

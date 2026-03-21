@@ -4,6 +4,8 @@
 
 :root {
   color-scheme: only light;
+  --font-manrope: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-sora: "Avenir Next", "Trebuchet MS", "Helvetica Neue", sans-serif;
 }
 
 * {

@@ -149,10 +149,10 @@ router.get(
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const tab = req.query.tab || "discover";
-    const filter = req.query.filter || "all";
+    const tab = assertOptionalString(req.query.tab, "tab", { max: 40 }) || "discover";
+    const filter = assertOptionalString(req.query.filter, "filter", { max: 40 }) || "all";
     const search = assertOptionalString(req.query.search, "search", { max: 200 });
-    const sort = req.query.sort || "most_popular";
+    const sort = assertOptionalString(req.query.sort, "sort", { max: 40 }) || "most_popular";
 
     const payload = await listIntegrationsForUser(req.auth.workspaceId, {
       tab,

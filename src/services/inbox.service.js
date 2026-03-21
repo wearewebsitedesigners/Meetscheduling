@@ -1,6 +1,12 @@
 const { query, withTransaction } = require("../db/pool");
 const { badRequest, notFound } = require("../utils/http-error");
-const { assertInteger, assertOptionalString, assertString } = require("../utils/validation");
+const {
+  assertInteger,
+  assertIsoDateTime,
+  assertJsonObject,
+  assertOptionalString,
+  assertString,
+} = require("../utils/validation");
 
 const THREAD_STATUSES = new Set(["open", "pending", "closed", "archived"]);
 const CAMPAIGN_STATUSES = new Set(["draft", "scheduled", "sent", "paused"]);
@@ -9,7 +15,7 @@ function normalizeThreadStatus(value = "") {
   const status = String(value || "")
     .trim()
     .toLowerCase();
-  if (!status) return "all";
+  if (!status || status === "all") return "all";
   if (!THREAD_STATUSES.has(status)) throw badRequest("status is invalid");
   return status;
 }
@@ -18,9 +24,14 @@ function normalizeCampaignStatus(value = "") {
   const status = String(value || "")
     .trim()
     .toLowerCase();
-  if (!status) return "all";
+  if (!status || status === "all") return "all";
   if (!CAMPAIGN_STATUSES.has(status)) throw badRequest("status is invalid");
   return status;
+}
+
+function normalizeScheduledFor(value, field = "scheduledFor") {
+  if (value === undefined || value === null || value === "") return null;
+  return assertIsoDateTime(value, field);
 }
 
 function mapThreadRow(row) {
@@ -260,14 +271,11 @@ async function createInboxCampaign(workspaceId, userId, payload = {}) {
   }
 
   const audienceFilter =
-    payload.audienceFilter && typeof payload.audienceFilter === "object"
-      ? payload.audienceFilter
-      : {};
+    payload.audienceFilter === undefined
+      ? {}
+      : assertJsonObject(payload.audienceFilter, "audienceFilter");
 
-  const scheduledFor = payload.scheduledFor ? new Date(payload.scheduledFor) : null;
-  if (scheduledFor && Number.isNaN(scheduledFor.getTime())) {
-    throw badRequest("scheduledFor is invalid");
-  }
+  const scheduledFor = normalizeScheduledFor(payload.scheduledFor, "scheduledFor");
 
   const result = await query(
     `
@@ -305,7 +313,7 @@ async function createInboxCampaign(workspaceId, userId, payload = {}) {
       previewText,
       status,
       JSON.stringify(audienceFilter),
-      scheduledFor ? scheduledFor.toISOString() : null,
+      scheduledFor,
     ]
   );
 

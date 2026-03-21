@@ -25,7 +25,6 @@
   <link rel="stylesheet" href="/login.css" />
   <script>
     (() => {
-      const AUTH_TOKEN_KEY = "meetscheduling_auth_token";
       const AUTH_USER_KEY = "meetscheduling_auth_user";
       const POST_LOGIN_REDIRECT_KEY = "meetscheduling_post_login_redirect";
 
@@ -35,7 +34,6 @@
 
       const clearStoredAuth = () => {
         try {
-          localStorage.removeItem(AUTH_TOKEN_KEY);
           localStorage.removeItem(AUTH_USER_KEY);
         } catch {
           // ignore
@@ -56,37 +54,9 @@
         window.location.replace(readRedirectTarget());
       };
 
-      const params = new URLSearchParams(window.location.search);
-      const tokenFromUrl = String(params.get("token") || "").trim();
-
-      if (tokenFromUrl) {
-        try {
-          localStorage.setItem(AUTH_TOKEN_KEY, tokenFromUrl);
-        } catch {
-          // ignore
-        }
-        params.delete("token");
-        const nextSearch = params.toString();
-        const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash || ""}`;
-        window.history.replaceState({}, document.title, nextUrl);
-      }
-
-      let token = "";
-      try {
-        token = String(localStorage.getItem(AUTH_TOKEN_KEY) || "").trim();
-      } catch {
-        token = "";
-      }
-
-      if (!token) {
-        revealLogin();
-        return;
-      }
-
       fetch("/api/auth/me", {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`,
           Accept: "application/json",
         },
         credentials: "same-origin",

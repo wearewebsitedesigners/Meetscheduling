@@ -1,12 +1,17 @@
 const { query, withTransaction } = require("../db/pool");
 const { badRequest, notFound } = require("../utils/http-error");
 const {
+  assertBoolean,
+  assertJsonObject,
+  assertNavigationUrl,
+  assertRelativeOrHttpUrl,
   assertString,
   assertOptionalString,
   assertSlug,
   assertInteger,
 } = require("../utils/validation");
 const { assertFeature, assertLimit } = require("./entitlements.service");
+const { getWorkspaceOwnerUser } = require("./workspace.service");
 
 const HISTORY_LIMIT = 10;
 
@@ -641,6 +646,38 @@ function buildStarterConfig({ presetId, businessName }) {
   };
 }
 
+function validateConfigUrlFields(value, field) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => validateConfigUrlFields(item, `${field}[${index}]`));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+
+  Object.entries(value).forEach(([key, entry]) => {
+    const nextField = `${field}.${key}`;
+    const lower = key.toLowerCase();
+
+    if (typeof entry === "string" && entry.trim()) {
+      if (lower.endsWith("href") || lower === "link") {
+        assertNavigationUrl(entry, nextField, { max: 2000 });
+        return;
+      }
+      if (lower.endsWith("url")) {
+        assertRelativeOrHttpUrl(entry, nextField, { max: 2000 });
+        return;
+      }
+    }
+
+    validateConfigUrlFields(entry, nextField);
+  });
+}
+
+function assertLandingBuilderConfigPayload(value, field = "config") {
+  const config = assertJsonObject(value, field);
+  validateConfigUrlFields(config, field);
+  return config;
+}
+
 function normalizeNavLinks(rawLinks, fallbackLinks) {
   const source = Array.isArray(rawLinks) ? rawLinks : Array.isArray(fallbackLinks) ? fallbackLinks : [];
   return source
@@ -1133,6 +1170,7 @@ function mapPageRow(row, userRow = null) {
   return {
     id: row.id,
     userId: row.user_id,
+    workspaceId: row.workspace_id || row.user_id,
     slug: row.slug,
     title: row.title,
     publicUrl: `/${row.slug}`,
@@ -1148,6 +1186,7 @@ function mapCategoryRow(row) {
   return {
     id: row.id,
     userId: row.user_id,
+    workspaceId: row.workspace_id || row.user_id,
     name: row.name,
     sortOrder: Number(row.sort_order) || 0,
     isActive: !!row.is_active,
@@ -1163,6 +1202,7 @@ function mapServiceRow(row, username = "") {
   return {
     id: row.id,
     userId: row.user_id,
+    workspaceId: row.workspace_id || row.user_id,
     categoryId: row.category_id,
     categoryName: row.category_name || "",
     eventTypeId: row.event_type_id || "",
@@ -1184,6 +1224,7 @@ function mapReviewRow(row) {
   return {
     id: row.id,
     userId: row.user_id,
+    workspaceId: row.workspace_id || row.user_id,
     serviceId: row.service_id || "",
     serviceName: row.service_name || "",
     name: row.name,
@@ -1207,19 +1248,13 @@ function mapEventTypeRow(row) {
 }
 
 async function getUser(userId, client = null) {
-  const result = await query(
-    `
-      SELECT id, username, display_name, timezone
-      FROM users
-      WHERE id = $1
-      LIMIT 1
-    `,
-    [userId],
-    client
-  );
-  const row = result.rows[0];
-  if (!row) throw notFound("User not found");
-  return row;
+  const owner = await getWorkspaceOwnerUser(userId, client);
+  return {
+    id: owner.id,
+    username: owner.username,
+    display_name: owner.display_name,
+    timezone: owner.timezone,
+  };
 }
 
 async function getUserBySlug(slug, client = null) {
@@ -1241,7 +1276,7 @@ async function listEventTypesForUser(userId, client = null) {
     `
       SELECT id, title, slug, duration_minutes, location_type
       FROM event_types
-      WHERE user_id = $1
+      WHERE workspace_id = $1
       ORDER BY created_at ASC
     `,
     [userId],
@@ -1282,25 +1317,26 @@ async function createUniqueSlug(baseSlug, exceptPageId = null, client = null) {
 }
 
 async function ensurePageVersions(pageId, config, client = null) {
+  const workspaceId = assertString(config.workspaceId, "workspaceId", { min: 6, max: 80 });
   const normalized = normalizeConfig(config, config);
   await query(
     `
-      INSERT INTO booking_page_versions (booking_page_id, status, version_number, config_json)
-      VALUES ($1, 'draft', 1, $2::jsonb)
+      INSERT INTO booking_page_versions (booking_page_id, workspace_id, status, version_number, config_json)
+      VALUES ($1, $2, 'draft', 1, $3::jsonb)
       ON CONFLICT (booking_page_id, status)
       DO NOTHING
     `,
-    [pageId, JSON.stringify(normalized)],
+    [pageId, workspaceId, JSON.stringify(normalized)],
     client
   );
   await query(
     `
-      INSERT INTO booking_page_versions (booking_page_id, status, version_number, config_json)
-      VALUES ($1, 'published', 1, $2::jsonb)
+      INSERT INTO booking_page_versions (booking_page_id, workspace_id, status, version_number, config_json)
+      VALUES ($1, $2, 'published', 1, $3::jsonb)
       ON CONFLICT (booking_page_id, status)
       DO NOTHING
     `,
-    [pageId, JSON.stringify(normalized)],
+    [pageId, workspaceId, JSON.stringify(normalized)],
     client
   );
 }
@@ -1310,15 +1346,16 @@ async function createStarterCatalogIfNeeded(userId, client = null) {
     return withTransaction(async (tx) => createStarterCatalogIfNeeded(userId, tx));
   }
 
+  const owner = await getWorkspaceOwnerUser(userId, client);
   await query(`SELECT pg_advisory_xact_lock(hashtext($1::text))`, [String(userId)], client);
 
   const categoryCountResult = await query(
-    `SELECT COUNT(*)::int AS count FROM service_categories WHERE user_id = $1`,
+    `SELECT COUNT(*)::int AS count FROM service_categories WHERE workspace_id = $1`,
     [userId],
     client
   );
   const serviceCountResult = await query(
-    `SELECT COUNT(*)::int AS count FROM services WHERE user_id = $1`,
+    `SELECT COUNT(*)::int AS count FROM services WHERE workspace_id = $1`,
     [userId],
     client
   );
@@ -1335,8 +1372,8 @@ async function createStarterCatalogIfNeeded(userId, client = null) {
   for (let index = 0; index < categoryNames.length; index += 1) {
     const created = await query(
       `
-        INSERT INTO service_categories (user_id, name, sort_order, is_active)
-        VALUES ($1, $2, $3, TRUE)
+        INSERT INTO service_categories (workspace_id, user_id, name, sort_order, is_active)
+        VALUES ($1, $2, $3, $4, TRUE)
         ON CONFLICT (user_id, name)
         DO UPDATE SET
           sort_order = EXCLUDED.sort_order,
@@ -1344,7 +1381,7 @@ async function createStarterCatalogIfNeeded(userId, client = null) {
           updated_at = NOW()
         RETURNING id
       `,
-      [userId, categoryNames[index], index],
+      [userId, owner.id, categoryNames[index], index],
       client
     );
     categoryIds.push(created.rows[0].id);
@@ -1388,6 +1425,7 @@ async function createStarterCatalogIfNeeded(userId, client = null) {
     await query(
       `
         INSERT INTO services (
+          workspace_id,
           user_id,
           category_id,
           event_type_id,
@@ -1399,10 +1437,11 @@ async function createStarterCatalogIfNeeded(userId, client = null) {
           is_active,
           sort_order
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, '', TRUE, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '', TRUE, $9)
       `,
       [
         userId,
+        owner.id,
         categoryIds[sample.categoryIndex] || null,
         fallbackEvent ? fallbackEvent.id : null,
         sample.name,
@@ -1437,10 +1476,10 @@ async function createStarterCatalogIfNeeded(userId, client = null) {
     const item = reviews[index];
     await query(
       `
-        INSERT INTO reviews (user_id, name, rating, text, avatar_url, sort_order)
-        VALUES ($1, $2, $3, $4, '', $5)
+        INSERT INTO reviews (workspace_id, user_id, name, rating, text, avatar_url, sort_order)
+        VALUES ($1, $2, $3, $4, $5, '', $6)
       `,
-      [userId, item.name, item.rating, item.text, index],
+      [userId, owner.id, item.name, item.rating, item.text, index],
       client
     );
   }
@@ -1449,9 +1488,9 @@ async function createStarterCatalogIfNeeded(userId, client = null) {
 async function ensureDefaultPageForUser(userId, client = null) {
   const pagesResult = await query(
     `
-      SELECT id, user_id, slug, title, created_at, updated_at
+      SELECT id, user_id, workspace_id, slug, title, created_at, updated_at
       FROM booking_pages
-      WHERE user_id = $1
+      WHERE workspace_id = $1
       ORDER BY created_at ASC
     `,
     [userId],
@@ -1469,11 +1508,11 @@ async function ensureDefaultPageForUser(userId, client = null) {
   const title = `${safeText(user.display_name, "My", 120)} landing page`;
   const inserted = await query(
     `
-      INSERT INTO booking_pages (user_id, slug, title)
-      VALUES ($1, $2, $3)
-      RETURNING id, user_id, slug, title, created_at, updated_at
+      INSERT INTO booking_pages (workspace_id, user_id, slug, title)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, user_id, workspace_id, slug, title, created_at, updated_at
     `,
-    [userId, slug, title],
+    [userId, user.id, slug, title],
     client
   );
 
@@ -1484,7 +1523,7 @@ async function ensureDefaultPageForUser(userId, client = null) {
     presetId: "hairluxury",
     businessName: user.display_name,
   });
-  await ensurePageVersions(page.id, starter, client);
+  await ensurePageVersions(page.id, { ...starter, workspaceId: userId }, client);
 
   return page;
 }
@@ -1493,15 +1532,29 @@ async function resolvePageForUser(userId, pageId, client = null) {
   const defaultPage = await ensureDefaultPageForUser(userId, client);
   const id = safeText(pageId, "", 80);
   if (!id || id === "default" || id === defaultPage.id) return defaultPage;
-  return defaultPage;
+  const result = await query(
+    `
+      SELECT id, user_id, workspace_id, slug, title, created_at, updated_at
+      FROM booking_pages
+      WHERE id = $1
+        AND workspace_id = $2
+      LIMIT 1
+    `,
+    [id, userId],
+    client
+  );
+  const row = result.rows[0];
+  if (!row) throw notFound("Page not found");
+  return row;
 }
 
-async function loadVersionRows(pageId, client = null) {
+async function loadVersionRows(workspaceId, pageId, client = null) {
   const result = await query(
     `
       SELECT
         id,
         booking_page_id,
+        workspace_id,
         status,
         version_number,
         config_json,
@@ -1509,9 +1562,10 @@ async function loadVersionRows(pageId, client = null) {
         updated_at
       FROM booking_page_versions
       WHERE booking_page_id = $1
+        AND workspace_id = $2
       ORDER BY status ASC
     `,
-    [pageId],
+    [pageId, workspaceId],
     client
   );
 
@@ -1522,7 +1576,7 @@ async function loadVersionRows(pageId, client = null) {
   };
 }
 
-async function loadHistoryRows(pageId, client = null) {
+async function loadHistoryRows(workspaceId, pageId, client = null) {
   const result = await query(
     `
       SELECT
@@ -1533,10 +1587,11 @@ async function loadHistoryRows(pageId, client = null) {
         created_at
       FROM booking_page_version_history
       WHERE booking_page_id = $1
+        AND workspace_id = $2
       ORDER BY created_at DESC
-      LIMIT $2
+      LIMIT $3
     `,
-    [pageId, HISTORY_LIMIT],
+    [pageId, workspaceId, HISTORY_LIMIT],
     client
   );
 
@@ -1549,7 +1604,7 @@ async function loadHistoryRows(pageId, client = null) {
   }));
 }
 
-async function trimHistory(pageId, client = null) {
+async function trimHistory(workspaceId, pageId, client = null) {
   await query(
     `
       DELETE FROM booking_page_version_history
@@ -1557,11 +1612,12 @@ async function trimHistory(pageId, client = null) {
         SELECT id
         FROM booking_page_version_history
         WHERE booking_page_id = $1
+          AND workspace_id = $2
         ORDER BY created_at DESC
-        OFFSET $2
+        OFFSET $3
       )
     `,
-    [pageId, HISTORY_LIMIT],
+    [pageId, workspaceId, HISTORY_LIMIT],
     client
   );
 }
@@ -1572,6 +1628,7 @@ async function fetchCategoriesForUser(userId, client = null) {
       SELECT
         c.id,
         c.user_id,
+        c.workspace_id,
         c.name,
         c.sort_order,
         c.is_active,
@@ -1579,8 +1636,11 @@ async function fetchCategoriesForUser(userId, client = null) {
         c.updated_at,
         COUNT(s.id)::int AS service_count
       FROM service_categories c
-      LEFT JOIN services s ON s.category_id = c.id AND s.is_active = TRUE
-      WHERE c.user_id = $1
+      LEFT JOIN services s
+        ON s.category_id = c.id
+       AND s.is_active = TRUE
+       AND s.workspace_id = c.workspace_id
+      WHERE c.workspace_id = $1
       GROUP BY c.id
       ORDER BY c.sort_order ASC, c.created_at ASC
     `,
@@ -1596,6 +1656,7 @@ async function fetchServicesForUser(userId, username = "", client = null) {
       SELECT
         s.id,
         s.user_id,
+        s.workspace_id,
         s.category_id,
         c.name AS category_name,
         s.event_type_id,
@@ -1610,9 +1671,9 @@ async function fetchServicesForUser(userId, username = "", client = null) {
         s.created_at,
         s.updated_at
       FROM services s
-      LEFT JOIN service_categories c ON c.id = s.category_id
-      LEFT JOIN event_types et ON et.id = s.event_type_id
-      WHERE s.user_id = $1
+      LEFT JOIN service_categories c ON c.id = s.category_id AND c.workspace_id = s.workspace_id
+      LEFT JOIN event_types et ON et.id = s.event_type_id AND et.workspace_id = s.workspace_id
+      WHERE s.workspace_id = $1
       ORDER BY s.sort_order ASC, s.created_at ASC
     `,
     [userId],
@@ -1627,6 +1688,7 @@ async function fetchReviewsForUser(userId, client = null) {
       SELECT
         r.id,
         r.user_id,
+        r.workspace_id,
         r.service_id,
         s.name AS service_name,
         r.name,
@@ -1637,8 +1699,8 @@ async function fetchReviewsForUser(userId, client = null) {
         r.created_at,
         r.updated_at
       FROM reviews r
-      LEFT JOIN services s ON s.id = r.service_id
-      WHERE r.user_id = $1
+      LEFT JOIN services s ON s.id = r.service_id AND s.workspace_id = r.workspace_id
+      WHERE r.workspace_id = $1
       ORDER BY r.sort_order ASC, r.created_at DESC
     `,
     [userId],
@@ -1716,7 +1778,7 @@ async function createPageForUser(userId, payload = {}) {
       `
         SELECT COUNT(*)::int AS count
         FROM booking_pages
-        WHERE user_id = $1
+        WHERE workspace_id = $1
       `,
       [userId],
       client
@@ -1725,9 +1787,9 @@ async function createPageForUser(userId, payload = {}) {
 
     const existing = await query(
       `
-        SELECT id, user_id, slug, title, created_at, updated_at
+        SELECT id, user_id, workspace_id, slug, title, created_at, updated_at
         FROM booking_pages
-        WHERE user_id = $1
+        WHERE workspace_id = $1
         ORDER BY created_at ASC
         LIMIT 1
       `,
@@ -1763,20 +1825,22 @@ async function createPageForUser(userId, payload = {}) {
           UPDATE booking_page_versions
           SET config_json = $2::jsonb, updated_at = NOW()
           WHERE booking_page_id = $1
+            AND workspace_id = $3
             AND status IN ('draft', 'published')
         `,
-        [page.id, JSON.stringify(normalizedConfig)],
+        [page.id, JSON.stringify(normalizedConfig), userId],
         client
       );
     }
 
     const refreshed = await query(
       `
-        SELECT id, user_id, slug, title, created_at, updated_at
+        SELECT id, user_id, workspace_id, slug, title, created_at, updated_at
         FROM booking_pages
         WHERE id = $1
+          AND workspace_id = $2
       `,
-      [page.id],
+      [page.id, userId],
       client
     );
     const stablePage = refreshed.rows[0] || page;
@@ -1809,8 +1873,8 @@ async function getPageDraftByIdForUser(userId, pageId) {
       businessName: user.display_name,
     });
 
-    const versions = await loadVersionRows(page.id, client);
-    await ensurePageVersions(page.id, fallback, client);
+    const versions = await loadVersionRows(userId, page.id, client);
+    await ensurePageVersions(page.id, { ...fallback, workspaceId: userId }, client);
 
     const draftConfig = ensureCategorySelection(
       normalizeConfig(versions.draft?.config_json, fallback),
@@ -1821,7 +1885,7 @@ async function getPageDraftByIdForUser(userId, pageId) {
       categories
     );
 
-    const history = await loadHistoryRows(page.id, client);
+    const history = await loadHistoryRows(userId, page.id, client);
 
     return buildBundlePayload({
       page,
@@ -1843,7 +1907,7 @@ async function updatePageDraftByIdForUser(userId, pageId, payload = {}) {
     const page = await resolvePageForUser(userId, pageId, client);
     const user = await getUser(userId, client);
 
-    const versions = await loadVersionRows(page.id, client);
+    const versions = await loadVersionRows(userId, page.id, client);
     const fallback = buildStarterConfig({
       presetId: "hairluxury",
       businessName: user.display_name,
@@ -1869,13 +1933,15 @@ async function updatePageDraftByIdForUser(userId, pageId, payload = {}) {
           UPDATE booking_pages
           SET title = $1, slug = $2, updated_at = NOW()
           WHERE id = $3
-          RETURNING id, user_id, slug, title, created_at, updated_at
+            AND workspace_id = $4
+          RETURNING id, user_id, workspace_id, slug, title, created_at, updated_at
         `,
-        [nextTitle, nextSlug, page.id],
+        [nextTitle, nextSlug, page.id, userId],
         client
       );
       page.id = updatedPage.rows[0].id;
       page.user_id = updatedPage.rows[0].user_id;
+      page.workspace_id = updatedPage.rows[0].workspace_id;
       page.slug = updatedPage.rows[0].slug;
       page.title = updatedPage.rows[0].title;
       page.created_at = updatedPage.rows[0].created_at;
@@ -1890,10 +1956,11 @@ async function updatePageDraftByIdForUser(userId, pageId, payload = {}) {
     const eventTypes = await listEventTypesForUser(userId, client);
 
     const currentDraftConfig = normalizeConfig(versions.draft?.config_json, fallback);
+    const safePayload = assertJsonObject(payload || {}, "payload");
     const payloadConfig =
-      payload && typeof payload === "object" && payload.config && typeof payload.config === "object"
-        ? payload.config
-        : payload;
+      safePayload.config !== undefined
+        ? assertLandingBuilderConfigPayload(safePayload.config, "config")
+        : assertLandingBuilderConfigPayload(safePayload, "config");
 
     const nextConfig = ensureCategorySelection(
       normalizeConfig(payloadConfig, currentDraftConfig),
@@ -1909,9 +1976,10 @@ async function updatePageDraftByIdForUser(userId, pageId, payload = {}) {
           version_number = $2,
           updated_at = NOW()
         WHERE booking_page_id = $3
+          AND workspace_id = $4
           AND status = 'draft'
       `,
-      [JSON.stringify(nextConfig), nextVersionNumber, page.id],
+      [JSON.stringify(nextConfig), nextVersionNumber, page.id, userId],
       client
     );
 
@@ -1919,19 +1987,20 @@ async function updatePageDraftByIdForUser(userId, pageId, payload = {}) {
       `
         INSERT INTO booking_page_version_history (
           booking_page_id,
+          workspace_id,
           source_status,
           version_number,
           config_json
         )
-        VALUES ($1, 'draft', $2, $3::jsonb)
+        VALUES ($1, $2, 'draft', $3, $4::jsonb)
       `,
-      [page.id, nextVersionNumber, JSON.stringify(nextConfig)],
+      [page.id, userId, nextVersionNumber, JSON.stringify(nextConfig)],
       client
     );
 
-    await trimHistory(page.id, client);
+    await trimHistory(userId, page.id, client);
 
-    const history = await loadHistoryRows(page.id, client);
+    const history = await loadHistoryRows(userId, page.id, client);
 
     return buildBundlePayload({
       page,
@@ -1960,7 +2029,7 @@ async function publishPageByIdForUser(userId, pageId) {
     const reviews = await fetchReviewsForUser(userId, client);
     const eventTypes = await listEventTypesForUser(userId, client);
 
-    const versions = await loadVersionRows(page.id, client);
+    const versions = await loadVersionRows(userId, page.id, client);
     const fallback = buildStarterConfig({
       presetId: "hairluxury",
       businessName: user.display_name,
@@ -1976,20 +2045,21 @@ async function publishPageByIdForUser(userId, pageId) {
       `
         INSERT INTO booking_page_versions (
           booking_page_id,
+          workspace_id,
           status,
           version_number,
           config_json,
           created_at,
           updated_at
         )
-        VALUES ($1, 'published', $2, $3::jsonb, NOW(), NOW())
+        VALUES ($1, $2, 'published', $3, $4::jsonb, NOW(), NOW())
         ON CONFLICT (booking_page_id, status)
         DO UPDATE SET
           version_number = EXCLUDED.version_number,
           config_json = EXCLUDED.config_json,
           updated_at = NOW()
       `,
-      [page.id, nextVersionNumber, JSON.stringify(nextConfig)],
+      [page.id, userId, nextVersionNumber, JSON.stringify(nextConfig)],
       client
     );
 
@@ -1997,18 +2067,19 @@ async function publishPageByIdForUser(userId, pageId) {
       `
         INSERT INTO booking_page_version_history (
           booking_page_id,
+          workspace_id,
           source_status,
           version_number,
           config_json
         )
-        VALUES ($1, 'published', $2, $3::jsonb)
+        VALUES ($1, $2, 'published', $3, $4::jsonb)
       `,
-      [page.id, nextVersionNumber, JSON.stringify(nextConfig)],
+      [page.id, userId, nextVersionNumber, JSON.stringify(nextConfig)],
       client
     );
 
-    await trimHistory(page.id, client);
-    const history = await loadHistoryRows(page.id, client);
+    await trimHistory(userId, page.id, client);
+    const history = await loadHistoryRows(userId, page.id, client);
 
     return buildBundlePayload({
       page,
@@ -2036,9 +2107,10 @@ async function restorePageVersionByHistoryIdForUser(userId, pageId, historyId) {
         FROM booking_page_version_history
         WHERE id = $1
           AND booking_page_id = $2
+          AND workspace_id = $3
         LIMIT 1
       `,
-      [historyId, page.id],
+      [historyId, page.id, userId],
       client
     );
     const historyRow = historyRowResult.rows[0];
@@ -2051,7 +2123,7 @@ async function restorePageVersionByHistoryIdForUser(userId, pageId, historyId) {
     const reviews = await fetchReviewsForUser(userId, client);
     const eventTypes = await listEventTypesForUser(userId, client);
 
-    const versions = await loadVersionRows(page.id, client);
+    const versions = await loadVersionRows(userId, page.id, client);
     const fallback = buildStarterConfig({
       presetId: "hairluxury",
       businessName: user.display_name,
@@ -2071,9 +2143,10 @@ async function restorePageVersionByHistoryIdForUser(userId, pageId, historyId) {
           version_number = $2,
           updated_at = NOW()
         WHERE booking_page_id = $3
+          AND workspace_id = $4
           AND status = 'draft'
       `,
-      [JSON.stringify(restoredConfig), nextVersionNumber, page.id],
+      [JSON.stringify(restoredConfig), nextVersionNumber, page.id, userId],
       client
     );
 
@@ -2081,18 +2154,19 @@ async function restorePageVersionByHistoryIdForUser(userId, pageId, historyId) {
       `
         INSERT INTO booking_page_version_history (
           booking_page_id,
+          workspace_id,
           source_status,
           version_number,
           config_json
         )
-        VALUES ($1, 'draft', $2, $3::jsonb)
+        VALUES ($1, $2, 'draft', $3, $4::jsonb)
       `,
-      [page.id, nextVersionNumber, JSON.stringify(restoredConfig)],
+      [page.id, userId, nextVersionNumber, JSON.stringify(restoredConfig)],
       client
     );
 
-    await trimHistory(page.id, client);
-    const history = await loadHistoryRows(page.id, client);
+    await trimHistory(userId, page.id, client);
+    const history = await loadHistoryRows(userId, page.id, client);
 
     return buildBundlePayload({
       page,
@@ -2115,6 +2189,7 @@ async function findPageBySlugOrUsername(slug, client = null) {
       SELECT
         bp.id,
         bp.user_id,
+        bp.workspace_id,
         bp.slug,
         bp.title,
         bp.created_at,
@@ -2123,7 +2198,8 @@ async function findPageBySlugOrUsername(slug, client = null) {
         u.display_name,
         u.timezone
       FROM booking_pages bp
-      JOIN users u ON u.id = bp.user_id
+      JOIN workspaces w ON w.id = bp.workspace_id
+      JOIN users u ON u.id = w.owner_user_id
       WHERE bp.slug = $1
       ORDER BY bp.updated_at DESC
       LIMIT 1
@@ -2142,6 +2218,7 @@ async function findPageBySlugOrUsername(slug, client = null) {
       SELECT
         bp.id,
         bp.user_id,
+        bp.workspace_id,
         bp.slug,
         bp.title,
         bp.created_at,
@@ -2150,7 +2227,8 @@ async function findPageBySlugOrUsername(slug, client = null) {
         $3::text AS display_name,
         $4::text AS timezone
       FROM booking_pages bp
-      WHERE bp.user_id = $1
+      JOIN workspaces w ON w.id = bp.workspace_id
+      WHERE w.owner_user_id = $1
       ORDER BY bp.updated_at DESC
       LIMIT 1
     `,
@@ -2173,21 +2251,24 @@ async function getPublishedPageBySlug(slugValue) {
         SELECT config_json
         FROM booking_page_versions
         WHERE booking_page_id = $1
+          AND workspace_id = $2
           AND status = 'published'
         LIMIT 1
       `,
-      [page.id],
+      [page.id, page.workspace_id || page.user_id],
       client
     );
     if (!versionResult.rows[0]) throw notFound("Published landing page not found");
 
-    await createStarterCatalogIfNeeded(page.user_id, client);
+    await createStarterCatalogIfNeeded(page.workspace_id || page.user_id, client);
 
-    const categories = await fetchCategoriesForUser(page.user_id, client);
-    const services = (await fetchServicesForUser(page.user_id, page.username, client)).filter(
+    const categories = await fetchCategoriesForUser(page.workspace_id || page.user_id, client);
+    const services = (
+      await fetchServicesForUser(page.workspace_id || page.user_id, page.username, client)
+    ).filter(
       (item) => item.isActive
     );
-    const reviews = await fetchReviewsForUser(page.user_id, client);
+    const reviews = await fetchReviewsForUser(page.workspace_id || page.user_id, client);
 
     const fallback = buildStarterConfig({
       presetId: "hairluxury",
@@ -2203,6 +2284,7 @@ async function getPublishedPageBySlug(slugValue) {
       page: {
         id: page.id,
         userId: page.user_id,
+        workspaceId: page.workspace_id || page.user_id,
         slug: page.slug,
         title: page.title,
         username: page.username,
@@ -2229,7 +2311,7 @@ async function assertCategoryOwnership(userId, categoryId, client = null) {
       SELECT id
       FROM service_categories
       WHERE id = $1
-        AND user_id = $2
+        AND workspace_id = $2
       LIMIT 1
     `,
     [safeCategoryId, userId],
@@ -2246,7 +2328,7 @@ async function assertServiceOwnership(userId, serviceId, client = null) {
       SELECT id
       FROM services
       WHERE id = $1
-        AND user_id = $2
+        AND workspace_id = $2
       LIMIT 1
     `,
     [safeServiceId, userId],
@@ -2263,7 +2345,7 @@ async function assertReviewOwnership(userId, reviewId, client = null) {
       SELECT id
       FROM reviews
       WHERE id = $1
-        AND user_id = $2
+        AND workspace_id = $2
       LIMIT 1
     `,
     [safeReviewId, userId],
@@ -2281,7 +2363,7 @@ async function assertEventTypeOwnership(userId, eventTypeId, client = null) {
       SELECT id
       FROM event_types
       WHERE id = $1
-        AND user_id = $2
+        AND workspace_id = $2
       LIMIT 1
     `,
     [safeEventTypeId, userId],
@@ -2322,6 +2404,7 @@ async function listCategoriesForUser(userId) {
 
 async function createCategoryForUser(userId, payload = {}) {
   return withTransaction(async (client) => {
+    const user = await getUser(userId, client);
     const name = assertString(payload.name, "name", { min: 2, max: 80 });
     const sortOrder = payload.sortOrder === undefined
       ? 0
@@ -2329,11 +2412,11 @@ async function createCategoryForUser(userId, payload = {}) {
 
     const inserted = await query(
       `
-        INSERT INTO service_categories (user_id, name, sort_order, is_active)
-        VALUES ($1, $2, $3, TRUE)
-        RETURNING id, user_id, name, sort_order, is_active, created_at, updated_at
+        INSERT INTO service_categories (workspace_id, user_id, name, sort_order, is_active)
+        VALUES ($1, $2, $3, $4, TRUE)
+        RETURNING id, user_id, workspace_id, name, sort_order, is_active, created_at, updated_at
       `,
-      [userId, name, sortOrder],
+      [userId, user.id, name, sortOrder],
       client
     );
 
@@ -2347,12 +2430,13 @@ async function updateCategoryForUser(userId, categoryId, payload = {}) {
 
     const currentResult = await query(
       `
-        SELECT id, user_id, name, sort_order, is_active, created_at, updated_at
+        SELECT id, user_id, workspace_id, name, sort_order, is_active, created_at, updated_at
         FROM service_categories
         WHERE id = $1
+          AND workspace_id = $2
         LIMIT 1
       `,
-      [safeCategoryId],
+      [safeCategoryId, userId],
       client
     );
     const current = currentResult.rows[0];
@@ -2365,7 +2449,7 @@ async function updateCategoryForUser(userId, categoryId, payload = {}) {
       : assertInteger(payload.sortOrder, "sortOrder", { min: 0, max: 9999 });
     const nextIsActive = payload.isActive === undefined
       ? !!current.is_active
-      : Boolean(payload.isActive);
+      : assertBoolean(payload.isActive, "isActive");
 
     const updated = await query(
       `
@@ -2376,9 +2460,10 @@ async function updateCategoryForUser(userId, categoryId, payload = {}) {
           is_active = $3,
           updated_at = NOW()
         WHERE id = $4
-        RETURNING id, user_id, name, sort_order, is_active, created_at, updated_at
+          AND workspace_id = $5
+        RETURNING id, user_id, workspace_id, name, sort_order, is_active, created_at, updated_at
       `,
-      [nextName, nextSortOrder, nextIsActive, safeCategoryId],
+      [nextName, nextSortOrder, nextIsActive, safeCategoryId, userId],
       client
     );
 
@@ -2393,8 +2478,9 @@ async function deleteCategoryForUser(userId, categoryId) {
       `
         DELETE FROM service_categories
         WHERE id = $1
+          AND workspace_id = $2
       `,
-      [safeCategoryId],
+      [safeCategoryId, userId],
       client
     );
     return { deleted: true };
@@ -2417,7 +2503,10 @@ async function createServiceForUser(userId, payload = {}) {
     const durationMinutes = payload.durationMinutes === undefined
       ? 30
       : assertInteger(payload.durationMinutes, "durationMinutes", { min: 5, max: 1440 });
-    const imageUrl = assertOptionalString(payload.imageUrl, "imageUrl", { max: 2000 });
+    const imageUrlRaw = assertOptionalString(payload.imageUrl, "imageUrl", { max: 2000 });
+    const imageUrl = imageUrlRaw
+      ? assertRelativeOrHttpUrl(imageUrlRaw, "imageUrl", { max: 2000 })
+      : "";
     const sortOrder = payload.sortOrder === undefined
       ? 0
       : assertInteger(payload.sortOrder, "sortOrder", { min: 0, max: 9999 });
@@ -2432,6 +2521,7 @@ async function createServiceForUser(userId, payload = {}) {
     const inserted = await query(
       `
         INSERT INTO services (
+          workspace_id,
           user_id,
           category_id,
           event_type_id,
@@ -2443,10 +2533,11 @@ async function createServiceForUser(userId, payload = {}) {
           is_active,
           sort_order
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, $10)
         RETURNING
           id,
           user_id,
+          workspace_id,
           category_id,
           event_type_id,
           name,
@@ -2461,6 +2552,7 @@ async function createServiceForUser(userId, payload = {}) {
       `,
       [
         userId,
+        user.id,
         categoryId,
         eventTypeId,
         name,
@@ -2480,6 +2572,7 @@ async function createServiceForUser(userId, payload = {}) {
         SELECT
           s.id,
           s.user_id,
+          s.workspace_id,
           s.category_id,
           c.name AS category_name,
           s.event_type_id,
@@ -2494,12 +2587,13 @@ async function createServiceForUser(userId, payload = {}) {
           s.created_at,
           s.updated_at
         FROM services s
-        LEFT JOIN service_categories c ON c.id = s.category_id
-        LEFT JOIN event_types et ON et.id = s.event_type_id
+        LEFT JOIN service_categories c ON c.id = s.category_id AND c.workspace_id = s.workspace_id
+        LEFT JOIN event_types et ON et.id = s.event_type_id AND et.workspace_id = s.workspace_id
         WHERE s.id = $1
+          AND s.workspace_id = $2
         LIMIT 1
       `,
-      [row.id],
+      [row.id, userId],
       client
     );
 
@@ -2517,6 +2611,7 @@ async function updateServiceForUser(userId, serviceId, payload = {}) {
         SELECT
           id,
           user_id,
+          workspace_id,
           category_id,
           event_type_id,
           name,
@@ -2530,9 +2625,10 @@ async function updateServiceForUser(userId, serviceId, payload = {}) {
           updated_at
         FROM services
         WHERE id = $1
+          AND workspace_id = $2
         LIMIT 1
       `,
-      [safeServiceId],
+      [safeServiceId, userId],
       client
     );
     const current = currentResult.rows[0];
@@ -2563,10 +2659,12 @@ async function updateServiceForUser(userId, serviceId, payload = {}) {
         : assertInteger(payload.durationMinutes, "durationMinutes", { min: 5, max: 1440 }),
       imageUrl: payload.imageUrl === undefined
         ? current.image_url || ""
-        : assertOptionalString(payload.imageUrl, "imageUrl", { max: 2000 }),
+        : payload.imageUrl
+          ? assertRelativeOrHttpUrl(payload.imageUrl, "imageUrl", { max: 2000 })
+          : "",
       isActive: payload.isActive === undefined
         ? !!current.is_active
-        : Boolean(payload.isActive),
+        : assertBoolean(payload.isActive, "isActive"),
       sortOrder: payload.sortOrder === undefined
         ? Number(current.sort_order) || 0
         : assertInteger(payload.sortOrder, "sortOrder", { min: 0, max: 9999 }),
@@ -2587,6 +2685,7 @@ async function updateServiceForUser(userId, serviceId, payload = {}) {
           sort_order = $9,
           updated_at = NOW()
         WHERE id = $10
+          AND workspace_id = $11
       `,
       [
         categoryId,
@@ -2599,6 +2698,7 @@ async function updateServiceForUser(userId, serviceId, payload = {}) {
         next.isActive,
         next.sortOrder,
         safeServiceId,
+        userId,
       ],
       client
     );
@@ -2608,6 +2708,7 @@ async function updateServiceForUser(userId, serviceId, payload = {}) {
         SELECT
           s.id,
           s.user_id,
+          s.workspace_id,
           s.category_id,
           c.name AS category_name,
           s.event_type_id,
@@ -2622,12 +2723,13 @@ async function updateServiceForUser(userId, serviceId, payload = {}) {
           s.created_at,
           s.updated_at
         FROM services s
-        LEFT JOIN service_categories c ON c.id = s.category_id
-        LEFT JOIN event_types et ON et.id = s.event_type_id
+        LEFT JOIN service_categories c ON c.id = s.category_id AND c.workspace_id = s.workspace_id
+        LEFT JOIN event_types et ON et.id = s.event_type_id AND et.workspace_id = s.workspace_id
         WHERE s.id = $1
+          AND s.workspace_id = $2
         LIMIT 1
       `,
-      [safeServiceId],
+      [safeServiceId, userId],
       client
     );
 
@@ -2642,8 +2744,9 @@ async function deleteServiceForUser(userId, serviceId) {
       `
         DELETE FROM services
         WHERE id = $1
+          AND workspace_id = $2
       `,
-      [safeServiceId],
+      [safeServiceId, userId],
       client
     );
     return { deleted: true };
@@ -2657,10 +2760,14 @@ async function listReviewsForUser(userId) {
 
 async function createReviewForUser(userId, payload = {}) {
   return withTransaction(async (client) => {
+    const user = await getUser(userId, client);
     const name = assertString(payload.name, "name", { min: 2, max: 120 });
     const rating = assertInteger(payload.rating ?? 5, "rating", { min: 1, max: 5 });
     const text = assertString(payload.text, "text", { min: 2, max: 3000 });
-    const avatarUrl = assertOptionalString(payload.avatarUrl, "avatarUrl", { max: 2000 });
+    const avatarUrlRaw = assertOptionalString(payload.avatarUrl, "avatarUrl", { max: 2000 });
+    const avatarUrl = avatarUrlRaw
+      ? assertRelativeOrHttpUrl(avatarUrlRaw, "avatarUrl", { max: 2000 })
+      : "";
     const sortOrder = payload.sortOrder === undefined
       ? 0
       : assertInteger(payload.sortOrder, "sortOrder", { min: 0, max: 9999 });
@@ -2671,6 +2778,7 @@ async function createReviewForUser(userId, payload = {}) {
     const inserted = await query(
       `
         INSERT INTO reviews (
+          workspace_id,
           user_id,
           service_id,
           name,
@@ -2679,10 +2787,11 @@ async function createReviewForUser(userId, payload = {}) {
           avatar_url,
           sort_order
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING
           id,
           user_id,
+          workspace_id,
           service_id,
           name,
           rating,
@@ -2692,7 +2801,7 @@ async function createReviewForUser(userId, payload = {}) {
           created_at,
           updated_at
       `,
-      [userId, serviceId, name, rating, text, avatarUrl, sortOrder],
+      [userId, user.id, serviceId, name, rating, text, avatarUrl, sortOrder],
       client
     );
 
@@ -2701,6 +2810,7 @@ async function createReviewForUser(userId, payload = {}) {
         SELECT
           r.id,
           r.user_id,
+          r.workspace_id,
           r.service_id,
           s.name AS service_name,
           r.name,
@@ -2711,11 +2821,12 @@ async function createReviewForUser(userId, payload = {}) {
           r.created_at,
           r.updated_at
         FROM reviews r
-        LEFT JOIN services s ON s.id = r.service_id
+        LEFT JOIN services s ON s.id = r.service_id AND s.workspace_id = r.workspace_id
         WHERE r.id = $1
+          AND r.workspace_id = $2
         LIMIT 1
       `,
-      [inserted.rows[0].id],
+      [inserted.rows[0].id, userId],
       client
     );
 
@@ -2732,6 +2843,7 @@ async function updateReviewForUser(userId, reviewId, payload = {}) {
         SELECT
           id,
           user_id,
+          workspace_id,
           service_id,
           name,
           rating,
@@ -2742,9 +2854,10 @@ async function updateReviewForUser(userId, reviewId, payload = {}) {
           updated_at
         FROM reviews
         WHERE id = $1
+          AND workspace_id = $2
         LIMIT 1
       `,
-      [safeReviewId],
+      [safeReviewId, userId],
       client
     );
     const current = currentResult.rows[0];
@@ -2767,7 +2880,9 @@ async function updateReviewForUser(userId, reviewId, payload = {}) {
         : assertString(payload.text, "text", { min: 2, max: 3000 }),
       avatarUrl: payload.avatarUrl === undefined
         ? current.avatar_url || ""
-        : assertOptionalString(payload.avatarUrl, "avatarUrl", { max: 2000 }),
+        : payload.avatarUrl
+          ? assertRelativeOrHttpUrl(payload.avatarUrl, "avatarUrl", { max: 2000 })
+          : "",
       sortOrder: payload.sortOrder === undefined
         ? Number(current.sort_order) || 0
         : assertInteger(payload.sortOrder, "sortOrder", { min: 0, max: 9999 }),
@@ -2785,6 +2900,7 @@ async function updateReviewForUser(userId, reviewId, payload = {}) {
           sort_order = $6,
           updated_at = NOW()
         WHERE id = $7
+          AND workspace_id = $8
       `,
       [
         nextServiceId,
@@ -2794,6 +2910,7 @@ async function updateReviewForUser(userId, reviewId, payload = {}) {
         next.avatarUrl,
         next.sortOrder,
         safeReviewId,
+        userId,
       ],
       client
     );
@@ -2803,6 +2920,7 @@ async function updateReviewForUser(userId, reviewId, payload = {}) {
         SELECT
           r.id,
           r.user_id,
+          r.workspace_id,
           r.service_id,
           s.name AS service_name,
           r.name,
@@ -2813,11 +2931,12 @@ async function updateReviewForUser(userId, reviewId, payload = {}) {
           r.created_at,
           r.updated_at
         FROM reviews r
-        LEFT JOIN services s ON s.id = r.service_id
+        LEFT JOIN services s ON s.id = r.service_id AND s.workspace_id = r.workspace_id
         WHERE r.id = $1
+          AND r.workspace_id = $2
         LIMIT 1
       `,
-      [safeReviewId],
+      [safeReviewId, userId],
       client
     );
 
@@ -2832,8 +2951,9 @@ async function deleteReviewForUser(userId, reviewId) {
       `
         DELETE FROM reviews
         WHERE id = $1
+          AND workspace_id = $2
       `,
-      [safeReviewId],
+      [safeReviewId, userId],
       client
     );
     return { deleted: true };

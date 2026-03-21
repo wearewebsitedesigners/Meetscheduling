@@ -1,4 +1,3 @@
-const AUTH_TOKEN_KEY = "meetscheduling_auth_token";
 const POST_LOGIN_REDIRECT_KEY = "meetscheduling_post_login_redirect";
 const POST_LOGIN_PLAN_KEY = "meetscheduling_post_login_plan";
 const UPGRADE_PLAN_QUERY_KEY = "upgradePlan";
@@ -68,10 +67,6 @@ function applyCycle(mode) {
   });
 }
 
-function getAuthToken() {
-  return String(localStorage.getItem(AUTH_TOKEN_KEY) || "").trim();
-}
-
 function setPostLoginRedirect(planKey = "") {
   const url = new URL(window.location.href);
   const normalizedPlan = normalizePlanKey(planKey);
@@ -139,19 +134,10 @@ async function apiRequest(path, options = {}) {
     headers.set("Content-Type", "application/json");
   }
 
-  if (auth) {
-    const token = getAuthToken();
-    if (!token) {
-      const error = new Error("Please log in to continue.");
-      error.code = "AUTH_REQUIRED";
-      throw error;
-    }
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-
   const response = await fetch(path, {
     method,
     headers,
+    credentials: "same-origin",
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
@@ -159,10 +145,23 @@ async function apiRequest(path, options = {}) {
   if (!response.ok) {
     const error = new Error(payload.error || payload.message || "Request failed.");
     error.status = response.status;
+    if (auth && response.status === 401) {
+      error.code = "AUTH_REQUIRED";
+    }
     throw error;
   }
 
   return payload;
+}
+
+async function hasActiveSession() {
+  try {
+    await apiRequest("/api/auth/me", { auth: false });
+    return true;
+  } catch (error) {
+    if (error.status === 401) return false;
+    throw error;
+  }
 }
 
 function planLabel(planKey) {
@@ -278,11 +277,6 @@ function renderSubscriptionStatus(subscription) {
 }
 
 async function refreshSubscriptionStatus() {
-  if (!getAuthToken()) {
-    renderSubscriptionStatus(null);
-    return;
-  }
-
   try {
     const payload = await apiRequest("/api/billing/subscription");
     renderSubscriptionStatus(payload.subscription || null);
@@ -438,7 +432,7 @@ async function renderPayPalButtons(planKey) {
 async function startPayPalCheckout(planKey, sourceButton = null) {
   const normalizedPlanKey = normalizePlanKey(planKey) || "BASIC";
   hideNotice();
-  if (!getAuthToken()) {
+  if (!(await hasActiveSession())) {
     setPostLoginRedirect(normalizedPlanKey);
     showNotice("Please log in or sign up first. We'll continue this upgrade after login.");
     window.setTimeout(() => {
@@ -471,7 +465,7 @@ async function startPayPalCheckout(planKey, sourceButton = null) {
 }
 
 async function cancelSubscription() {
-  if (!getAuthToken()) {
+  if (!(await hasActiveSession())) {
     showNotice("Please log in to manage subscriptions.");
     return;
   }
@@ -562,7 +556,7 @@ function clearPendingUpgradePlan() {
 async function resumeCheckoutAfterAuth() {
   const params = new URLSearchParams(window.location.search);
   if (params.has("paypal")) return;
-  if (!getAuthToken()) return;
+  if (!(await hasActiveSession())) return;
 
   const pendingPlan = readPendingUpgradePlan();
   if (!pendingPlan) return;
@@ -585,7 +579,7 @@ async function handlePayPalReturn() {
 
   if (mode === "success") {
     const subscriptionId = String(params.get("subscription_id") || "").trim();
-    if (subscriptionId && getAuthToken()) {
+    if (subscriptionId && (await hasActiveSession())) {
       try {
         await syncSubscription(subscriptionId);
         showNotice("Payment confirmed and subscription synced.", "success");

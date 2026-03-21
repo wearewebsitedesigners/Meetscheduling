@@ -176,7 +176,7 @@ export default function HeroSection() {
               className="-right-5 bottom-[9%] hidden lg:block"
               icon={Star}
               title="Creator review"
-              body="\"The smoothest builder we have used.\""
+              body={'"The smoothest builder we have used."'}
               color="#2159d2"
               delay={0.7}
             />

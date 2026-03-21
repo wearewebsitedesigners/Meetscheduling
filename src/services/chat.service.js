@@ -1,6 +1,12 @@
 const { query, withTransaction } = require("../db/pool");
 const { badRequest, notFound } = require("../utils/http-error");
-const { assertInteger, assertOptionalString, assertString } = require("../utils/validation");
+const {
+  assertEmail,
+  assertInteger,
+  assertJsonObject,
+  assertOptionalString,
+  assertString,
+} = require("../utils/validation");
 
 const CHAT_STATUSES = new Set(["open", "resolved", "archived"]);
 const CHAT_CHANNELS = new Set(["chat", "support", "lead", "internal"]);
@@ -21,6 +27,45 @@ function normalizeChannel(channel = "") {
   if (!value) return "chat";
   if (!CHAT_CHANNELS.has(value)) throw badRequest("channel is invalid");
   return value;
+}
+
+function normalizeParticipants(participants) {
+  if (participants === undefined || participants === null) return [];
+  if (!Array.isArray(participants)) {
+    throw badRequest("participants must be an array");
+  }
+  if (participants.length > 50) {
+    throw badRequest("participants contains too many entries");
+  }
+
+  return participants.map((participant, index) => {
+    if (!participant || typeof participant !== "object" || Array.isArray(participant)) {
+      throw badRequest(`participants[${index}] must be an object`);
+    }
+
+    const participantEmailRaw = assertOptionalString(
+      participant.email,
+      `participants[${index}].email`,
+      { max: 320 }
+    );
+    const participantEmail = participantEmailRaw
+      ? assertEmail(participantEmailRaw, `participants[${index}].email`)
+      : "";
+    const participantName = assertOptionalString(
+      participant.displayName || participant.name,
+      `participants[${index}].displayName`,
+      { max: 160 }
+    );
+
+    if (!participantEmail && !participantName) {
+      throw badRequest(`participants[${index}] must include email or displayName`);
+    }
+
+    return {
+      email: participantEmail,
+      displayName: participantName || participantEmail || "Participant",
+    };
+  });
 }
 
 function mapConversationRow(row) {
@@ -138,7 +183,7 @@ async function createChatConversation(workspaceId, userId, payload = {}) {
     max: 200,
   });
   const channel = normalizeChannel(payload.channel || "chat");
-  const participants = Array.isArray(payload.participants) ? payload.participants : [];
+  const participants = normalizeParticipants(payload.participants);
 
   return withTransaction(async (client) => {
     const insertedConversation = await query(
@@ -201,18 +246,6 @@ async function createChatConversation(workspaceId, userId, payload = {}) {
     );
 
     for (const participant of participants) {
-      if (!participant || typeof participant !== "object") continue;
-      const participantEmail = assertOptionalString(participant.email, "participants.email", {
-        max: 320,
-      });
-      const participantName = assertOptionalString(
-        participant.displayName || participant.name,
-        "participants.displayName",
-        { max: 160 }
-      );
-
-      if (!participantEmail && !participantName) continue;
-
       await query(
         `
           INSERT INTO chat_participants (
@@ -232,8 +265,8 @@ async function createChatConversation(workspaceId, userId, payload = {}) {
         [
           conversation.id,
           workspaceId,
-          participantEmail || null,
-          participantName || participantEmail || "Participant",
+          participant.email || null,
+          participant.displayName,
         ],
         client
       );
@@ -273,6 +306,8 @@ async function listChatMessages(workspaceId, conversationId, { limit = 200 } = {
 
 async function createChatMessage(workspaceId, conversationId, userId, payload = {}) {
   const body = assertString(payload.body, "body", { min: 1, max: 10000 });
+  const metadata =
+    payload.metadata === undefined ? {} : assertJsonObject(payload.metadata, "metadata");
   const messageType = String(payload.messageType || "text")
     .trim()
     .toLowerCase();
@@ -329,7 +364,7 @@ async function createChatMessage(workspaceId, conversationId, userId, payload = 
         senderName,
         body,
         messageType,
-        JSON.stringify(payload.metadata && typeof payload.metadata === "object" ? payload.metadata : {}),
+        JSON.stringify(metadata),
       ],
       client
     );

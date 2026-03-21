@@ -1,6 +1,12 @@
 const { query, withTransaction } = require("../db/pool");
 const { badRequest, conflict, notFound } = require("../utils/http-error");
-const { assertInteger, assertOptionalString, assertString } = require("../utils/validation");
+const {
+  assertInteger,
+  assertIsoDateTime,
+  assertOptionalString,
+  assertRelativeOrHttpUrl,
+  assertString,
+} = require("../utils/validation");
 const { slugify } = require("../utils/slug");
 
 const POST_STATUSES = new Set(["draft", "published", "archived"]);
@@ -22,6 +28,11 @@ function normalizeTags(tags) {
     unique.add(value);
   });
   return Array.from(unique);
+}
+
+function normalizePublishedAt(value, field = "publishedAt") {
+  if (value === undefined || value === null || value === "") return null;
+  return assertIsoDateTime(value, field);
 }
 
 function mapPostRow(row) {
@@ -182,9 +193,12 @@ async function createPost(workspaceId, userId, payload = {}) {
 
   const excerpt = assertOptionalString(payload.excerpt, "excerpt", { max: 600 });
   const content = assertOptionalString(payload.content, "content", { max: 500000 });
-  const coverImageUrl = assertOptionalString(payload.coverImageUrl, "coverImageUrl", {
+  const coverImageUrlRaw = assertOptionalString(payload.coverImageUrl, "coverImageUrl", {
     max: 1000,
   });
+  const coverImageUrl = coverImageUrlRaw
+    ? assertRelativeOrHttpUrl(coverImageUrlRaw, "coverImageUrl", { max: 1000 })
+    : "";
   const seoTitle = assertOptionalString(payload.seoTitle, "seoTitle", { max: 180 });
   const seoDescription = assertOptionalString(payload.seoDescription, "seoDescription", {
     max: 300,
@@ -194,13 +208,9 @@ async function createPost(workspaceId, userId, payload = {}) {
   const publishedAt =
     status === "published"
       ? payload.publishedAt
-        ? new Date(payload.publishedAt)
-        : new Date()
+        ? normalizePublishedAt(payload.publishedAt, "publishedAt")
+        : new Date().toISOString()
       : null;
-
-  if (publishedAt && Number.isNaN(publishedAt.getTime())) {
-    throw badRequest("publishedAt is invalid");
-  }
 
   return withTransaction(async (client) => {
     try {
@@ -247,7 +257,7 @@ async function createPost(workspaceId, userId, payload = {}) {
           content,
           coverImageUrl,
           status,
-          publishedAt ? publishedAt.toISOString() : null,
+          publishedAt,
           seoTitle,
           seoDescription,
         ],
@@ -349,7 +359,9 @@ async function updatePost(workspaceId, userId, postId, payload = {}) {
     const coverImageUrl =
       payload.coverImageUrl === undefined
         ? current.coverImageUrl
-        : assertOptionalString(payload.coverImageUrl, "coverImageUrl", { max: 1000 });
+        : payload.coverImageUrl
+          ? assertRelativeOrHttpUrl(payload.coverImageUrl, "coverImageUrl", { max: 1000 })
+          : "";
 
     const seoTitle =
       payload.seoTitle === undefined
@@ -366,14 +378,10 @@ async function updatePost(workspaceId, userId, postId, payload = {}) {
 
     const publishedAt =
       status === "published"
-        ? payload.publishedAt
-          ? new Date(payload.publishedAt)
-          : current.publishedAt || new Date()
+        ? payload.publishedAt === undefined || payload.publishedAt === null || payload.publishedAt === ""
+          ? current.publishedAt || new Date().toISOString()
+          : normalizePublishedAt(payload.publishedAt, "publishedAt")
         : null;
-
-    if (publishedAt && Number.isNaN(new Date(publishedAt).getTime())) {
-      throw badRequest("publishedAt is invalid");
-    }
 
     const tags = payload.tags === undefined ? current.tags : normalizeTags(payload.tags);
 
@@ -417,7 +425,7 @@ async function updatePost(workspaceId, userId, postId, payload = {}) {
           content,
           coverImageUrl,
           status,
-          publishedAt ? new Date(publishedAt).toISOString() : null,
+          publishedAt,
           seoTitle,
           seoDescription,
           workspaceId,

@@ -29,7 +29,11 @@ router.get(
 router.post(
   "/forms",
   asyncHandler(async (req, res) => {
-    const form = await createRoutingFormForUser(req.auth.workspaceId, req.body || {});
+    const form = await createRoutingFormForUser(
+      req.auth.workspaceId,
+      req.auth.userId,
+      req.body || {}
+    );
     res.status(201).json({ form });
   })
 );
@@ -57,7 +61,11 @@ router.delete(
 router.post(
   "/leads",
   asyncHandler(async (req, res) => {
-    const lead = await createRoutingLeadForUser(req.auth.workspaceId, req.body || {});
+    const lead = await createRoutingLeadForUser(
+      req.auth.workspaceId,
+      req.auth.userId,
+      req.body || {}
+    );
     res.status(201).json({ lead });
   })
 );
@@ -92,4 +100,3 @@ router.delete(
 );
 
 module.exports = router;
-

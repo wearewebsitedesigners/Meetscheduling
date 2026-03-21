@@ -19,7 +19,7 @@ import {
   Trash2,
   Wand2,
 } from "lucide-react";
-import { apiFetch, cn, getAuthToken, GlassButton, Toggle } from "../shared.jsx";
+import { apiFetch, cn, GlassButton, isLocalPreviewHost, Toggle } from "../shared.jsx";
 
 const weekdayMeta = [
   { weekday: 0, key: "Sun", label: "Sunday" },
@@ -430,8 +430,7 @@ export default function AvailabilityPanel() {
       setError("");
       setNotice("");
     }
-    const token = getAuthToken();
-    if (!token) {
+    if (isLocalPreviewHost()) {
       applyPreviewState();
       setLoading(false);
       return;

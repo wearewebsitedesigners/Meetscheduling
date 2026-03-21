@@ -1,7 +1,14 @@
 const path = require("path");
 const { query } = require("../db/pool");
 const { badRequest, notFound } = require("../utils/http-error");
-const { assertInteger, assertOptionalString, assertString } = require("../utils/validation");
+const {
+  assertBoolean,
+  assertInteger,
+  assertJsonObject,
+  assertOptionalString,
+  assertSafeFileName,
+  assertString,
+} = require("../utils/validation");
 const { uploadImageForUser } = require("./upload.service");
 
 function mapFolderRow(row) {
@@ -186,7 +193,9 @@ function inferStorageKeyFromUrl(url) {
 
 async function uploadFile(workspaceId, userId, payload = {}) {
   const folderId = payload.folderId ? await ensureFolder(workspaceId, payload.folderId) : null;
-  const fileName = assertOptionalString(payload.fileName, "fileName", { max: 220 });
+  const fileName = payload.fileName
+    ? assertSafeFileName(payload.fileName, "fileName", { max: 220 })
+    : "";
 
   const uploaded = await uploadImageForUser(userId, payload);
   const originalName = fileName || path.basename(uploaded.url);
@@ -238,7 +247,11 @@ async function uploadFile(workspaceId, userId, payload = {}) {
       uploaded.url,
       uploaded.contentType,
       uploaded.bytes,
-      JSON.stringify({ source: "uploads", bytes: uploaded.bytes }),
+      JSON.stringify({
+        source: "uploads",
+        bytes: uploaded.bytes,
+        alt: uploaded.alt || "",
+      }),
     ]
   );
 
@@ -289,9 +302,9 @@ async function updateFile(workspaceId, fileId, payload = {}) {
         : null;
 
   const metadata =
-    payload.metadata && typeof payload.metadata === "object"
-      ? payload.metadata
-      : current.metadata_json || {};
+    payload.metadata === undefined
+      ? current.metadata_json || {}
+      : assertJsonObject(payload.metadata, "metadata");
 
   const result = await query(
     `
@@ -462,7 +475,9 @@ async function createGalleryItem(workspaceId, userId, payload = {}) {
       altText,
       tags,
       sortOrder,
-      payload.isPublished === undefined ? true : !!payload.isPublished,
+      payload.isPublished === undefined
+        ? true
+        : assertBoolean(payload.isPublished, "isPublished"),
       userId,
     ]
   );

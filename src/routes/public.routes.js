@@ -1,7 +1,10 @@
 const express = require("express");
 const asyncHandler = require("../middleware/async-handler");
 const publicRateLimit = require("../middleware/public-rate-limit");
+const { createRateLimiter } = require("../middleware/rate-limit");
 const { badRequest } = require("../utils/http-error");
+const { assertSlug } = require("../utils/validation");
+const { getRequestIp, logSecurityEvent } = require("../utils/security-log");
 const { getPublicEventTypeByUsernameAndSlug } = require("../services/event-types.service");
 const {
   generatePublicSlots,
@@ -21,6 +24,27 @@ const {
 const router = express.Router();
 router.use(publicRateLimit);
 
+const publicWriteRateLimit = createRateLimiter({
+  key: "public-write",
+  windowMs: 10 * 60 * 1000,
+  maxRequests: 10,
+  blockMs: 20 * 60 * 1000,
+  errorMessage: "Too many form submissions. Please try again later.",
+  keyFn: (req) => {
+    const email = String(req.body?.email || "").trim().toLowerCase().slice(0, 320);
+    return `${String(req.hostname || "").trim().toLowerCase() || "unknown-host"}:${getRequestIp(req)}:${req.path}:${email || "anon"}`;
+  },
+  onLimit: (req, meta) => {
+    logSecurityEvent("traffic.public_write_rate_limited", {
+      requestId: req.id || "",
+      ip: getRequestIp(req),
+      host: String(req.hostname || "").trim().toLowerCase() || "unknown-host",
+      path: req.originalUrl || req.url || "",
+      retryAfterSeconds: meta.retryAfterSeconds,
+    }, { level: "warn" });
+  },
+});
+
 function detectVisitorTimezone(req) {
   const fromQuery = req.query.timezone;
   const fromHeader = req.headers["x-timezone"];
@@ -30,18 +54,28 @@ function detectVisitorTimezone(req) {
   return assertZone(preferred, "timezone");
 }
 
+function readPublicRouteParams(req) {
+  return {
+    username: assertSlug(req.params.username, "username"),
+    slug: assertSlug(req.params.slug, "slug"),
+  };
+}
+
 router.get(
   "/landing/:username",
   asyncHandler(async (req, res) => {
-    const landingPage = await getPublicLandingPageByUsername(req.params.username);
+    const username = assertSlug(req.params.username, "username");
+    const landingPage = await getPublicLandingPageByUsername(username);
     res.json({ landingPage });
   })
 );
 
 router.post(
   "/landing/:username/leads",
+  publicWriteRateLimit,
   asyncHandler(async (req, res) => {
-    const lead = await createLandingLeadForUsername(req.params.username, req.body || {}, {
+    const username = assertSlug(req.params.username, "username");
+    const lead = await createLandingLeadForUsername(username, req.body || {}, {
       sourceUrl: req.body?.sourceUrl || req.headers.referer || "",
     });
     res.status(201).json({ lead });
@@ -51,14 +85,12 @@ router.post(
 router.get(
   "/:username/:slug",
   asyncHandler(async (req, res) => {
+    const { username, slug } = readPublicRouteParams(req);
     const visitorTimezone = detectVisitorTimezone(req);
-    const event = await getPublicEventTypeByUsernameAndSlug(
-      req.params.username,
-      req.params.slug
-    );
+    const event = await getPublicEventTypeByUsernameAndSlug(username, slug);
     const dates = await listPublicBookableDates({
-      username: req.params.username,
-      slug: req.params.slug,
+      username,
+      slug,
       visitorTimezone,
     });
     res.json({
@@ -84,14 +116,15 @@ router.get(
 router.get(
   "/:username/:slug/slots",
   asyncHandler(async (req, res) => {
+    const { username, slug } = readPublicRouteParams(req);
     const date = req.query.date;
     if (!date) throw badRequest("date is required");
     const safeDate = assertDate(date, "date");
     const visitorTimezone = detectVisitorTimezone(req);
 
     const payload = await generatePublicSlots({
-      username: req.params.username,
-      slug: req.params.slug,
+      username,
+      slug,
       visitorDate: safeDate,
       visitorTimezone,
     });
@@ -102,11 +135,9 @@ router.get(
 router.get(
   "/:username/:slug/bookings/:bookingId",
   asyncHandler(async (req, res) => {
+    const { username, slug } = readPublicRouteParams(req);
     const visitorTimezone = detectVisitorTimezone(req);
-    const event = await getPublicEventTypeByUsernameAndSlug(
-      req.params.username,
-      req.params.slug
-    );
+    const event = await getPublicEventTypeByUsernameAndSlug(username, slug);
     const booking = await getPublicBookingConfirmationForEvent(event, req.params.bookingId, {
       timezone: visitorTimezone,
     });
@@ -135,12 +166,14 @@ router.get(
 
 router.post(
   "/:username/:slug/bookings",
+  publicWriteRateLimit,
   asyncHandler(async (req, res) => {
+    const { username, slug } = readPublicRouteParams(req);
     const body = req.body || {};
     const visitorTimezone = detectVisitorTimezone(req);
     const result = await createPublicBooking({
-      username: req.params.username,
-      slug: req.params.slug,
+      username,
+      slug,
       visitorDate: body.visitorDate || body.date,
       visitorTimezone,
       startAtUtc: body.startAtUtc,
@@ -154,8 +187,8 @@ router.post(
     });
     res.status(201).json({
       ...result,
-      publicBookingUrl: `/${encodeURIComponent(req.params.username)}/${encodeURIComponent(req.params.slug)}`,
-      landingUrl: `/${encodeURIComponent(req.params.username)}`,
+      publicBookingUrl: `/${encodeURIComponent(username)}/${encodeURIComponent(slug)}`,
+      landingUrl: `/${encodeURIComponent(username)}`,
     });
   })
 );

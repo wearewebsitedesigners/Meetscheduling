@@ -9,6 +9,7 @@ DEPLOY_ENV="${DEPLOY_ENV:-}"
 ECOSYSTEM_FILE="${ECOSYSTEM_FILE:-ecosystem.config.js}"
 PORT="${PORT:-8080}"
 HEALTHCHECK_URL="${HEALTHCHECK_URL:-http://127.0.0.1:${PORT}/api/health}"
+RUN_MIGRATIONS="${RUN_MIGRATIONS:-false}"
 
 log() {
   printf '[deploy] %s\n' "$*"
@@ -48,6 +49,15 @@ npm ci --omit=dev
 
 if [ -f .env ]; then
   chmod 600 .env
+fi
+
+if [[ "$RUN_MIGRATIONS" =~ ^(1|true|yes)$ ]]; then
+  if node -e "const pkg=require('./package.json'); process.exit(pkg.scripts && pkg.scripts.migrate ? 0 : 1)"; then
+    log "Running database migrations"
+    npm run migrate
+  else
+    fail "RUN_MIGRATIONS was requested but no migrate script exists"
+  fi
 fi
 
 if node -e "const pkg=require('./package.json'); process.exit(pkg.scripts && pkg.scripts.build ? 0 : 1)"; then

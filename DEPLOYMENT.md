@@ -49,9 +49,41 @@ Optional secrets:
 Optional repository variables:
 
 - `VPS_APP_DIR` (default used by workflow: `/var/www/meetscheduling`)
+- `PM2_APP_NAME` (default: `meetscheduling`)
+- `DEPLOY_BRANCH` (default: `main`)
+- `HEALTHCHECK_URL` (default: `http://127.0.0.1:8080/api/health`)
 - `RUN_MIGRATIONS` (`true` or `false`; default behavior is skip)
 
-## 3) One-time VPS bootstrap
+## 3) Create the deploy SSH key
+
+Generate a dedicated deploy key locally:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/meetscheduling_github_actions -C "github-actions-deploy"
+```
+
+Install the public key on the VPS for the deploy user:
+
+```bash
+ssh-copy-id -i ~/.ssh/meetscheduling_github_actions.pub <user>@<host>
+```
+
+Or append it manually to `~/.ssh/authorized_keys` for `VPS_USER`.
+
+Then paste the private key into the GitHub secret `VPS_SSH_KEY`:
+
+```bash
+cat ~/.ssh/meetscheduling_github_actions
+```
+
+Make sure the VPS permissions are correct:
+
+```bash
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+```
+
+## 4) One-time VPS bootstrap
 
 Install prerequisites on server:
 
@@ -108,7 +140,14 @@ npm run check-env -- --production
 
 This fails fast when HTTPS, loopback binding, database TLS, or private-database assertions are unsafe.
 
-## 4) Manual VPS deploy (optional fallback)
+First-run behavior from GitHub Actions:
+
+- the workflow first validates raw SSH login
+- if `VPS_APP_DIR` does not exist yet, it clones the repo there automatically
+- if `.env` is missing, it creates a placeholder from `.env.example`, stops, and asks you to fill in production secrets on the VPS
+- once `.env` is configured, rerun the workflow and it will complete the deploy
+
+## 5) Manual VPS deploy (optional fallback)
 
 Use `deploy.sh` with environment variables:
 
@@ -133,7 +172,7 @@ Optional overrides:
 - `DEPLOY_PATH` (default `/var/www/meetscheduling`)
 - `DEPLOY_REF` (default `main`)
 
-## 5) TLS proxy and network exposure
+## 6) TLS proxy and network exposure
 
 Terminate TLS at Nginx/Caddy/Cloudflare and proxy traffic to `127.0.0.1:8080`. A ready-to-adapt
 Nginx example is included at [`deploy/nginx/meetscheduling.conf`](/Users/divyanshu/Downloads/Meetscheduling-fixed/deploy/nginx/meetscheduling.conf).
@@ -154,7 +193,7 @@ ufw deny 8080/tcp
 ufw deny 5432/tcp
 ```
 
-## 6) SSH timeout troubleshooting
+## 7) SSH timeout troubleshooting
 
 If GitHub Actions fails with `dial tcp ... i/o timeout`, the runner could not open a TCP connection to the SSH host. That happens before key authentication, so the usual causes are:
 
@@ -165,7 +204,20 @@ If GitHub Actions fails with `dial tcp ... i/o timeout`, the runner could not op
 
 For the most stable setup, use the VPS public IP or a direct DNS A record for `VPS_HOST`, and verify that the SSH port is reachable from outside your local network.
 
-## 7) Post-deploy smoke checks
+If GitHub Actions fails with SSH exit code `255`, that usually means authentication or remote shell startup failed. Check:
+
+- `VPS_USER` is correct
+- the private key in `VPS_SSH_KEY` matches the public key in `~/.ssh/authorized_keys`
+- the SSH daemon allows that user and key
+- the deploy user can `cd` into `VPS_APP_DIR`
+
+Manual test:
+
+```bash
+ssh -i ~/.ssh/meetscheduling_github_actions -p <port> <user>@<host> 'echo ok && whoami && hostname'
+```
+
+## 8) Post-deploy smoke checks
 
 ```bash
 APP_URL=https://your-domain.com bash scripts/smoke.sh
@@ -178,7 +230,7 @@ Expected:
 - protected routes work with the session cookie
 - frontend pages return HTTP 200
 
-## 8) Production checklist
+## 9) Production checklist
 
 - Replace all placeholder secrets.
 - Keep `.env` server-side only and never commit it.

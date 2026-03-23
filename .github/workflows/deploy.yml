@@ -5,6 +5,18 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      run_migrations:
+        description: "Run database migrations during deploy"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
 
 concurrency:
   group: meetscheduling-production
@@ -122,6 +134,30 @@ jobs:
           keyscan_flag="${SSH_FLAG:-}"
           ssh-keyscan $keyscan_flag -p "$port" "$host" >> ~/.ssh/known_hosts 2>/dev/null
 
+      - name: Validate SSH login
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          SSH_FLAG: ${{ steps.detect_ssh.outputs.ssh_flag }}
+        run: |
+          set -euo pipefail
+          host="${VPS_HOST:?VPS_HOST secret is required}"
+          port="${VPS_PORT:-22}"
+          user="${VPS_USER:?VPS_USER secret is required}"
+          flag="${SSH_FLAG:-}"
+
+          ssh \
+            "$flag" \
+            -i ~/.ssh/meetscheduling_deploy_key \
+            -p "$port" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            "$user@$host" \
+            'set -euo pipefail; echo "[ssh] connected as $(whoami) on $(hostname)"'
+
       - name: Run production deploy over SSH
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -129,12 +165,25 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           SSH_FLAG: ${{ steps.detect_ssh.outputs.ssh_flag }}
           SSH_LABEL: ${{ steps.detect_ssh.outputs.ssh_label }}
+          VPS_APP_DIR: ${{ vars.VPS_APP_DIR }}
+          PM2_APP_NAME: ${{ vars.PM2_APP_NAME }}
+          DEPLOY_BRANCH: ${{ vars.DEPLOY_BRANCH }}
+          HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
+          RUN_MIGRATIONS_INPUT: ${{ github.event.inputs.run_migrations }}
+          RUN_MIGRATIONS_VAR: ${{ vars.RUN_MIGRATIONS }}
+          GITHUB_REPOSITORY_SLUG: ${{ github.repository }}
         run: |
           set -euo pipefail
           host="${VPS_HOST:?VPS_HOST secret is required}"
           port="${VPS_PORT:-22}"
           user="${VPS_USER:?VPS_USER secret is required}"
           flag="${SSH_FLAG:-}"
+          app_dir="${VPS_APP_DIR:-/var/www/meetscheduling}"
+          pm2_app_name="${PM2_APP_NAME:-meetscheduling}"
+          branch="${DEPLOY_BRANCH:-main}"
+          healthcheck_url="${HEALTHCHECK_URL:-http://127.0.0.1:8080/api/health}"
+          run_migrations="${RUN_MIGRATIONS_INPUT:-${RUN_MIGRATIONS_VAR:-false}}"
+          repo_slug="${GITHUB_REPOSITORY_SLUG:?github.repository is required}"
           echo "Deploying over ${SSH_LABEL:-unknown}"
 
           ssh_cmd=(
@@ -145,19 +194,74 @@ jobs:
             -o BatchMode=yes
             -o IdentitiesOnly=yes
             -o StrictHostKeyChecking=yes
+            -o ConnectTimeout=15
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=3
           )
 
-          "${ssh_cmd[@]}" "$user@$host" '
+          "${ssh_cmd[@]}" "$user@$host" "
             set -euo pipefail
             export DEPLOY_ENV=production
-            export APP_DIR=/home/meetscheduling/htdocs/www.meetscheduling.com
-            export PM2_APP_NAME=meetscheduling
-            export BRANCH=main
-            export HEALTHCHECK_URL=http://127.0.0.1:8080/api/health
+            export APP_DIR=\"${app_dir}\"
+            export PM2_APP_NAME=\"${pm2_app_name}\"
+            export BRANCH=\"${branch}\"
+            export HEALTHCHECK_URL=\"${healthcheck_url}\"
+            export RUN_MIGRATIONS=\"${run_migrations}\"
+            export REPO_SLUG=\"${repo_slug}\"
 
-            cd /home/meetscheduling/htdocs/www.meetscheduling.com
+            if [ ! -d \"\$APP_DIR/.git\" ]; then
+              if [ -e \"\$APP_DIR\" ]; then
+                echo \"[bootstrap] \$APP_DIR exists but is not a git checkout\"
+                ls -ld \"\$APP_DIR\"
+                exit 1
+              fi
+              echo \"[bootstrap] app directory missing, cloning https://github.com/\$REPO_SLUG.git into \$APP_DIR\"
+              mkdir -p \"\$(dirname \"\$APP_DIR\")\"
+              git clone --depth 1 --branch \"\$BRANCH\" \"https://github.com/\$REPO_SLUG.git\" \"\$APP_DIR\"
+            fi
+
+            cd \"\$APP_DIR\"
+
+            if [ ! -f .env ]; then
+              cp .env.example .env
+              chmod 600 .env
+              echo \"[bootstrap] created \$APP_DIR/.env from .env.example\"
+              echo \"[bootstrap] fill in production secrets on the VPS, then rerun the workflow\"
+              exit 1
+            fi
+
             bash scripts/deploy.sh
-          '
+          "
+
+      - name: Collect SSH diagnostics on failure
+        if: failure()
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          SSH_FLAG: ${{ steps.detect_ssh.outputs.ssh_flag }}
+        run: |
+          set +e
+          host="${VPS_HOST:-}"
+          port="${VPS_PORT:-22}"
+          user="${VPS_USER:-}"
+          flag="${SSH_FLAG:-}"
+
+          if [ -z "$host" ] || [ -z "$user" ]; then
+            exit 0
+          fi
+
+          ssh \
+            "$flag" \
+            -vv \
+            -i ~/.ssh/meetscheduling_deploy_key \
+            -p "$port" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            "$user@$host" \
+            'exit 0' || true
 
       - name: Verify public health endpoint
         run: |

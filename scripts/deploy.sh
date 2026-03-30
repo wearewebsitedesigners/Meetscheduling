@@ -86,17 +86,8 @@ else
   log "No check-env script found, skipping environment validation"
 fi
 
-app_exists="$(
-  pm2_cmd jlist 2>/dev/null | node -e '
-    const fs = require("fs");
-    const name = process.argv[1];
-    const input = fs.readFileSync(0, "utf8").trim();
-    if (!input) process.exit(1);
-    const apps = JSON.parse(input);
-    process.exit(apps.some((entry) => entry.name === name) ? 0 : 1);
-  ' "$PM2_APP_NAME"
-  echo $?
-)"
+pm2_cmd describe "$PM2_APP_NAME" > /dev/null 2>&1
+app_exists=$?
 
 if [ "$app_exists" = "0" ]; then
   log "Restarting PM2 app"

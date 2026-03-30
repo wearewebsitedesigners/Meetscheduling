@@ -495,11 +495,17 @@ async function selectDate(ymd, btnElem) {
   // Visual update
   document.querySelectorAll(".calendar-day").forEach(el => el.classList.remove("selected"));
   if (btnElem) btnElem.classList.add("selected");
+  else {
+    // auto-select: highlight the matching day button
+    document.querySelectorAll(".calendar-day").forEach(el => {
+      if (el.dataset.ymd === ymd) el.classList.add("selected");
+    });
+  }
 
-  // Format date header nicely for the slots column
-  const dateObj = new Date(`${ymd}T00:00:00`); // parse strictly as local date
-  const dowNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const mNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  // Format date header
+  const dateObj = new Date(`${ymd}T00:00:00`);
+  const dowNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const mNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   slotsHeader.textContent = `${dowNames[dateObj.getDay()]}, ${mNames[dateObj.getMonth()]} ${dateObj.getDate()}`;
   slotsHeader.style.opacity = 1;
   if (selectedDatePill) {
@@ -507,6 +513,12 @@ async function selectDate(ymd, btnElem) {
   }
 
   sidebarDatetime.style.display = "none";
+
+  // Auto-scroll to slots panel on mobile
+  const slotsCard = document.querySelector(".slots-card");
+  if (slotsCard && window.innerWidth < 1024) {
+    setTimeout(() => slotsCard.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+  }
 
   await fetchSlotsForDate(ymd);
 }
@@ -586,24 +598,51 @@ async function fetchSlotsForDate(ymd) {
   }
 }
 
+function getEventCacheKey() {
+  return `ms_event_cache__${buildPublicEventUrl()}__${visitorTimezone}`;
+}
+
+function readEventCache() {
+  try {
+    const raw = localStorage.getItem(getEventCacheKey());
+    if (!raw) return null;
+    const entry = JSON.parse(raw);
+    if (Date.now() - entry.ts > 5 * 60 * 1000) return null; // 5 min TTL
+    return entry.data;
+  } catch {
+    return null;
+  }
+}
+
+function writeEventCache(data) {
+  try {
+    localStorage.setItem(getEventCacheKey(), JSON.stringify({ ts: Date.now(), data }));
+  } catch {
+    // localStorage unavailable or full — ignore
+  }
+}
+
 async function loadEvent() {
   try {
     showError("");
-    showLoading();
     if (!useLocalPreview && !isCustomDomainBooking && !hasPublicEventPath) {
       throw new Error(
         "This booking page needs a valid public booking link. Open the host's booking URL, or use /booking.html?username=HOST&slug=EVENT-SLUG for preview."
       );
     }
-    const data = useLocalPreview
-      ? {
-          event: getPreviewEvent(),
-          visitorTimezone,
-          dates: getPreviewDates(),
-        }
-      : await fetchJson(
-          `${buildPublicEventUrl()}?timezone=${encodeURIComponent(visitorTimezone)}`
-        );
+
+    const cached = useLocalPreview ? null : readEventCache();
+    let data;
+    if (cached) {
+      // Render from cache instantly — no spinner
+      data = cached;
+    } else {
+      showLoading();
+      data = useLocalPreview
+        ? { event: getPreviewEvent(), visitorTimezone, dates: getPreviewDates() }
+        : await fetchJson(`${buildPublicEventUrl()}?timezone=${encodeURIComponent(visitorTimezone)}`);
+      if (!useLocalPreview) writeEventCache(data);
+    }
 
     currentEvent = data.event;
     renderSidebarEventDetails(currentEvent);

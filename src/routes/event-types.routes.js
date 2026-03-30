@@ -1,7 +1,18 @@
 const express = require("express");
 const asyncHandler = require("../middleware/async-handler");
 const { requireAuth } = require("../middleware/auth");
-const { assertBoolean, assertOptionalBooleanString } = require("../utils/validation");
+const { assertBoolean, assertOptionalBooleanString, assertString } = require("../utils/validation");
+const { badRequest } = require("../utils/http-error");
+
+const EVENT_TYPE_ID_RE = /^[a-zA-Z0-9_-]{1,100}$/;
+
+function assertEventTypeId(value) {
+  const id = assertString(value, "eventTypeId", { min: 1, max: 100 });
+  if (!EVENT_TYPE_ID_RE.test(id)) {
+    throw badRequest("eventTypeId is invalid");
+  }
+  return id;
+}
 const { assertFeature } = require("../services/entitlements.service");
 const {
   listEventTypesByUser,
@@ -43,9 +54,10 @@ router.post(
 router.get(
   "/:eventTypeId",
   asyncHandler(async (req, res) => {
+    const eventTypeId = assertEventTypeId(req.params.eventTypeId);
     const eventType = await getEventTypeByIdForUser(
       req.auth.workspaceId,
-      req.params.eventTypeId
+      eventTypeId
     );
     res.json({ eventType });
   })
@@ -54,9 +66,10 @@ router.get(
 router.patch(
   "/:eventTypeId",
   asyncHandler(async (req, res) => {
+    const eventTypeId = assertEventTypeId(req.params.eventTypeId);
     const eventType = await updateEventType(
       req.auth.workspaceId,
-      req.params.eventTypeId,
+      eventTypeId,
       req.body || {}
     );
     res.json({ eventType });
@@ -66,10 +79,11 @@ router.patch(
 router.patch(
   "/:eventTypeId/active",
   asyncHandler(async (req, res) => {
+    const eventTypeId = assertEventTypeId(req.params.eventTypeId);
     const isActive = assertBoolean(req.body?.isActive, "isActive");
     const eventType = await setEventTypeActive(
       req.auth.workspaceId,
-      req.params.eventTypeId,
+      eventTypeId,
       isActive
     );
     res.json({ eventType });
@@ -79,7 +93,8 @@ router.patch(
 router.delete(
   "/:eventTypeId",
   asyncHandler(async (req, res) => {
-    const result = await deleteEventType(req.auth.workspaceId, req.params.eventTypeId);
+    const eventTypeId = assertEventTypeId(req.params.eventTypeId);
+    const result = await deleteEventType(req.auth.workspaceId, eventTypeId);
     res.json(result);
   })
 );

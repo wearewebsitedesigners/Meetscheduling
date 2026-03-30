@@ -253,6 +253,36 @@ function generateBackupCodes() {
   return codes;
 }
 
+async function storePending2FASecret(userId, secret, client = null) {
+  await query(
+    `UPDATE users SET two_factor_pending_secret = $1, two_factor_pending_secret_at = NOW() WHERE id = $2`,
+    [secret, userId],
+    client
+  );
+}
+
+async function consumePending2FASecret(userId, client = null) {
+  const result = await query(
+    `UPDATE users SET two_factor_pending_secret = NULL, two_factor_pending_secret_at = NULL WHERE id = $1 RETURNING two_factor_pending_secret`,
+    [userId],
+    client
+  );
+  return null;
+}
+
+async function getPending2FASecret(userId, client = null) {
+  const result = await query(
+    `SELECT two_factor_pending_secret, two_factor_pending_secret_at FROM users WHERE id = $1`,
+    [userId],
+    client
+  );
+  const row = result.rows[0];
+  if (!row || !row.two_factor_pending_secret) return null;
+  const ageMs = Date.now() - new Date(row.two_factor_pending_secret_at).getTime();
+  if (ageMs > 10 * 60 * 1000) return null;
+  return row.two_factor_pending_secret;
+}
+
 async function enableUser2FA(userId, secret, client = null) {
   const backupCodes = generateBackupCodes();
   const hashedCodes = await Promise.all(backupCodes.map((code) => hashBackupCode(code)));
@@ -354,6 +384,9 @@ module.exports = {
   getOrCreateUser,
   requireUser,
   updateUserProfile,
+  storePending2FASecret,
+  getPending2FASecret,
+  consumePending2FASecret,
   enableUser2FA,
   disableUser2FA,
   getBackupCodes,

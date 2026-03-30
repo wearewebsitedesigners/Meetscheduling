@@ -14,6 +14,8 @@ const {
 } = require("../middleware/auth");
 const {
   requireUser,
+  storePending2FASecret,
+  getPending2FASecret,
   enableUser2FA,
   disableUser2FA,
   removeBackupCode,
@@ -24,7 +26,6 @@ const { buildAuthClaimsForUser, buildUserPayload } = require("../services/auth-c
 const { verifyPassword } = require("../services/password-auth.service");
 const { query } = require("../db/pool");
 const {
-  assertBase32Secret,
   assertString,
   assertTotpCode,
 } = require("../utils/validation");
@@ -73,6 +74,8 @@ router.post(
       length: 20,
     });
 
+    await storePending2FASecret(user.id, secret.base32);
+
     const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url);
     logAuthEvent("2fa_setup_started", req, {
       userId: user.id,
@@ -92,10 +95,14 @@ router.post(
   asyncHandler(async (req, res) => {
     const user = await requireUser(req.auth.userId);
     const token = assertTotpCode(req.body?.token, "token");
-    const secret = assertBase32Secret(req.body?.secret, "secret");
+
+    const pendingSecret = await getPending2FASecret(user.id);
+    if (!pendingSecret) {
+      return res.status(400).json({ error: "2FA setup session expired. Please restart setup." });
+    }
 
     const verified = speakeasy.totp.verify({
-      secret,
+      secret: pendingSecret,
       encoding: "base32",
       token,
       window: 1,
@@ -105,7 +112,7 @@ router.post(
       return res.status(400).json({ error: "Invalid verification code." });
     }
 
-    const { backupCodes } = await enableUser2FA(user.id, secret);
+    const { backupCodes } = await enableUser2FA(user.id, pendingSecret);
     logAuthEvent("2fa_enabled", req, {
       userId: user.id,
       email: maskEmail(user.email),
@@ -152,13 +159,17 @@ router.post(
     }
 
     let isBackupCode = false;
+    let matchedBackupHash = null;
     if (code.length === 8 && user.two_factor_backup_codes) {
       for (const hash of user.two_factor_backup_codes) {
-        if (await bcrypt.compare(code.toUpperCase(), hash)) {
-          isBackupCode = true;
-          await removeBackupCode(user.id, hash);
-          break;
+        const match = await bcrypt.compare(code.toUpperCase(), hash);
+        if (match && !matchedBackupHash) {
+          matchedBackupHash = hash;
         }
+      }
+      if (matchedBackupHash) {
+        isBackupCode = true;
+        await removeBackupCode(user.id, matchedBackupHash);
       }
     }
 

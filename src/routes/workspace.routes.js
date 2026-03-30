@@ -9,9 +9,20 @@ const {
   deleteWorkspaceMember,
   getWorkspaceRoleForUser,
 } = require("../services/workspace.service");
+const env = require("../config/env");
 
 const router = express.Router();
 router.use(requireAuth);
+
+function requireSameOrigin(req, res, next) {
+  const appOrigin = String(env.appBaseUrl || "").replace(/\/$/, "");
+  if (!appOrigin) return next();
+  const origin = req.headers["origin"] || req.headers["referer"] || "";
+  if (!origin || !String(origin).startsWith(appOrigin)) {
+    return res.status(403).json({ error: "Forbidden: invalid request origin." });
+  }
+  return next();
+}
 
 router.get(
   "/members",
@@ -24,6 +35,7 @@ router.get(
 
 router.post(
   "/members/invite",
+  requireSameOrigin,
   requirePermission("workspace.members.invite"),
   asyncHandler(async (req, res) => {
     const { member, emailStatus } = await inviteWorkspaceMember(
@@ -52,6 +64,7 @@ router.post(
 
 router.patch(
   "/members/:memberId/role",
+  requireSameOrigin,
   requirePermission("workspace.members.updateRole"),
   asyncHandler(async (req, res) => {
     const member = await updateWorkspaceMemberRole(
@@ -79,6 +92,7 @@ router.patch(
 
 router.delete(
   "/members/:memberId",
+  requireSameOrigin,
   requirePermission("workspace.members.remove"),
   asyncHandler(async (req, res) => {
     const result = await deleteWorkspaceMember(req.auth.workspaceId, req.params.memberId);

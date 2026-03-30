@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const env = require("../config/env");
 const { forbidden, unauthorized } = require("../utils/http-error");
 const { PERMISSIONS_VERSION, canRole, normalizeRole } = require("../services/workspace.service");
+const { query } = require("../db/pool");
 
 function parseCookies(cookieHeader = "") {
   return String(cookieHeader || "")
@@ -136,12 +137,26 @@ function buildAuthContextFromClaims(decoded) {
   };
 }
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   try {
     const token = readAuthToken(req);
     if (!token) throw unauthorized("Missing auth token");
     const decoded = jwt.verify(token, env.jwtSecret);
-    req.auth = buildAuthContextFromClaims(decoded);
+    const authContext = buildAuthContextFromClaims(decoded);
+
+    const claimedWorkspaceId = authContext.workspaceId;
+    const userId = authContext.userId;
+    if (claimedWorkspaceId && claimedWorkspaceId !== userId) {
+      const memberCheck = await query(
+        `SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2 AND status = 'active' LIMIT 1`,
+        [claimedWorkspaceId, userId]
+      );
+      if (memberCheck.rowCount === 0) {
+        return next(unauthorized("Invalid or expired session"));
+      }
+    }
+
+    req.auth = authContext;
     next();
   } catch (error) {
     next(unauthorized("Invalid or expired session"));

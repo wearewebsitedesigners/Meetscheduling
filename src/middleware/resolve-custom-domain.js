@@ -3,6 +3,7 @@ const {
   isPlatformOwnedDomain,
   normalizeHostHeader,
 } = require("../utils/domain-utils");
+const { logSecurityEvent } = require("../utils/security-log");
 
 async function resolveCustomDomain(req, res, next) {
   try {
@@ -20,7 +21,11 @@ async function resolveCustomDomain(req, res, next) {
     req.customDomain = resolvedDomain;
     return next();
   } catch (error) {
-    return next(error);
+    logSecurityEvent("custom_domain.resolve_error", {
+      message: error?.message || String(error),
+      host: req.headers["x-forwarded-host"] || req.headers.host || "",
+    }, { level: "error" });
+    return res.status(500).json({ error: "An unexpected error occurred." });
   }
 }
 

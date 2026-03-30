@@ -48,7 +48,7 @@ const {
 } = require("../services/password-auth.service");
 const { slugify } = require("../utils/slug");
 const env = require("../config/env");
-const { logAuthEvent, maskEmail } = require("../utils/security-log");
+const { logAuthEvent, logSecurityEvent, maskEmail } = require("../utils/security-log");
 
 const router = express.Router();
 
@@ -56,6 +56,10 @@ function sendEmailSilently(task) {
   Promise.resolve()
     .then(() => task())
     .catch((error) => {
+      logSecurityEvent("email.send_failed", {
+        message: error?.message || String(error),
+        stack: error?.stack || "",
+      }, { level: "error" });
       // eslint-disable-next-line no-console
       console.error("Auth email failed:", error?.message || error);
     });

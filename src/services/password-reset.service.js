@@ -40,30 +40,34 @@ async function createPasswordResetRequest(email, meta = {}) {
   const requestedIp = String(meta.ipAddress || "").trim().slice(0, 80) || null;
   const userAgent = String(meta.userAgent || "").trim().slice(0, 500) || null;
 
-  await query(
-    `
-      DELETE FROM password_reset_tokens
-      WHERE user_id = $1
-         OR expires_at <= NOW()
-         OR used_at IS NOT NULL
-    `,
-    [user.id]
-  );
+  await withTransaction(async (client) => {
+    await query(
+      `
+        DELETE FROM password_reset_tokens
+        WHERE user_id = $1
+           OR expires_at <= NOW()
+           OR used_at IS NOT NULL
+      `,
+      [user.id],
+      client
+    );
 
-  await query(
-    `
-      INSERT INTO password_reset_tokens (
-        user_id,
-        workspace_id,
-        token_hash,
-        expires_at,
-        requested_ip,
-        user_agent
-      )
-      VALUES ($1, $2, $3, $4, $5, $6)
-    `,
-    [user.id, workspaceId, tokenHash, expiresAt, requestedIp, userAgent]
-  );
+    await query(
+      `
+        INSERT INTO password_reset_tokens (
+          user_id,
+          workspace_id,
+          token_hash,
+          expires_at,
+          requested_ip,
+          user_agent
+        )
+        VALUES ($1, $2, $3, $4, $5, $6)
+      `,
+      [user.id, workspaceId, tokenHash, expiresAt, requestedIp, userAgent],
+      client
+    );
+  });
 
   return {
     token,

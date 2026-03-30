@@ -55,6 +55,7 @@ git reset --hard "origin/$BRANCH"
 
 log "Installing dependencies"
 npm ci --omit=dev
+chown -R "$PM2_USER:$PM2_USER" "$APP_DIR" 2>/dev/null || true
 
 if [ -f .env ]; then
   chmod 600 .env

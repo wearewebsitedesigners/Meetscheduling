@@ -820,6 +820,31 @@ bookingForm.addEventListener("submit", async (e) => {
   if (topHostName) topHostName.textContent = nameFromUrl;
 })();
 
+// Show the calendar shell immediately (all days disabled) before API responds
+(function preRenderCalendar() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  calendarMonthYear.textContent = `${monthNames[month]} ${year}`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  calendarDays.innerHTML = "";
+
+  for (let i = 0; i < firstDay; i++) {
+    calendarDays.appendChild(document.createElement("div"));
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const btn = document.createElement("button");
+    btn.className = "calendar-day";
+    btn.textContent = d;
+    btn.disabled = true; // enabled after API responds with available dates
+    calendarDays.appendChild(btn);
+  }
+  prevMonthBtn.disabled = true;
+})();
+
 initTimezoneSelect();
 setLandingLink();
 syncStepPills("select");

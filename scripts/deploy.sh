@@ -55,7 +55,6 @@ git reset --hard "origin/$BRANCH"
 
 log "Installing dependencies"
 npm ci --omit=dev
-chown -R "$PM2_USER:$PM2_USER" "$APP_DIR" 2>/dev/null || true
 
 if [ -f .env ]; then
   chmod 600 .env
@@ -79,6 +78,9 @@ fi
 
 mkdir -p logs/pm2
 chmod 700 logs logs/pm2
+
+log "Fixing file ownership for $PM2_USER"
+chown -R "$PM2_USER:$PM2_USER" "$APP_DIR" 2>/dev/null || true
 
 if node -e "const pkg=require('./package.json'); process.exit(pkg.scripts && pkg.scripts['check-env'] ? 0 : 1)"; then
   log "Validating production environment"

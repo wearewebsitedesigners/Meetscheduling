@@ -41,7 +41,8 @@
 
     html,
     body {
-      min-height: 100%;
+      height: 100%;
+      overflow: hidden;
     }
 
     body {
@@ -51,7 +52,9 @@
         radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 32%),
         radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent 28%),
         linear-gradient(180deg, #f6faff 0%, #eef4ff 45%, #f7fbff 100%);
-      padding: 24px 14px;
+      padding: 14px 14px;
+      display: flex;
+      flex-direction: column;
     }
 
     h1,
@@ -79,6 +82,10 @@
       width: 100%;
       max-width: 1240px;
       margin: 0 auto;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
 
     .booking-page-topbar {
@@ -189,7 +196,8 @@
       position: relative;
       overflow: hidden;
       display: grid;
-      min-height: 720px;
+      flex: 1;
+      min-height: 0;
       background: var(--card-bg);
       border: 1px solid rgba(214, 225, 244, 0.84);
       border-radius: var(--radius-xl);
@@ -199,7 +207,8 @@
 
     @media (min-width: 980px) {
       .booking-wrapper {
-        grid-template-columns: 320px minmax(0, 1fr);
+        grid-template-columns: 290px minmax(0, 1fr);
+        grid-template-rows: 1fr;
       }
     }
 
@@ -238,44 +247,45 @@
 
     .event-details {
       position: relative;
-      padding: 28px 24px;
+      padding: 20px 20px;
       border-bottom: 1px solid var(--panel-border);
       background:
         radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 38%),
         linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      overflow-y: auto;
     }
 
     @media (min-width: 980px) {
       .event-details {
         border-bottom: none;
         border-right: 1px solid var(--panel-border);
-        padding: 34px 28px;
+        padding: 24px 22px;
       }
     }
 
     .host-profile {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 10px;
       align-items: center;
       justify-content: center;
-      padding-bottom: 22px;
+      padding-bottom: 16px;
       border-bottom: 1px solid var(--panel-border);
       text-align: center;
     }
 
     .host-avatar {
-      width: 88px;
-      height: 88px;
-      border-radius: 24px;
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       background: linear-gradient(180deg, #8a5a3e 0%, #2c1d16 62%, #080808 100%);
       color: #d8a37b;
-      font-size: 2rem;
+      font-size: 1.5rem;
       font-weight: 800;
-      box-shadow: 0 22px 46px rgba(0, 0, 0, 0.24);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
     }
 
     .host-name {
@@ -286,8 +296,8 @@
     }
 
     .event-title {
-      margin-top: 20px;
-      font-size: clamp(1.6rem, 3vw, 2.1rem);
+      margin-top: 14px;
+      font-size: clamp(1.3rem, 2.5vw, 1.7rem);
       line-height: 1.1;
       text-align: center;
     }
@@ -296,23 +306,23 @@
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      margin: 22px 0;
+      gap: 8px;
+      margin: 14px 0;
     }
 
     .event-meta-item {
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      padding: 14px 15px;
+      padding: 10px 13px;
       border: 1px solid var(--panel-border);
-      border-radius: 18px;
+      border-radius: 14px;
       background: rgba(255, 255, 255, 0.78);
       color: var(--text-muted);
-      font-size: 0.93rem;
+      font-size: 0.88rem;
       font-weight: 600;
       line-height: 1.5;
-      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
     }
 
     .event-meta-item#sidebar-datetime {
@@ -355,22 +365,29 @@
 
     .step-container {
       background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-      overflow: auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .step-inner {
-      padding: 22px 18px 26px;
+      padding: 18px 16px 20px;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
     }
 
     @media (min-width: 768px) {
       .step-inner {
-        padding: 26px 24px 32px;
+        padding: 20px 22px 24px;
       }
     }
 
     @media (min-width: 1180px) {
       .step-inner {
-        padding: 28px 30px 34px;
+        padding: 22px 26px 24px;
       }
     }
 
@@ -455,12 +472,15 @@
 
     .calendar-slots-layout {
       display: grid;
-      gap: 22px;
+      gap: 16px;
+      flex: 1;
+      min-height: 0;
     }
 
     @media (min-width: 1024px) {
       .calendar-slots-layout {
-        grid-template-columns: minmax(0, 1fr) 240px;
+        grid-template-columns: minmax(0, 1fr) 220px;
+        align-items: stretch;
       }
     }
 
@@ -663,26 +683,50 @@
     }
 
     .slots-card {
-      padding: 18px 16px;
-      align-self: start;
-      min-height: 100%;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    @media (min-width: 1024px) {
+      .slots-card {
+        max-height: 100%;
+      }
     }
 
     .slots-header {
-      margin-bottom: 14px;
-      font-size: 0.88rem;
+      margin-bottom: 10px;
+      font-size: 0.82rem;
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--text-main);
       transition: opacity 0.2s ease;
+      flex-shrink: 0;
     }
 
     .slots-list {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      min-height: 240px;
+      gap: 8px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 120px;
+      padding-right: 2px;
+    }
+
+    .slots-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .slots-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .slots-list::-webkit-scrollbar-thumb {
+      background: rgba(29, 99, 234, 0.18);
+      border-radius: 999px;
     }
 
     .slot-action-row {
@@ -695,9 +739,10 @@
     .slot-btn,
     .confirm-slot-btn,
     .submit-btn {
-      min-height: 48px;
-      border-radius: 16px;
+      min-height: 40px;
+      border-radius: 12px;
       font-weight: 800;
+      font-size: 0.88rem;
       border: 1px solid transparent;
       cursor: pointer;
       transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
@@ -872,7 +917,7 @@
     }
 
     .booking-step-lead {
-      margin-bottom: 18px;
+      margin-bottom: 12px;
     }
 
     .booking-step-lead p {
@@ -891,8 +936,26 @@
     }
 
     @media (max-width: 979px) {
+      html, body {
+        height: auto;
+        overflow: auto;
+      }
+
       body {
         padding: 14px 10px 18px;
+      }
+
+      .booking-wrapper {
+        min-height: 640px;
+      }
+
+      .step-inner {
+        overflow-y: visible;
+      }
+
+      .slots-list {
+        overflow-y: visible;
+        max-height: none;
       }
 
       .booking-page-topbar {

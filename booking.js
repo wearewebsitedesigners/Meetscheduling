@@ -1,6 +1,5 @@
 // Elements
 const loadingOverlay = document.getElementById("loading-overlay");
-const loadingText = document.getElementById("loading-text");
 const errorAlert = document.getElementById("error-alert");
 
 const hostAvatar = document.getElementById("host-avatar");
@@ -232,8 +231,7 @@ function showError(msg, panel = errorAlert) {
   panel.style.display = msg ? "block" : "none";
 }
 
-function showLoading(msg) {
-  loadingText.textContent = msg || "Loading...";
+function showLoading() {
   loadingOverlay.classList.add("active");
 }
 
@@ -513,78 +511,85 @@ async function selectDate(ymd, btnElem) {
   await fetchSlotsForDate(ymd);
 }
 
-async function fetchSlotsForDate(ymd) {
+function renderSlots(slots) {
   slotsList.innerHTML = "";
+  if (!slots.length) {
+    slotsList.innerHTML = '<div style="color:var(--text-muted); padding:1rem 0; font-size:0.88rem;">No slots available</div>';
+    return;
+  }
+  slots.forEach(slot => {
+    const row = document.createElement("div");
+    row.className = "slot-action-row";
 
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "slot-btn";
+    btn.textContent = slot.startLocal.time;
+
+    const confirmSlotBtn = document.createElement("button");
+    confirmSlotBtn.type = "button";
+    confirmSlotBtn.className = "confirm-slot-btn";
+    confirmSlotBtn.textContent = "Next";
+    confirmSlotBtn.style.display = "none";
+
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".slot-action-row").forEach(el => {
+        el.querySelector(".slot-btn").classList.remove("active");
+        el.querySelector(".confirm-slot-btn").style.display = "none";
+      });
+      btn.classList.add("active");
+      confirmSlotBtn.style.display = "block";
+      selectedSlot = slot;
+    });
+
+    confirmSlotBtn.addEventListener("click", () => goToStep2());
+
+    row.appendChild(btn);
+    row.appendChild(confirmSlotBtn);
+    slotsList.appendChild(row);
+  });
+}
+
+function showSlotSkeletons(count = 6) {
+  slotsList.innerHTML = "";
+  for (let i = 0; i < count; i++) {
+    const skel = document.createElement("div");
+    skel.className = "slot-skeleton";
+    slotsList.appendChild(skel);
+  }
+}
+
+async function fetchSlotsForDate(ymd) {
   try {
-    showLoading();
-    // Use cached slots if available to avoid spamming the backend
-    let slots = cachedSlots[ymd];
-    if (!slots) {
-      if (useLocalPreview) {
-        slots = getPreviewSlots(ymd);
-      } else {
-        const data = await fetchJson(
-          buildPublicSlotsUrl(ymd)
-        );
-        slots = data.slots || [];
-      }
-      cachedSlots[ymd] = slots; // simple cache
-    }
-
-    if (!slots.length) {
-      slotsList.innerHTML = '<div style="color:var(--text-muted); padding:1rem 0;">No slots available</div>';
+    // If cached, render instantly
+    if (cachedSlots[ymd]) {
+      renderSlots(cachedSlots[ymd]);
       return;
     }
 
-    slots.forEach(slot => {
-      // Wrapper for slot layout (button + confirm button)
-      const row = document.createElement("div");
-      row.className = "slot-action-row";
+    // Show skeletons immediately while fetching
+    showSlotSkeletons();
 
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "slot-btn";
-      btn.textContent = slot.startLocal.time;
-
-      const confirmSlotBtn = document.createElement("button");
-      confirmSlotBtn.type = "button";
-      confirmSlotBtn.className = "confirm-slot-btn";
-      confirmSlotBtn.textContent = "Next";
-      confirmSlotBtn.style.display = "none"; // Hide initially
-
-      btn.addEventListener("click", () => {
-        // Reset all sizes
-        document.querySelectorAll(".slot-action-row").forEach(el => {
-          el.querySelector(".slot-btn").classList.remove("active");
-          el.querySelector(".confirm-slot-btn").style.display = "none";
-        });
-
-        btn.classList.add("active");
-        confirmSlotBtn.style.display = "block";
-        selectedSlot = slot;
-      });
-
-      confirmSlotBtn.addEventListener("click", () => {
-        goToStep2();
-      });
-
-      row.appendChild(btn);
-      row.appendChild(confirmSlotBtn);
-      slotsList.appendChild(row);
-    });
+    let slots;
+    if (useLocalPreview) {
+      slots = getPreviewSlots(ymd);
+    } else {
+      const data = await fetchJson(buildPublicSlotsUrl(ymd));
+      slots = data.slots || [];
+    }
+    cachedSlots[ymd] = slots;
+    renderSlots(slots);
 
   } catch (err) {
+    slotsList.innerHTML = "";
     showError(err.message);
-  } finally {
-    hideLoading();
   }
 }
 
 async function loadEvent() {
   try {
     showError("");
-    showLoading("Loading your experience...");
+    showLoading();
     if (!useLocalPreview && !isCustomDomainBooking && !hasPublicEventPath) {
       throw new Error(
         "This booking page needs a valid public booking link. Open the host's booking URL, or use /booking.html?username=HOST&slug=EVENT-SLUG for preview."
@@ -764,7 +769,18 @@ bookingForm.addEventListener("submit", async (e) => {
   }
 });
 
-// Init
+// Init - render sidebar immediately from URL so page feels instant
+(function preRenderSidebar() {
+  const nameFromUrl = username
+    ? decodeURIComponent(username).replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase())
+    : "Loading...";
+  const initials = nameFromUrl.split(/\s+/).filter(Boolean).map(w => w[0]).join("").slice(0, 2).toUpperCase() || "MS";
+  if (hostAvatar) hostAvatar.textContent = initials;
+  if (hostName) hostName.textContent = nameFromUrl;
+  if (topHostAvatar) topHostAvatar.textContent = initials;
+  if (topHostName) topHostName.textContent = nameFromUrl;
+})();
+
 initTimezoneSelect();
 setLandingLink();
 syncStepPills("select");

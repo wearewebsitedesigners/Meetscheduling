@@ -217,13 +217,10 @@
       inset: 0;
       z-index: 30;
       display: none;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      background: rgba(248, 251, 255, 0.88);
-      backdrop-filter: blur(12px);
-      color: var(--text-main);
-      font-weight: 700;
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: 16px;
+      pointer-events: none;
     }
 
     .loading-overlay.active {
@@ -231,12 +228,12 @@
     }
 
     .spinner {
-      width: 42px;
-      height: 42px;
+      width: 22px;
+      height: 22px;
       border-radius: 999px;
-      border: 4px solid rgba(29, 99, 234, 0.12);
+      border: 3px solid rgba(29, 99, 234, 0.12);
       border-top-color: var(--brand-color);
-      animation: spin 1s linear infinite;
+      animation: spin 0.7s linear infinite;
     }
 
     @keyframes spin {
@@ -729,6 +726,19 @@
       border-radius: 999px;
     }
 
+    .slot-skeleton {
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(90deg, #eef2f8 25%, #f5f7fc 50%, #eef2f8 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
     .slot-action-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -1024,7 +1034,6 @@
     <div class="booking-wrapper">
       <div id="loading-overlay" class="loading-overlay">
         <div class="spinner"></div>
-        <span id="loading-text">Loading event...</span>
       </div>
 
       <aside class="event-details">

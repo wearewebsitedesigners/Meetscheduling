@@ -41,7 +41,8 @@
 
     html,
     body {
-      height: 100%;
+      height: 100dvh;
+      max-height: 100dvh;
       overflow: hidden;
     }
 
@@ -52,9 +53,10 @@
         radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 32%),
         radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent 28%),
         linear-gradient(180deg, #f6faff 0%, #eef4ff 45%, #f7fbff 100%);
-      padding: 14px 14px;
+      padding: 10px 14px;
       display: flex;
       flex-direction: column;
+      height: 100dvh;
     }
 
     h1,
@@ -93,9 +95,10 @@
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 14px;
+      gap: 10px;
+      margin-bottom: 10px;
       padding: 0 6px;
+      flex-shrink: 0;
     }
 
     .booking-page-host {
@@ -371,7 +374,7 @@
       padding: 14px 14px 16px;
       flex: 1;
       min-height: 0;
-      overflow-y: auto;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
     }
@@ -472,12 +475,14 @@
       gap: 16px;
       flex: 1;
       min-height: 0;
+      overflow: hidden;
     }
 
     @media (min-width: 1024px) {
       .calendar-slots-layout {
-        grid-template-columns: minmax(0, 1fr) 220px;
+        grid-template-columns: minmax(0, 1fr) 210px;
         align-items: stretch;
+        height: 100%;
       }
     }
 
@@ -494,6 +499,8 @@
 
     .calendar-card {
       padding: 14px;
+      overflow-y: auto;
+      min-height: 0;
     }
 
     @media (min-width: 768px) {
@@ -686,12 +693,8 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-    }
-
-    @media (min-width: 1024px) {
-      .slots-card {
-        max-height: 100%;
-      }
+      min-height: 0;
+      height: 100%;
     }
 
     .slots-header {
@@ -954,11 +957,13 @@
     @media (max-width: 979px) {
       html, body {
         height: auto;
+        max-height: none;
         overflow: auto;
       }
 
       body {
         padding: 14px 10px 18px;
+        height: auto;
       }
 
       .booking-wrapper {
@@ -966,12 +971,24 @@
       }
 
       .step-inner {
-        overflow-y: visible;
+        overflow: visible;
+        height: auto;
+      }
+
+      .calendar-slots-layout {
+        overflow: visible;
+        height: auto;
+      }
+
+      .slots-card {
+        height: auto;
+        overflow: visible;
       }
 
       .slots-list {
         overflow-y: visible;
         max-height: none;
+        flex: none;
       }
 
       .booking-page-topbar {

@@ -84,10 +84,14 @@ async function startServer() {
     }
 
     const { processReminders } = require("./services/reminders.service");
+    const { recoverPendingCalls } = require("./services/ivr.service");
 
     // Start reminder worker
     setInterval(processReminders, 60000);
     processReminders(); // run once immediately
+
+    // Re-arm any IVR confirmation calls that were pending at last shutdown
+    recoverPendingCalls();
   };
 
   if (listenHost) {

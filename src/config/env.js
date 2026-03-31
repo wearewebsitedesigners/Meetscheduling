@@ -280,6 +280,11 @@ const env = {
     popularPriceUsd: readEnv("PAYPAL_POPULAR_PRICE_USD", "28"),
     proPriceUsd: readEnv("PAYPAL_PRO_PRICE_USD", "79"),
   },
+  twilio: {
+    accountSid: readEnv("TWILIO_ACCOUNT_SID", ""),
+    authToken: readEnv("TWILIO_AUTH_TOKEN", ""),
+    phoneNumber: readEnv("TWILIO_PHONE_NUMBER", ""),
+  },
   domains: {
     provider: readEnv("CUSTOM_DOMAIN_PROVIDER", "local"),
     cnameTarget: readEnv("CUSTOM_DOMAIN_CNAME_TARGET", (() => {

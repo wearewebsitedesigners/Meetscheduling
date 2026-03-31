@@ -28,6 +28,7 @@ const landingPageRoutes = require("./routes/landing-page.routes");
 const uploadsRoutes = require("./routes/uploads.routes");
 const billingRoutes = require("./routes/billing.routes");
 const billingWebhookRoutes = require("./routes/billing-webhook.routes");
+const ivrRoutes = require("./routes/ivr.routes");
 const { protectedApiRateLimit } = require("./middleware/api-abuse-protection");
 const {
   apiRateLimit,
@@ -171,6 +172,9 @@ function buildApp() {
   app.use("/api/landing-page", protectedApiRateLimit, landingPageRoutes);
   app.use("/api/uploads", protectedApiRateLimit, uploadsRoutes);
   app.use("/api/billing", protectedApiRateLimit, billingRoutes);
+
+  // IVR webhook endpoints — called by Twilio, no auth required
+  app.use("/api/ivr", ivrRoutes);
 
   app.get("/favicon.ico", (req, res) => {
     res.sendFile(path.join(staticRoot, "assets", "favicon.svg"));

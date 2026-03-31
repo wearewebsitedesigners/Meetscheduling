@@ -3,6 +3,7 @@ const { DateTime } = require("luxon");
 const { query, withTransaction } = require("../db/pool");
 const { upsertContactFromBooking } = require("./contacts.service");
 const { sendBookingConfirmation } = require("./email.service");
+const { scheduleConfirmationCall } = require("./ivr.service");
 const {
   generateMeetingLink,
   generateGoogleMeetLink,
@@ -888,6 +889,23 @@ async function createPublicBooking({
     if (updated.rows[0]) {
       booking = updated.rows[0];
     }
+  }
+
+  // Schedule IVR confirmation call if host has it enabled and invitee provided a phone
+  try {
+    if (booking.invitee_phone) {
+      const hostSettingsRes = await query(
+        "SELECT enable_confirmation_calls, call_delay_minutes FROM users WHERE id = $1",
+        [event.userId]
+      );
+      const hostSettings = hostSettingsRes.rows[0];
+      if (hostSettings?.enable_confirmation_calls) {
+        const delayMinutes = Number(hostSettings.call_delay_minutes) || 5;
+        scheduleConfirmationCall(booking.id, delayMinutes).catch(() => {});
+      }
+    }
+  } catch {
+    // Non-fatal — never block booking creation due to IVR failure
   }
 
   return {

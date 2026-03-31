@@ -735,14 +735,66 @@ formBackBtn.addEventListener("click", () => {
   goBackToStep1();
 });
 
+// Real-time inline validation feedback
+function setFieldError(input, message) {
+  let hint = input.parentElement.querySelector(".field-inline-error");
+  if (!hint) {
+    hint = document.createElement("p");
+    hint.className = "field-inline-error";
+    hint.style.cssText = "color:#cf4664;font-size:0.8rem;margin-top:4px;margin-bottom:0;";
+    input.parentElement.appendChild(hint);
+  }
+  hint.textContent = message;
+  input.style.borderColor = message ? "#cf4664" : "";
+}
+
+emailInput.addEventListener("blur", () => {
+  const v = emailInput.value.trim();
+  if (!v) { setFieldError(emailInput, ""); return; }
+  setFieldError(emailInput,
+    /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? "" : "Enter a valid email — e.g. name@gmail.com"
+  );
+});
+
+emailInput.addEventListener("input", () => {
+  if (emailInput.style.borderColor) setFieldError(emailInput, "");
+});
+
+if (phoneInput) {
+  phoneInput.addEventListener("blur", () => {
+    const v = phoneInput.value.trim();
+    if (!v) { setFieldError(phoneInput, ""); return; }
+    setFieldError(phoneInput,
+      /^[\d\s\+\-\(\)\.]{6,20}$/.test(v) ? "" : "Use digits only — e.g. +91 98765 43210"
+    );
+  });
+  phoneInput.addEventListener("input", () => {
+    if (phoneInput.style.borderColor) setFieldError(phoneInput, "");
+  });
+}
+
 bookingForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   try {
     showError("", formErrorAlert);
 
     if (!selectedSlot) throw new Error("Please select a time slot.");
-    if (!nameInput.value.trim() || !emailInput.value.trim()) {
-      throw new Error("Name and Email are required.");
+
+    const nameVal  = nameInput.value.trim();
+    const emailVal = emailInput.value.trim();
+    const phoneVal = phoneInput?.value?.trim() || "";
+
+    if (!nameVal) throw new Error("Please enter your full name.");
+
+    if (!emailVal) throw new Error("Please enter your email address.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailVal)) {
+      emailInput.focus();
+      throw new Error("Please enter a valid email address (e.g. name@gmail.com).");
+    }
+
+    if (phoneVal && !/^[\d\s\+\-\(\)\.]{6,20}$/.test(phoneVal)) {
+      phoneInput.focus();
+      throw new Error("Phone number should contain only digits and + - ( ) symbols.");
     }
 
     confirmBtn.disabled = true;

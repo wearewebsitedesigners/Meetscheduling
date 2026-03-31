@@ -1226,14 +1226,14 @@
                   </div>
                   <div class="form-group">
                     <label for="email-input">Email *</label>
-                    <input type="email" id="email-input" placeholder="name@company.com" required />
+                    <input type="email" id="email-input" placeholder="name@gmail.com" required autocomplete="email" inputmode="email" />
                   </div>
                 </div>
 
                 <div class="form-grid form-grid--two">
                   <div class="form-group">
                     <label for="phone-input">Phone number</label>
-                    <input type="tel" id="phone-input" placeholder="+91 98765 43210" inputmode="tel" />
+                    <input type="tel" id="phone-input" placeholder="+91 98765 43210" inputmode="tel" autocomplete="tel" pattern="[\d\s\+\-\(\)\.]{6,20}" />
                     <p class="field-helper">Optional, but useful if the host sends a reminder before the call.</p>
                   </div>
                   <div class="form-group">

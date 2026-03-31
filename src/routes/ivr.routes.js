@@ -68,6 +68,20 @@ router.post("/welcome", async (req, res) => {
     return sendTwiml(res, "<Hangup/>");
   }
 
+  // TEST mode — no DB needed
+  if (callId === "TEST") {
+    const message =
+      `Hello, this is a call from MeetScheduling. ` +
+      `You recently booked a meeting scheduled on Monday, April 7 at 3:00 PM. ` +
+      `To confirm your meeting, please press 1. ` +
+      `To reschedule your meeting, please press 2.`;
+    const gatherBlock = gather(
+      { input: "dtmf", numDigits: "1", action: `/api/ivr/handle-response?callId=TEST`, method: "POST", timeout: "10" },
+      say(message)
+    );
+    return sendTwiml(res, gatherBlock + say("We did not receive your input. Goodbye.") + "<Hangup/>");
+  }
+
   try {
     const result = await query(
       `SELECT cc.id, cc.status,
@@ -135,6 +149,16 @@ router.post("/handle-response", async (req, res) => {
   const digits = String(req.body.Digits || "").trim();
 
   if (!callId) return sendTwiml(res, "<Hangup/>");
+
+  // TEST mode
+  if (callId === "TEST") {
+    if (digits === "1") {
+      return sendTwiml(res, say("Thank you. Your meeting is confirmed. We look forward to speaking with you. Goodbye!") + "<Hangup/>");
+    } else if (digits === "2") {
+      return sendTwiml(res, say("No problem. A rescheduling link will be sent to your email shortly. Please use that link to choose a new time. Goodbye!") + "<Hangup/>");
+    }
+    return sendTwiml(res, say("Invalid selection. Goodbye.") + "<Hangup/>");
+  }
 
   try {
     if (digits === "1") {

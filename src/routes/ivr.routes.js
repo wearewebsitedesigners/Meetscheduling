@@ -72,10 +72,12 @@ router.post("/welcome", async (req, res) => {
     const result = await query(
       `SELECT cc.id, cc.status,
               b.invitee_name, b.start_at_utc, b.visitor_timezone,
-              u.display_name AS host_name
+              u.display_name AS host_name,
+              COALESCE(NULLIF(w.name, ''), u.display_name, 'MeetScheduling') AS company_name
        FROM confirmation_calls cc
        JOIN bookings b ON b.id = cc.booking_id
        JOIN users u ON u.id = b.user_id
+       JOIN workspaces w ON w.id = b.workspace_id
        WHERE cc.id = $1`,
       [callId]
     );
@@ -96,10 +98,10 @@ router.post("/welcome", async (req, res) => {
     const meetingTime = dt.toFormat("h:mm a");
 
     const message =
-      `Hi ${call.invitee_name}. This is a confirmation call for your meeting ` +
-      `with ${call.host_name} on ${meetingDate} at ${meetingTime}. ` +
-      `Press 1 to confirm your attendance. ` +
-      `Press 2 to reschedule.`;
+      `Hello, this is a call from ${call.company_name}. ` +
+      `You recently booked a meeting scheduled on ${meetingDate} at ${meetingTime}. ` +
+      `To confirm your meeting, please press 1. ` +
+      `To reschedule your meeting, please press 2.`;
 
     const gatherBlock = gather(
       {
@@ -155,33 +157,27 @@ router.post("/handle-response", async (req, res) => {
       return sendTwiml(
         res,
         say(
-          "Thank you! Your meeting is confirmed. " +
-            "You will receive a reminder before the meeting. Goodbye!"
+          "Thank you. Your meeting is confirmed. " +
+            "We look forward to speaking with you. Goodbye!"
         ) + "<Hangup/>"
       );
     } else if (digits === "2") {
       // ── RESCHEDULE ───────────────────────────────────────────────────────
-      const reasonGather = gather(
-        {
-          input: "dtmf",
-          numDigits: "1",
-          action: `/api/ivr/reschedule-reason?callId=${encodeURIComponent(callId)}`,
-          method: "POST",
-          timeout: "10",
-        },
-        say(
-          "We understand you need to reschedule. " +
-            "Press 1 for scheduling conflict. " +
-            "Press 2 for emergency. " +
-            "Press 3 for other reason."
-        )
+      await query(
+        `UPDATE confirmation_calls
+         SET status = 'reschedule_requested', response = 'reschedule',
+             completed_at = NOW(), updated_at = NOW()
+         WHERE id = $1`,
+        [callId]
       );
 
       return sendTwiml(
         res,
-        reasonGather +
-          say("We did not receive your selection. Goodbye.") +
-          "<Hangup/>"
+        say(
+          "No problem. " +
+            "A rescheduling link will be sent to your email shortly. " +
+            "Please use that link to choose a new time. Goodbye!"
+        ) + "<Hangup/>"
       );
     } else {
       // ── INVALID INPUT ────────────────────────────────────────────────────

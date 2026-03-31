@@ -70,12 +70,12 @@ export function Toggle({ checked, onChange }) {
         "relative inline-flex h-8 w-14 overflow-hidden rounded-full border p-[2px] transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
         checked
           ? "border-cyan-300/30 bg-gradient-to-r from-[#3B82F6] to-[#22D3EE] shadow-[0_0_24px_rgba(56,189,248,0.26),inset_0_1px_0_rgba(255,255,255,0.18)]"
-          : "border-white/15 bg-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:border-white/10 dark:bg-white/[0.08]"
+          : "border-slate-300 bg-slate-200 shadow-inner dark:border-white/10 dark:bg-white/[0.08]"
       )}
     >
       <span
         className={cn(
-          "pointer-events-none absolute left-[2px] top-[2px] h-[26px] w-[26px] rounded-full bg-white shadow-[0_4px_14px_rgba(15,23,42,0.34)] transition-transform duration-300 ease-out",
+          "pointer-events-none absolute left-[2px] top-[2px] h-[26px] w-[26px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.25)] transition-transform duration-300 ease-out",
           checked ? "translate-x-6" : "translate-x-0"
         )}
       />

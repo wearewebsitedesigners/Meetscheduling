@@ -76,123 +76,90 @@ function formatMeetingLabel(value) {
   });
 }
 
-function ContactFormModal({
-  open,
-  mode,
-  form,
-  submitting,
-  onClose,
-  onChange,
-  onSubmit,
-}) {
+const inputCls = "h-11 w-full rounded-2xl border border-[#DFE7F3] bg-white px-4 text-[14px] text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/15 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-[#3B82F6]/60";
+const labelCls = "block text-[13px] font-semibold text-slate-600 dark:text-slate-300 mb-1.5";
+
+function ContactFormModal({ open, mode, form, submitting, onClose, onChange, onSubmit }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#071122]/60 px-4 backdrop-blur-sm">
-      <div className="relative w-full max-w-[470px] overflow-hidden rounded-[24px] border border-white/40 bg-white/78 shadow-[0_20px_72px_rgba(15,23,42,0.22)] backdrop-blur-3xl dark:border-white/10 dark:bg-[#0B1324]/90">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.44),rgba(255,255,255,0.14)_38%,rgba(255,255,255,0.06))] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03)_34%,rgba(255,255,255,0.02))]" />
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-900/50 px-4 pb-4 backdrop-blur-sm sm:items-center sm:pb-0">
+      <div className="relative w-full max-w-[520px] overflow-hidden rounded-[28px] border border-[#DFE7F3] bg-white shadow-[0_32px_80px_rgba(15,23,42,0.20)] dark:border-white/10 dark:bg-[#0e1929]">
 
-        <div className="relative flex items-start justify-between gap-3 border-b border-white/40 px-5 pb-4 pt-5 dark:border-white/10">
-          <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-blue-200/60 bg-blue-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-700 dark:border-blue-400/20 dark:bg-blue-500/15 dark:text-blue-300">
-              <Users className="h-3 w-3" /> {mode === "create" ? "New contact" : "Edit contact"}
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 border-b border-[#DFE7F3] px-6 py-5 dark:border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#3B82F6] to-[#2563EB] shadow-[0_4px_12px_rgba(37,99,235,0.30)]">
+              <Users className="h-4.5 w-4.5 text-white" size={18} />
             </div>
-            <h3 className="text-[22px] font-semibold tracking-[-0.03em] text-slate-900 dark:text-white">
-              {mode === "create" ? "Add contact" : form.name || "Update contact"}
-            </h3>
-            <p className="mt-1.5 text-[13px] leading-5 text-slate-600 dark:text-slate-400">
-              Keep your contact data aligned with bookings and follow-ups.
-            </p>
+            <div>
+              <h3 className="text-[18px] font-bold text-slate-900 dark:text-white">
+                {mode === "create" ? "Add contact" : form.name || "Edit contact"}
+              </h3>
+              <p className="text-[12px] text-slate-400 dark:text-slate-500">
+                {mode === "create" ? "Create a new contact" : "Update contact details"}
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-white/50 bg-white/40 text-slate-600 shadow-[0_8px_20px_rgba(15,23,42,0.08)] transition hover:bg-white/65 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#DFE7F3] bg-slate-50 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="relative grid gap-4 px-5 py-5">
-          <label className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <span className="font-medium">Name</span>
-            <input
-              value={form.name}
-              onChange={(event) => onChange("name", event.target.value)}
-              className="h-11 rounded-[18px] border border-white/50 bg-white/55 px-4 text-slate-900 outline-none focus:border-blue-300 focus:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-white"
-              placeholder="Olivia Carter"
-            />
-          </label>
-
-          <label className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <span className="font-medium">Email</span>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(event) => onChange("email", event.target.value)}
-              className="h-11 rounded-[18px] border border-white/50 bg-white/55 px-4 text-slate-900 outline-none focus:border-blue-300 focus:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-white"
-              placeholder="name@company.com"
-            />
-          </label>
-
-          <label className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <span className="font-medium">Company</span>
-            <input
-              value={form.company}
-              onChange={(event) => onChange("company", event.target.value)}
-              className="h-11 rounded-[18px] border border-white/50 bg-white/55 px-4 text-slate-900 outline-none focus:border-blue-300 focus:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-white"
-              placeholder="Northlane Studio"
-            />
-          </label>
-
-          <label className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <span className="font-medium">Type</span>
-            <select
-              value={form.type}
-              onChange={(event) => onChange("type", event.target.value)}
-              className="h-11 rounded-[18px] border border-white/50 bg-white/55 px-4 text-slate-900 outline-none focus:border-blue-300 focus:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-white"
-            >
-              <option value="Lead">Lead</option>
-              <option value="Customer">Customer</option>
-            </select>
-          </label>
-
-          <label className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <span className="font-medium">Tags</span>
-            <input
-              value={form.tags}
-              onChange={(event) => onChange("tags", event.target.value)}
-              className="h-11 rounded-[18px] border border-white/50 bg-white/55 px-4 text-slate-900 outline-none focus:border-blue-300 focus:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-white"
-              placeholder="VIP, Agency, Retainer"
-            />
-          </label>
-
-          <label className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <span className="font-medium">Notes</span>
+        {/* Body — two column grid */}
+        <div className="max-h-[68vh] overflow-y-auto px-6 py-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelCls}>Name <span className="text-rose-500">*</span></label>
+              <input value={form.name} onChange={(e) => onChange("name", e.target.value)} className={inputCls} placeholder="Olivia Carter" />
+            </div>
+            <div>
+              <label className={labelCls}>Email <span className="text-rose-500">*</span></label>
+              <input type="email" value={form.email} onChange={(e) => onChange("email", e.target.value)} className={inputCls} placeholder="name@company.com" />
+            </div>
+            <div>
+              <label className={labelCls}>Company</label>
+              <input value={form.company} onChange={(e) => onChange("company", e.target.value)} className={inputCls} placeholder="Northlane Studio" />
+            </div>
+            <div>
+              <label className={labelCls}>Type</label>
+              <select value={form.type} onChange={(e) => onChange("type", e.target.value)} className={inputCls}>
+                <option value="Lead">Lead</option>
+                <option value="Customer">Customer</option>
+                <option value="VIP">VIP</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Tags</label>
+              <input value={form.tags} onChange={(e) => onChange("tags", e.target.value)} className={inputCls} placeholder="VIP, Agency, Retainer" />
+            </div>
+            <div>
+              <label className={labelCls}>Last meeting date</label>
+              <input type="date" value={form.lastMeeting} onChange={(e) => onChange("lastMeeting", e.target.value)} className={inputCls} />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className={labelCls}>Notes</label>
             <textarea
               value={form.notes}
-              onChange={(event) => onChange("notes", event.target.value)}
-              className="min-h-[92px] rounded-[18px] border border-white/50 bg-white/55 px-4 py-3 text-slate-900 outline-none focus:border-blue-300 focus:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-white"
+              onChange={(e) => onChange("notes", e.target.value)}
+              rows={3}
+              className="w-full rounded-2xl border border-[#DFE7F3] bg-white px-4 py-3 text-[14px] text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/15 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-slate-500"
               placeholder="Context from the last meeting, objections, or follow-up plan."
             />
-          </label>
-
-          <label className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <span className="font-medium">Last meeting date</span>
-            <input
-              type="date"
-              value={form.lastMeeting}
-              onChange={(event) => onChange("lastMeeting", event.target.value)}
-              className="h-11 rounded-[18px] border border-white/50 bg-white/55 px-4 text-slate-900 outline-none focus:border-blue-300 focus:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-white"
-            />
-          </label>
+          </div>
         </div>
 
-        <div className="relative flex items-center justify-end gap-3 border-t border-white/40 px-5 py-4 dark:border-white/10">
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 border-t border-[#DFE7F3] px-6 py-4 dark:border-white/10">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-4 py-2 text-[14px] font-medium text-slate-600 transition hover:bg-white/60 dark:text-slate-300 dark:hover:bg-white/10"
+            className="rounded-2xl border border-[#DFE7F3] bg-white px-5 py-2.5 text-[14px] font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
           >
             Cancel
           </button>
@@ -200,7 +167,7 @@ function ContactFormModal({
             type="button"
             onClick={onSubmit}
             disabled={submitting}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2 text-[14px] font-semibold text-white shadow-[0_12px_28px_rgba(37,99,235,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#2563EB] px-5 py-2.5 text-[14px] font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
             {mode === "create" ? "Save contact" : "Update contact"}
@@ -544,7 +511,7 @@ export default function ContactsPanel() {
                           <button
                             type="button"
                             onClick={() => openEdit(contact)}
-                            className="inline-flex items-center gap-2 rounded-xl border border-white/40 bg-white/55 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white/75 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-[#DFE7F3] bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-[#3B82F6]/40 hover:bg-[#EEF4FF] hover:text-[#2563EB] dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                             Edit

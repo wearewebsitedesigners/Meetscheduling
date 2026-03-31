@@ -57,7 +57,8 @@ function sendTwiml(res, inner) {
 // ---------------------------------------------------------------------------
 
 router.all("/welcome", async (req, res) => {
-  const callId = String(req.query.callId || "").trim();
+  const rawCallId = req.query.callId;
+  const callId = String(Array.isArray(rawCallId) ? rawCallId[0] : (rawCallId || "")).trim();
   if (!callId) {
     return sendTwiml(res, say("Sorry, we could not find your booking.") + "<Hangup/>");
   }
@@ -145,7 +146,8 @@ router.all("/welcome", async (req, res) => {
 // ---------------------------------------------------------------------------
 
 router.post("/handle-response", async (req, res) => {
-  const callId = String(req.query.callId || "").trim();
+  const rawCallId = req.query.callId;
+  const callId = String(Array.isArray(rawCallId) ? rawCallId[0] : (rawCallId || "")).trim();
   const digits = String(req.body.Digits || "").trim();
 
   if (!callId) return sendTwiml(res, "<Hangup/>");
@@ -222,7 +224,8 @@ router.post("/handle-response", async (req, res) => {
 // ---------------------------------------------------------------------------
 
 router.post("/reschedule-reason", async (req, res) => {
-  const callId = String(req.query.callId || "").trim();
+  const rawCallId = req.query.callId;
+  const callId = String(Array.isArray(rawCallId) ? rawCallId[0] : (rawCallId || "")).trim();
   const digits = String(req.body.Digits || "").trim();
 
   if (!callId) return sendTwiml(res, "<Hangup/>");

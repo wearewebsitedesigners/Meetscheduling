@@ -14,6 +14,8 @@ const {
   cancelBookingForUser,
 } = require("../services/bookings.service");
 const { getDashboardOverview } = require("../services/dashboard-overview.service");
+const { query } = require("../db/pool");
+const env = require("../config/env");
 
 const router = express.Router();
 router.use(requireAuth);
@@ -81,6 +83,91 @@ router.post(
       reason
     );
     res.json({ booking });
+  })
+);
+
+// ── IVR / Confirmation Calls Settings ──────────────────────────────────────
+
+router.get(
+  "/ivr-settings",
+  asyncHandler(async (req, res) => {
+    // Get user's IVR settings
+    const userRes = await query(
+      `SELECT enable_confirmation_calls, call_delay_minutes
+       FROM users
+       WHERE id = (
+         SELECT owner_user_id FROM workspaces WHERE id = $1
+       )`,
+      [req.auth.workspaceId]
+    );
+    const user = userRes.rows[0] || {};
+
+    // Recent calls (last 50)
+    const callsRes = await query(
+      `SELECT cc.id, cc.status, cc.response, cc.reschedule_reason,
+              cc.call_duration_seconds, cc.cost_estimate_usd, cc.created_at,
+              b.invitee_name
+       FROM confirmation_calls cc
+       JOIN bookings b ON b.id = cc.booking_id
+       WHERE b.workspace_id = $1
+       ORDER BY cc.created_at DESC
+       LIMIT 50`,
+      [req.auth.workspaceId]
+    );
+
+    // Monthly usage
+    const month = new Date().toISOString().slice(0, 7);
+    const usageRes = await query(
+      `SELECT total_calls, total_minutes, total_cost_usd
+       FROM call_usage
+       WHERE user_id = (SELECT owner_user_id FROM workspaces WHERE id = $1)
+         AND month = $2`,
+      [req.auth.workspaceId, month]
+    );
+
+    res.json({
+      settings: {
+        enable_confirmation_calls: Boolean(user.enable_confirmation_calls),
+        call_delay_minutes: Number(user.call_delay_minutes) || 5,
+        twilio_configured: Boolean(env.twilio?.accountSid && env.twilio?.phoneNumber),
+      },
+      recentCalls: callsRes.rows,
+      usage: usageRes.rows[0] || null,
+    });
+  })
+);
+
+router.patch(
+  "/ivr-settings",
+  asyncHandler(async (req, res) => {
+    const body = req.body || {};
+    const updates = [];
+    const params = [];
+
+    if (typeof body.enable_confirmation_calls === "boolean") {
+      params.push(body.enable_confirmation_calls);
+      updates.push(`enable_confirmation_calls = $${params.length}`);
+    }
+
+    if (typeof body.call_delay_minutes === "number") {
+      const delay = Math.max(1, Math.min(120, Math.trunc(body.call_delay_minutes)));
+      params.push(delay);
+      updates.push(`call_delay_minutes = $${params.length}`);
+    }
+
+    if (!updates.length) {
+      return res.json({ ok: true });
+    }
+
+    params.push(req.auth.workspaceId);
+    await query(
+      `UPDATE users
+       SET ${updates.join(", ")}, updated_at = NOW()
+       WHERE id = (SELECT owner_user_id FROM workspaces WHERE id = $${params.length})`,
+      params
+    );
+
+    res.json({ ok: true });
   })
 );
 

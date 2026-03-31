@@ -24,6 +24,7 @@ import {
   UserPlus,
   Users,
   PlugZap,
+  PhoneCall,
   Calendar,
   CalendarDays,
   Clock3,
@@ -39,6 +40,7 @@ const ContactsPanel = lazy(() => import("./dashboard/panels/contacts-panel.jsx")
 const DomainsPanel = lazy(() => import("./dashboard/panels/domains-panel.jsx"));
 const OverviewPanel = lazy(() => import("./dashboard/panels/overview-panel.jsx"));
 const LandingPageBuilder = lazy(() => import("./dashboard/landing-builder/LandingPageBuilder.jsx"));
+const IvrSettingsPanel = lazy(() => import("./dashboard/panels/ivr-settings-panel.jsx"));
 
 const COLLAPSE_KEY = "meetscheduling_react_sidebar_collapsed_v1";
 const THEME_KEY = "meetscheduling_react_theme_v1";
@@ -68,6 +70,7 @@ const primaryNav = [
   { key: "contacts", label: "Contacts", icon: Users },
   { key: "workflows", label: "Email automation", icon: Mail },
   { key: "integrations", label: "Integrations & apps", icon: PlugZap },
+  { key: "confirmation-calls", label: "Confirmation calls", icon: PhoneCall },
 ];
 
 const secondaryNav = [
@@ -360,8 +363,9 @@ function parseDashboardRoute(pathname) {
   if (next === "dashboard") {
     return { type: "section", sectionKey: defaultSectionKey };
   }
-  return next && (genericSections[next] || primaryNav.some((item) => item.key === next) || secondaryNav.some((item) => item.key === next))
-    ? { type: "section", sectionKey: next }
+  const nextNorm = next && next.replace(/_/g, "-");
+  return nextNorm && (genericSections[nextNorm] || primaryNav.some((item) => item.key === nextNorm) || secondaryNav.some((item) => item.key === nextNorm))
+    ? { type: "section", sectionKey: nextNorm }
     : { type: "section", sectionKey: defaultSectionKey };
 }
 
@@ -1024,6 +1028,7 @@ function App() {
     if (currentKey === "meetings") return <MeetingsPanel />;
     if (currentKey === "availability") return <AvailabilityPanel />;
     if (currentKey === "contacts") return <ContactsPanel />;
+    if (currentKey === "confirmation-calls") return <IvrSettingsPanel />;
     if (currentKey === "integrations") return <DomainsPanel />;
     return <GenericSectionPanel section={currentSection || genericSections.workflows} />;
   };

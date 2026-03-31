@@ -459,7 +459,7 @@ async function listPublicBookableDates({
   slug,
   visitorTimezone,
   fromDate,
-  count = 60,
+  count = 45,
   event,
 }) {
   const safeVisitorTimezone = assertZone(visitorTimezone || "UTC", "timezone");

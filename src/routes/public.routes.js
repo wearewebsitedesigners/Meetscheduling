@@ -27,8 +27,8 @@ const {
 // Slots per date are cached separately keyed by "username:slug:date:timezone".
 // Both caches are bounded at 500 entries to prevent unbounded growth.
 // ---------------------------------------------------------------------------
-const EVENT_CACHE_TTL = 60_000;  // 60 seconds
-const SLOT_CACHE_TTL  = 60_000;
+const EVENT_CACHE_TTL = 600_000;  // 10 minutes — busted on new booking
+const SLOT_CACHE_TTL  = 300_000;  // 5 minutes
 
 const eventPageCache = new Map(); // key → { data, expiresAt }
 const slotCache      = new Map(); // key → { data, expiresAt }

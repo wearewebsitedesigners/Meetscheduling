@@ -1049,7 +1049,7 @@ function App() {
             <ChevronLeft className={cn("h-[10px] w-[10px] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]", collapsed && "rotate-180")} />
           </button>
 
-          <div className={collapsed ? "flex h-full flex-col px-2 py-5" : "flex h-full flex-col px-4 py-5"}>
+          <div className={collapsed ? "flex h-full flex-col px-0 py-5" : "flex h-full flex-col px-4 py-5"}>
             <div className={collapsed ? "flex justify-center" : "flex items-center gap-3 px-1"}>
               <div className="relative flex h-11 w-11 items-center justify-center">
                 <div className="absolute left-0 h-8 w-8 rounded-full border-[5px] border-[#2563EB]" />
@@ -1061,7 +1061,7 @@ function App() {
               </div>
             </div>
 
-            <div className="mt-6 space-y-3">
+            <div className="mt-9 space-y-3">
               <button type="button" className={cn("flex items-center justify-center overflow-hidden rounded-[22px] border border-[#4C7CFF]/40 bg-gradient-to-r from-[#2563EB] to-[#4F8BFF] text-white shadow-[0_20px_40px_rgba(37,99,235,0.32)] transition-all duration-300 hover:brightness-105", collapsed ? "mx-auto h-[58px] w-[58px] rounded-full" : "h-14 w-full gap-2 px-4")}>
                 <Plus className="h-5 w-5 shrink-0" />
                 {!collapsed && <span className="text-[15px] font-semibold tracking-[-0.02em]">Create</span>}

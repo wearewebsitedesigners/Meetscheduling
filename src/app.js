@@ -377,6 +377,11 @@ function buildApp() {
           res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
           return;
         }
+        // dashboard-app.js has no content hash — must revalidate on every visit
+        if (filePath.endsWith("dashboard-app.js") || filePath.endsWith("dashboard-react.css")) {
+          res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+          return;
+        }
         if (/\.(js|css|svg|png|jpg|jpeg|webp|woff2?)$/i.test(filePath)) {
           res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
         }

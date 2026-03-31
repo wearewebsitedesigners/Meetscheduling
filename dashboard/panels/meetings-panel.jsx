@@ -9,6 +9,8 @@ import {
   Download,
   ExternalLink,
   LoaderCircle,
+  Phone,
+  PhoneMissed,
   RefreshCw,
   RotateCcw,
   Search,
@@ -48,6 +50,7 @@ function normalizeBooking(row) {
     status: row.status || "confirmed",
     cancelReason: row.cancelReason || row.cancel_reason || "",
     createdAt: row.createdAt || row.created_at || "",
+    ivrStatus: row.ivrStatus || row.ivr_status || null,
   };
 }
 
@@ -159,6 +162,16 @@ function MeetingDetails({ booking, timezone, canceling, onCancel }) {
             {booking.cancelReason ? (
               <div className="mt-3 text-sm text-slate-500 dark:text-slate-400">Reason: {booking.cancelReason}</div>
             ) : null}
+            {booking.ivrStatus === "confirmed" && (
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                <Phone className="h-3.5 w-3.5" /> Confirmed on Call
+              </div>
+            )}
+            {booking.ivrStatus === "reschedule_requested" && (
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                <PhoneMissed className="h-3.5 w-3.5" /> Reschedule via Call
+              </div>
+            )}
           </div>
         </div>
 
@@ -194,6 +207,16 @@ function BookingRow({ booking, timezone, expanded, onToggle, onCancel, canceling
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center rounded-full border border-white/30 bg-white/60 px-3 py-1 text-[12px] font-medium text-slate-700 backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:text-slate-200">{booking.eventTitle}</span>
             <span className="inline-flex items-center rounded-full border border-white/30 bg-white/60 px-3 py-1 text-[12px] font-medium text-slate-700 backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:text-slate-200">{booking.visitorTimezone}</span>
+            {booking.ivrStatus === "confirmed" && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[12px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                <Phone className="h-3 w-3" /> Confirmed on Call
+              </span>
+            )}
+            {booking.ivrStatus === "reschedule_requested" && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[12px] font-semibold text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                <PhoneMissed className="h-3 w-3" /> Reschedule via Call
+              </span>
+            )}
           </div>
         </div>
 

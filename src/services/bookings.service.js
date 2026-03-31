@@ -73,6 +73,7 @@ function mapBookingRow(row, timezone = "UTC") {
     canceledAt: row.canceled_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    ivrStatus: row.ivr_status || null,
   };
 }
 
@@ -1261,9 +1262,15 @@ async function listBookingsForUser(
     `
       SELECT
         b.*,
-        et.title AS event_title
+        et.title AS event_title,
+        cc.status AS ivr_status
       FROM bookings b
       JOIN event_types et ON et.id = b.event_type_id
+      LEFT JOIN LATERAL (
+        SELECT status FROM confirmation_calls
+        WHERE booking_id = b.id
+        ORDER BY created_at DESC LIMIT 1
+      ) cc ON TRUE
       WHERE ${conditions.join(" AND ")}
       ORDER BY b.start_at_utc ASC
     `,
@@ -1279,9 +1286,15 @@ async function listUpcomingBookingsForUser(workspaceId, { limit = 20, timezone =
     `
       SELECT
         b.*,
-        et.title AS event_title
+        et.title AS event_title,
+        cc.status AS ivr_status
       FROM bookings b
       JOIN event_types et ON et.id = b.event_type_id
+      LEFT JOIN LATERAL (
+        SELECT status FROM confirmation_calls
+        WHERE booking_id = b.id
+        ORDER BY created_at DESC LIMIT 1
+      ) cc ON TRUE
       WHERE b.workspace_id = $1
         AND b.status = 'confirmed'
         AND b.start_at_utc >= NOW()

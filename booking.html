@@ -898,6 +898,37 @@
       color: var(--text-main);
     }
 
+    .phone-field-wrap {
+      display: flex;
+      gap: 8px;
+    }
+
+    .phone-country-select {
+      flex: 0 0 auto;
+      width: auto;
+      min-width: 96px;
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--text-main);
+      padding: 0 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .phone-country-select:focus {
+      border-color: rgba(29, 99, 234, 0.32);
+      box-shadow: 0 0 0 4px rgba(29, 99, 234, 0.08);
+    }
+
+    .phone-field-wrap input {
+      flex: 1;
+      min-width: 0;
+    }
+
     .form-group textarea {
       min-height: 140px;
       resize: vertical;
@@ -1233,7 +1264,10 @@
                 <div class="form-grid form-grid--two">
                   <div class="form-group">
                     <label for="phone-input">Phone number</label>
-                    <input type="tel" id="phone-input" placeholder="+91 98765 43210" inputmode="tel" autocomplete="tel" pattern="[\d\s\+\-\(\)\.]{6,20}" />
+                    <div class="phone-field-wrap">
+                      <select id="phone-country-select" class="phone-country-select" aria-label="Country dial code"></select>
+                      <input type="tel" id="phone-input" placeholder="98765 43210" inputmode="numeric" autocomplete="tel-national" />
+                    </div>
                     <p class="field-helper">Optional, but useful if the host sends a reminder before the call.</p>
                   </div>
                   <div class="form-group">

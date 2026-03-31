@@ -735,6 +735,140 @@ formBackBtn.addEventListener("click", () => {
   goBackToStep1();
 });
 
+// ---------------------------------------------------------------------------
+// Country dial code picker
+// ---------------------------------------------------------------------------
+const COUNTRIES = [
+  { flag: "🇦🇫", name: "Afghanistan",            dial: "+93",  tz: ["Asia/Kabul"] },
+  { flag: "🇦🇱", name: "Albania",                dial: "+355", tz: ["Europe/Tirane"] },
+  { flag: "🇩🇿", name: "Algeria",                dial: "+213", tz: ["Africa/Algiers"] },
+  { flag: "🇦🇷", name: "Argentina",              dial: "+54",  tz: ["America/Argentina/Buenos_Aires","America/Buenos_Aires"] },
+  { flag: "🇦🇲", name: "Armenia",                dial: "+374", tz: ["Asia/Yerevan"] },
+  { flag: "🇦🇺", name: "Australia",              dial: "+61",  tz: ["Australia/Sydney","Australia/Melbourne","Australia/Brisbane","Australia/Perth","Australia/Adelaide","Australia/Darwin"] },
+  { flag: "🇦🇹", name: "Austria",                dial: "+43",  tz: ["Europe/Vienna"] },
+  { flag: "🇦🇿", name: "Azerbaijan",             dial: "+994", tz: ["Asia/Baku"] },
+  { flag: "🇧🇭", name: "Bahrain",                dial: "+973", tz: ["Asia/Bahrain"] },
+  { flag: "🇧🇩", name: "Bangladesh",             dial: "+880", tz: ["Asia/Dhaka"] },
+  { flag: "🇧🇾", name: "Belarus",                dial: "+375", tz: ["Europe/Minsk"] },
+  { flag: "🇧🇪", name: "Belgium",                dial: "+32",  tz: ["Europe/Brussels"] },
+  { flag: "🇧🇴", name: "Bolivia",                dial: "+591", tz: ["America/La_Paz"] },
+  { flag: "🇧🇦", name: "Bosnia & Herzegovina",   dial: "+387", tz: ["Europe/Sarajevo"] },
+  { flag: "🇧🇷", name: "Brazil",                 dial: "+55",  tz: ["America/Sao_Paulo","America/Manaus","America/Belem","America/Fortaleza","America/Recife"] },
+  { flag: "🇧🇬", name: "Bulgaria",               dial: "+359", tz: ["Europe/Sofia"] },
+  { flag: "🇨🇦", name: "Canada",                 dial: "+1",   tz: ["America/Toronto","America/Vancouver","America/Winnipeg","America/Halifax","America/Regina","America/Edmonton"] },
+  { flag: "🇨🇱", name: "Chile",                  dial: "+56",  tz: ["America/Santiago"] },
+  { flag: "🇨🇳", name: "China",                  dial: "+86",  tz: ["Asia/Shanghai","Asia/Chongqing"] },
+  { flag: "🇨🇴", name: "Colombia",               dial: "+57",  tz: ["America/Bogota"] },
+  { flag: "🇭🇷", name: "Croatia",                dial: "+385", tz: ["Europe/Zagreb"] },
+  { flag: "🇨🇾", name: "Cyprus",                 dial: "+357", tz: ["Asia/Nicosia"] },
+  { flag: "🇨🇿", name: "Czech Republic",         dial: "+420", tz: ["Europe/Prague"] },
+  { flag: "🇩🇰", name: "Denmark",                dial: "+45",  tz: ["Europe/Copenhagen"] },
+  { flag: "🇪🇨", name: "Ecuador",                dial: "+593", tz: ["America/Guayaquil"] },
+  { flag: "🇪🇬", name: "Egypt",                  dial: "+20",  tz: ["Africa/Cairo"] },
+  { flag: "🇪🇹", name: "Ethiopia",               dial: "+251", tz: ["Africa/Addis_Ababa"] },
+  { flag: "🇫🇮", name: "Finland",                dial: "+358", tz: ["Europe/Helsinki"] },
+  { flag: "🇫🇷", name: "France",                 dial: "+33",  tz: ["Europe/Paris"] },
+  { flag: "🇬🇪", name: "Georgia",                dial: "+995", tz: ["Asia/Tbilisi"] },
+  { flag: "🇩🇪", name: "Germany",                dial: "+49",  tz: ["Europe/Berlin"] },
+  { flag: "🇬🇭", name: "Ghana",                  dial: "+233", tz: ["Africa/Accra"] },
+  { flag: "🇬🇷", name: "Greece",                 dial: "+30",  tz: ["Europe/Athens"] },
+  { flag: "🇭🇰", name: "Hong Kong",              dial: "+852", tz: ["Asia/Hong_Kong"] },
+  { flag: "🇭🇺", name: "Hungary",                dial: "+36",  tz: ["Europe/Budapest"] },
+  { flag: "🇮🇸", name: "Iceland",                dial: "+354", tz: ["Atlantic/Reykjavik"] },
+  { flag: "🇮🇳", name: "India",                  dial: "+91",  tz: ["Asia/Kolkata","Asia/Calcutta"] },
+  { flag: "🇮🇩", name: "Indonesia",              dial: "+62",  tz: ["Asia/Jakarta","Asia/Makassar","Asia/Jayapura"] },
+  { flag: "🇮🇷", name: "Iran",                   dial: "+98",  tz: ["Asia/Tehran"] },
+  { flag: "🇮🇶", name: "Iraq",                   dial: "+964", tz: ["Asia/Baghdad"] },
+  { flag: "🇮🇪", name: "Ireland",                dial: "+353", tz: ["Europe/Dublin"] },
+  { flag: "🇮🇱", name: "Israel",                 dial: "+972", tz: ["Asia/Jerusalem"] },
+  { flag: "🇮🇹", name: "Italy",                  dial: "+39",  tz: ["Europe/Rome"] },
+  { flag: "🇯🇲", name: "Jamaica",                dial: "+1876",tz: ["America/Jamaica"] },
+  { flag: "🇯🇵", name: "Japan",                  dial: "+81",  tz: ["Asia/Tokyo"] },
+  { flag: "🇯🇴", name: "Jordan",                 dial: "+962", tz: ["Asia/Amman"] },
+  { flag: "🇰🇿", name: "Kazakhstan",             dial: "+7",   tz: ["Asia/Almaty"] },
+  { flag: "🇰🇪", name: "Kenya",                  dial: "+254", tz: ["Africa/Nairobi"] },
+  { flag: "🇰🇼", name: "Kuwait",                 dial: "+965", tz: ["Asia/Kuwait"] },
+  { flag: "🇱🇧", name: "Lebanon",                dial: "+961", tz: ["Asia/Beirut"] },
+  { flag: "🇲🇾", name: "Malaysia",               dial: "+60",  tz: ["Asia/Kuala_Lumpur"] },
+  { flag: "🇲🇻", name: "Maldives",               dial: "+960", tz: ["Indian/Maldives"] },
+  { flag: "🇲🇽", name: "Mexico",                 dial: "+52",  tz: ["America/Mexico_City","America/Monterrey","America/Tijuana"] },
+  { flag: "🇲🇦", name: "Morocco",                dial: "+212", tz: ["Africa/Casablanca"] },
+  { flag: "🇲🇲", name: "Myanmar",                dial: "+95",  tz: ["Asia/Rangoon","Asia/Yangon"] },
+  { flag: "🇳🇵", name: "Nepal",                  dial: "+977", tz: ["Asia/Kathmandu","Asia/Katmandu"] },
+  { flag: "🇳🇱", name: "Netherlands",            dial: "+31",  tz: ["Europe/Amsterdam"] },
+  { flag: "🇳🇿", name: "New Zealand",            dial: "+64",  tz: ["Pacific/Auckland"] },
+  { flag: "🇳🇬", name: "Nigeria",                dial: "+234", tz: ["Africa/Lagos"] },
+  { flag: "🇳🇴", name: "Norway",                 dial: "+47",  tz: ["Europe/Oslo"] },
+  { flag: "🇴🇲", name: "Oman",                   dial: "+968", tz: ["Asia/Muscat"] },
+  { flag: "🇵🇰", name: "Pakistan",               dial: "+92",  tz: ["Asia/Karachi"] },
+  { flag: "🇵🇦", name: "Panama",                 dial: "+507", tz: ["America/Panama"] },
+  { flag: "🇵🇾", name: "Paraguay",               dial: "+595", tz: ["America/Asuncion"] },
+  { flag: "🇵🇪", name: "Peru",                   dial: "+51",  tz: ["America/Lima"] },
+  { flag: "🇵🇭", name: "Philippines",            dial: "+63",  tz: ["Asia/Manila"] },
+  { flag: "🇵🇱", name: "Poland",                 dial: "+48",  tz: ["Europe/Warsaw"] },
+  { flag: "🇵🇹", name: "Portugal",               dial: "+351", tz: ["Europe/Lisbon"] },
+  { flag: "🇶🇦", name: "Qatar",                  dial: "+974", tz: ["Asia/Qatar"] },
+  { flag: "🇷🇴", name: "Romania",                dial: "+40",  tz: ["Europe/Bucharest"] },
+  { flag: "🇷🇺", name: "Russia",                 dial: "+7",   tz: ["Europe/Moscow","Asia/Yekaterinburg","Asia/Novosibirsk","Asia/Vladivostok"] },
+  { flag: "🇸🇦", name: "Saudi Arabia",           dial: "+966", tz: ["Asia/Riyadh"] },
+  { flag: "🇷🇸", name: "Serbia",                 dial: "+381", tz: ["Europe/Belgrade"] },
+  { flag: "🇸🇬", name: "Singapore",              dial: "+65",  tz: ["Asia/Singapore"] },
+  { flag: "🇸🇰", name: "Slovakia",               dial: "+421", tz: ["Europe/Bratislava"] },
+  { flag: "🇸🇮", name: "Slovenia",               dial: "+386", tz: ["Europe/Ljubljana"] },
+  { flag: "🇿🇦", name: "South Africa",           dial: "+27",  tz: ["Africa/Johannesburg"] },
+  { flag: "🇰🇷", name: "South Korea",            dial: "+82",  tz: ["Asia/Seoul"] },
+  { flag: "🇪🇸", name: "Spain",                  dial: "+34",  tz: ["Europe/Madrid"] },
+  { flag: "🇱🇰", name: "Sri Lanka",              dial: "+94",  tz: ["Asia/Colombo"] },
+  { flag: "🇸🇩", name: "Sudan",                  dial: "+249", tz: ["Africa/Khartoum"] },
+  { flag: "🇸🇪", name: "Sweden",                 dial: "+46",  tz: ["Europe/Stockholm"] },
+  { flag: "🇨🇭", name: "Switzerland",            dial: "+41",  tz: ["Europe/Zurich"] },
+  { flag: "🇸🇾", name: "Syria",                  dial: "+963", tz: ["Asia/Damascus"] },
+  { flag: "🇹🇼", name: "Taiwan",                 dial: "+886", tz: ["Asia/Taipei"] },
+  { flag: "🇹🇿", name: "Tanzania",               dial: "+255", tz: ["Africa/Dar_es_Salaam"] },
+  { flag: "🇹🇭", name: "Thailand",               dial: "+66",  tz: ["Asia/Bangkok"] },
+  { flag: "🇹🇳", name: "Tunisia",                dial: "+216", tz: ["Africa/Tunis"] },
+  { flag: "🇹🇷", name: "Turkey",                 dial: "+90",  tz: ["Europe/Istanbul"] },
+  { flag: "🇺🇬", name: "Uganda",                 dial: "+256", tz: ["Africa/Kampala"] },
+  { flag: "🇺🇦", name: "Ukraine",                dial: "+380", tz: ["Europe/Kiev","Europe/Kyiv"] },
+  { flag: "🇦🇪", name: "UAE",                    dial: "+971", tz: ["Asia/Dubai"] },
+  { flag: "🇬🇧", name: "United Kingdom",         dial: "+44",  tz: ["Europe/London"] },
+  { flag: "🇺🇸", name: "United States",          dial: "+1",   tz: ["America/New_York","America/Chicago","America/Denver","America/Los_Angeles","America/Phoenix","America/Anchorage","Pacific/Honolulu"] },
+  { flag: "🇺🇾", name: "Uruguay",                dial: "+598", tz: ["America/Montevideo"] },
+  { flag: "🇺🇿", name: "Uzbekistan",             dial: "+998", tz: ["Asia/Tashkent"] },
+  { flag: "🇻🇪", name: "Venezuela",              dial: "+58",  tz: ["America/Caracas"] },
+  { flag: "🇻🇳", name: "Vietnam",                dial: "+84",  tz: ["Asia/Ho_Chi_Minh","Asia/Saigon"] },
+  { flag: "🇾🇪", name: "Yemen",                  dial: "+967", tz: ["Asia/Aden"] },
+  { flag: "🇿🇲", name: "Zambia",                 dial: "+260", tz: ["Africa/Lusaka"] },
+  { flag: "🇿🇼", name: "Zimbabwe",               dial: "+263", tz: ["Africa/Harare"] },
+];
+
+const phoneCountrySelect = document.getElementById("phone-country-select");
+
+function detectCountryFromTimezone(tz) {
+  const normalized = String(tz || "").trim();
+  for (const c of COUNTRIES) {
+    if (c.tz.includes(normalized)) return c;
+  }
+  return null;
+}
+
+(function initPhoneCountrySelect() {
+  if (!phoneCountrySelect) return;
+  const sorted = [...COUNTRIES].sort((a, b) => a.name.localeCompare(b.name));
+  sorted.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.dial;
+    opt.textContent = `${c.flag} ${c.dial}`;
+    opt.title = c.name;
+    phoneCountrySelect.appendChild(opt);
+  });
+
+  // Auto-select based on visitor timezone
+  const detected = detectCountryFromTimezone(visitorTimezone);
+  if (detected) phoneCountrySelect.value = detected.dial;
+  if (!phoneCountrySelect.value) phoneCountrySelect.value = "+1"; // fallback USA
+})();
+
 // Real-time inline validation feedback
 function setFieldError(input, message) {
   let hint = input.parentElement.querySelector(".field-inline-error");
@@ -765,7 +899,7 @@ if (phoneInput) {
     const v = phoneInput.value.trim();
     if (!v) { setFieldError(phoneInput, ""); return; }
     setFieldError(phoneInput,
-      /^[\d\s\+\-\(\)\.]{6,20}$/.test(v) ? "" : "Use digits only — e.g. +91 98765 43210"
+      /^[\d\s\-\(\)\.]{4,18}$/.test(v) ? "" : "Use digits only — e.g. 98765 43210"
     );
   });
   phoneInput.addEventListener("input", () => {
@@ -782,7 +916,9 @@ bookingForm.addEventListener("submit", async (e) => {
 
     const nameVal  = nameInput.value.trim();
     const emailVal = emailInput.value.trim();
-    const phoneVal = phoneInput?.value?.trim() || "";
+    const localNumber = phoneInput?.value?.trim() || "";
+    const dialCode = phoneCountrySelect?.value || "";
+    const phoneVal = localNumber ? `${dialCode} ${localNumber}` : "";
 
     if (!nameVal) throw new Error("Please enter your full name.");
 
@@ -792,9 +928,9 @@ bookingForm.addEventListener("submit", async (e) => {
       throw new Error("Please enter a valid email address (e.g. name@gmail.com).");
     }
 
-    if (phoneVal && !/^[\d\s\+\-\(\)\.]{6,20}$/.test(phoneVal)) {
+    if (localNumber && !/^[\d\s\-\(\)\.]{4,18}$/.test(localNumber)) {
       phoneInput.focus();
-      throw new Error("Phone number should contain only digits and + - ( ) symbols.");
+      throw new Error("Phone number should contain digits only — e.g. 98765 43210");
     }
 
     confirmBtn.disabled = true;
@@ -806,7 +942,7 @@ bookingForm.addEventListener("submit", async (e) => {
       slotToken: selectedSlot.token,
       name: nameInput.value.trim(),
       email: emailInput.value.trim(),
-      phone: phoneInput?.value?.trim() || "",
+      phone: phoneVal,
       notes: notesInput.value.trim(),
       timezone: visitorTimezone,
     };

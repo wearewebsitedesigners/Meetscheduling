@@ -49,6 +49,10 @@ command -v pm2 >/dev/null 2>&1 || fail "pm2 is not installed"
 
 log "Deploying $PM2_APP_NAME from origin/$BRANCH"
 git config --global --add safe.directory "$APP_DIR" >/dev/null 2>&1 || true
+# Use deploy key if present
+if [ -f "/home/meetscheduling/.ssh/github_deploy" ]; then
+  export GIT_SSH_COMMAND="ssh -i /home/meetscheduling/.ssh/github_deploy -o StrictHostKeyChecking=no -o IdentitiesOnly=yes"
+fi
 git fetch --prune origin
 git rev-parse --verify "origin/$BRANCH" >/dev/null 2>&1 || fail "Remote branch origin/$BRANCH not found"
 git reset --hard "origin/$BRANCH"

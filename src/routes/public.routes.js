@@ -21,6 +21,41 @@ const {
   createLandingLeadForUsername,
 } = require("../services/landing-page.service");
 
+// ---------------------------------------------------------------------------
+// In-memory TTL cache for public event page data (event info + available dates).
+// Keyed by "username:slug:timezone". Entries expire after 60 s.
+// Slots per date are cached separately keyed by "username:slug:date:timezone".
+// Both caches are bounded at 500 entries to prevent unbounded growth.
+// ---------------------------------------------------------------------------
+const EVENT_CACHE_TTL = 60_000;  // 60 seconds
+const SLOT_CACHE_TTL  = 60_000;
+
+const eventPageCache = new Map(); // key → { data, expiresAt }
+const slotCache      = new Map(); // key → { data, expiresAt }
+
+function _getCached(map, key) {
+  const entry = map.get(key);
+  if (!entry || Date.now() > entry.expiresAt) return null;
+  return entry.data;
+}
+
+function _setCached(map, key, data, ttl) {
+  map.set(key, { data, expiresAt: Date.now() + ttl });
+  if (map.size > 500) {
+    map.delete(map.keys().next().value);
+  }
+}
+
+/** Remove all cache entries that belong to a given event (by eventTypeId). */
+function bustEventCache(eventTypeId) {
+  for (const [key, entry] of eventPageCache) {
+    if (entry.data?.eventTypeId === eventTypeId) eventPageCache.delete(key);
+  }
+  for (const [key, entry] of slotCache) {
+    if (entry.data?.eventTypeId === eventTypeId) slotCache.delete(key);
+  }
+}
+
 const router = express.Router();
 router.use(publicRateLimit);
 
@@ -87,13 +122,26 @@ router.get(
   asyncHandler(async (req, res) => {
     const { username, slug } = readPublicRouteParams(req);
     const visitorTimezone = detectVisitorTimezone(req);
+
+    const cacheKey = `${username}:${slug}:${visitorTimezone}`;
+    const cached = _getCached(eventPageCache, cacheKey);
+    if (cached) {
+      res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+      return res.json(cached);
+    }
+
+    // Fetch event once and pass it into listPublicBookableDates so it is not
+    // re-fetched internally by preparePublicSchedulingContext.
     const event = await getPublicEventTypeByUsernameAndSlug(username, slug);
     const dates = await listPublicBookableDates({
       username,
       slug,
       visitorTimezone,
+      event,
     });
-    res.json({
+
+    const responseData = {
+      eventTypeId: event.id, // used by cache busting
       event: {
         id: event.id,
         title: event.title,
@@ -109,7 +157,11 @@ router.get(
       },
       visitorTimezone,
       dates,
-    });
+    };
+
+    _setCached(eventPageCache, cacheKey, responseData, EVENT_CACHE_TTL);
+    res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+    res.json(responseData);
   })
 );
 
@@ -122,12 +174,22 @@ router.get(
     const safeDate = assertDate(date, "date");
     const visitorTimezone = detectVisitorTimezone(req);
 
+    const cacheKey = `${username}:${slug}:${safeDate}:${visitorTimezone}`;
+    const cached = _getCached(slotCache, cacheKey);
+    if (cached) {
+      res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+      return res.json(cached);
+    }
+
     const payload = await generatePublicSlots({
       username,
       slug,
       visitorDate: safeDate,
       visitorTimezone,
     });
+
+    _setCached(slotCache, cacheKey, payload, SLOT_CACHE_TTL);
+    res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
     res.json(payload);
   })
 );
@@ -185,6 +247,8 @@ router.post(
       source: body.source || "booking_link",
       notes: body.notes || "",
     });
+    // Bust the event page + slot caches so the next visitor sees fresh availability.
+    if (result?.booking?.event_type_id) bustEventCache(result.booking.event_type_id);
     res.status(201).json({
       ...result,
       publicBookingUrl: `/${encodeURIComponent(username)}/${encodeURIComponent(slug)}`,

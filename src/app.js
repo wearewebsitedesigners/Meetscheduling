@@ -43,6 +43,13 @@ const { notFoundHandler, errorHandler } = require("./middleware/error-handler");
 
 function buildApp() {
   const app = express();
+
+  // Compress all text responses (HTML, JSON, JS, CSS) before they leave Node.
+  // level 6 is the gzip default — good balance of speed vs ratio.
+  // threshold 1024 skips tiny responses that aren't worth compressing.
+  const compression = require("compression");
+  app.use(compression({ level: 6, threshold: 1024 }));
+
   const staticRoot = path.resolve(__dirname, "..");
   const dashboardShellPath = path.join(staticRoot, "dashboard.html");
 

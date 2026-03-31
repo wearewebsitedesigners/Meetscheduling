@@ -189,6 +189,7 @@ async function preparePublicSchedulingContext({
   slug,
   visitorTimezone,
   visitorDates,
+  event: preloadedEvent,
 }) {
   const safeVisitorTimezone = assertZone(visitorTimezone || "UTC", "timezone");
   const safeDates = Array.from(
@@ -198,7 +199,9 @@ async function preparePublicSchedulingContext({
     throw badRequest("At least one date is required");
   }
 
-  const event = await getPublicEventTypeByUsernameAndSlug(username, slug);
+  // Accept a pre-fetched event to avoid a redundant DB lookup when the caller
+  // already has the event record (e.g., the public route handler).
+  const event = preloadedEvent || await getPublicEventTypeByUsernameAndSlug(username, slug);
   const hostTimezone = assertZone(
     event.timezone || env.defaultTimezone,
     "Host timezone"
@@ -227,23 +230,27 @@ async function preparePublicSchedulingContext({
     hostTimezone
   );
 
-  const weeklyRows = await fetchWeeklyAvailability(eventWorkspaceId);
-  const dateOverrides = await fetchDateOverrides(
-    eventWorkspaceId,
-    hostDateRange[0],
-    hostDateRange[hostDateRange.length - 1]
-  );
-  const existingBookings = await fetchBookingsForRange(
-    event.id,
-    hostWindowStart.toUTC().toISO(),
-    hostWindowEnd.toUTC().toISO()
-  );
-  const bookingCountByHostDate = await fetchBookingCountByHostDate(
-    event.id,
-    hostTimezone,
-    hostWindowStart.toUTC().toISO(),
-    hostWindowEnd.toUTC().toISO()
-  );
+  // Run all 4 independent DB queries in parallel instead of sequentially.
+  const [weeklyRows, dateOverrides, existingBookings, bookingCountByHostDate] =
+    await Promise.all([
+      fetchWeeklyAvailability(eventWorkspaceId),
+      fetchDateOverrides(
+        eventWorkspaceId,
+        hostDateRange[0],
+        hostDateRange[hostDateRange.length - 1]
+      ),
+      fetchBookingsForRange(
+        event.id,
+        hostWindowStart.toUTC().toISO(),
+        hostWindowEnd.toUTC().toISO()
+      ),
+      fetchBookingCountByHostDate(
+        event.id,
+        hostTimezone,
+        hostWindowStart.toUTC().toISO(),
+        hostWindowEnd.toUTC().toISO()
+      ),
+    ]);
 
   const durationMinutes = Number(event.duration_minutes);
   const bufferBefore = Number(event.buffer_before_min || 0);
@@ -453,6 +460,7 @@ async function listPublicBookableDates({
   visitorTimezone,
   fromDate,
   count = 60,
+  event,
 }) {
   const safeVisitorTimezone = assertZone(visitorTimezone || "UTC", "timezone");
   const candidateDates = nextDatesFrom(fromDate, safeVisitorTimezone, count);
@@ -461,6 +469,7 @@ async function listPublicBookableDates({
     slug,
     visitorTimezone: safeVisitorTimezone,
     visitorDates: candidateDates,
+    event,
   });
 
   return candidateDates.filter((safeDate) =>

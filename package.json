@@ -28,6 +28,7 @@
   "license": "MIT",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "compression": "^1.8.1",
     "dotenv": "^16.4.7",
     "esbuild": "^0.27.3",
     "express": "^4.21.2",

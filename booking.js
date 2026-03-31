@@ -68,7 +68,9 @@ const isCustomDomainBooking = !isBookingShellPath && !hasPublicEventPath;
 const isLocalPreview = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost";
 const useLocalPreview = isLocalPreview && isCustomDomainBooking;
 
-let visitorTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+// Use the timezone detected by the early-fetch script in <head> if available,
+// so we don't redetect and potentially fire a mismatched second request.
+let visitorTimezone = window.__bookingEarlyTz || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 let currentEvent = null;
 let availableDates = new Set(); // yyyy-mm-dd
 let currentViewDate = new Date(); // dictates which month we're looking at
@@ -638,10 +640,21 @@ async function loadEvent() {
       data = cached;
     } else {
       showLoading();
-      data = useLocalPreview
-        ? { event: getPreviewEvent(), visitorTimezone, dates: getPreviewDates() }
-        : await fetchJson(`${buildPublicEventUrl()}?timezone=${encodeURIComponent(visitorTimezone)}`);
-      if (!useLocalPreview) writeEventCache(data);
+      if (useLocalPreview) {
+        data = { event: getPreviewEvent(), visitorTimezone, dates: getPreviewDates() };
+      } else if (window.__bookingEventFetch) {
+        // Consume the fetch that was started early in <head> — it's already in-flight.
+        const earlyFetch = window.__bookingEventFetch;
+        window.__bookingEventFetch = null;
+        const response = await earlyFetch;
+        const text = await response.text();
+        const parsed = text ? JSON.parse(text) : {};
+        if (!response.ok) throw new Error(parsed.error || "Request failed");
+        data = parsed;
+      } else {
+        data = await fetchJson(`${buildPublicEventUrl()}?timezone=${encodeURIComponent(visitorTimezone)}`);
+      }
+      writeEventCache(data);
     }
 
     currentEvent = data.event;

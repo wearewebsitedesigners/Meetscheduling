@@ -24,7 +24,7 @@ const pool = new Pool({
     ? dbIdleInTransactionTimeoutMs
     : 10000,
   idleTimeoutMillis: 10000,
-  max: env.nodeEnv === "production" ? 3 : 10,
+  max: Number(process.env.DB_POOL_MAX || (env.nodeEnv === "production" ? 10 : 20)),
   application_name: "meetscheduling",
   keepAlive: true,
 });

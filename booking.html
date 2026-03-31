@@ -11,6 +11,25 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" /></noscript>
+  <!-- Fire the event-data API fetch immediately while the rest of the page loads.
+       booking.js will consume window.__bookingEventFetch instead of creating a new fetch. -->
+  <script>
+  (function () {
+    try {
+      var parts = window.location.pathname.split('/').filter(Boolean);
+      // Only apply on /:username/:slug routes (not /booking.html?... shell paths)
+      if (parts.length >= 2 && parts[0] !== 'booking') {
+        var tz = (typeof Intl !== 'undefined' && Intl.DateTimeFormat)
+          ? Intl.DateTimeFormat().resolvedOptions().timeZone
+          : 'UTC';
+        var url = '/api/public/' + encodeURIComponent(parts[0]) + '/' +
+                  encodeURIComponent(parts[1]) + '?timezone=' + encodeURIComponent(tz);
+        window.__bookingEventFetch = fetch(url);
+        window.__bookingEarlyTz = tz;
+      }
+    } catch (_) {}
+  })();
+  </script>
   <style>
     :root {
       --bg-color: #eef4ff;
@@ -1244,7 +1263,7 @@
     </div>
   </div>
 
-  <script src="/booking.js"></script>
+  <script defer src="/booking.js"></script>
 </body>
 
 </html>

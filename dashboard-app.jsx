@@ -1047,7 +1047,7 @@ function App() {
           <div className="pointer-events-none absolute -right-16 top-12 h-28 w-28 rounded-full bg-[#4C7CFF]/20 blur-3xl" />
           <div className="pointer-events-none absolute left-0 top-16 h-72 w-full bg-[radial-gradient(circle_at_0%_30%,rgba(76,124,255,0.18),transparent_48%)]" />
 
-          <button type="button" onClick={() => setCollapsed((value) => !value)} className="absolute -right-[13px] top-[100px] z-30 flex h-[30px] w-[30px] items-center justify-center rounded-full border border-slate-200/85 bg-white text-[#0f1f3d] shadow-[0_8px_20px_rgba(15,31,61,0.15)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#9DB8FF] hover:bg-[#F7FAFF] hover:text-[#2563EB] hover:shadow-[0_12px_24px_rgba(37,99,235,0.16)]" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+          <button type="button" onClick={() => setCollapsed((value) => !value)} className="absolute -right-[13px] top-[88px] z-30 flex h-[30px] w-[30px] items-center justify-center rounded-full border border-slate-200/85 bg-white text-[#0f1f3d] shadow-[0_8px_20px_rgba(15,31,61,0.15)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#9DB8FF] hover:bg-[#F7FAFF] hover:text-[#2563EB] hover:shadow-[0_12px_24px_rgba(37,99,235,0.16)]" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
             <ChevronLeft className={cn("h-[10px] w-[10px] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]", collapsed && "rotate-180")} />
           </button>
 

@@ -56,7 +56,7 @@ function sendTwiml(res, inner) {
 // POST /api/ivr/welcome
 // ---------------------------------------------------------------------------
 
-router.post("/welcome", async (req, res) => {
+router.all("/welcome", async (req, res) => {
   const callId = String(req.query.callId || "").trim();
   if (!callId) {
     return sendTwiml(res, say("Sorry, we could not find your booking.") + "<Hangup/>");

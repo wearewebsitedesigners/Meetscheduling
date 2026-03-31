@@ -234,41 +234,61 @@ export default function IvrSettingsPanel() {
       <div className="grid gap-6 xl:grid-cols-[400px_minmax(0,1fr)]">
 
         {/* Settings card */}
-        <div className="rounded-[34px] border border-[#DFE7F3] bg-white p-7 shadow-[0_18px_50px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-white/[0.04]">
-          <h2 className="mb-5 text-[18px] font-bold text-slate-800 dark:text-white">Settings</h2>
+        <div className="relative overflow-hidden rounded-[34px] border border-[#DFE7F3] bg-white p-7 shadow-[0_18px_50px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-white/[0.04]">
+          <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-[#3B82F6]/5 blur-2xl dark:bg-[#3B82F6]/10" />
+
+          <div className="relative mb-6 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#3B82F6] to-[#2563EB] shadow-[0_4px_12px_rgba(37,99,235,0.35)]">
+              <PhoneCall size={15} className="text-white" />
+            </div>
+            <h2 className="text-[18px] font-bold text-slate-800 dark:text-white">Settings</h2>
+          </div>
 
           {/* Enable toggle */}
           <div className={cn(
-            "mb-5 flex items-center justify-between rounded-2xl border px-5 py-4 transition-all duration-300",
+            "relative mb-5 overflow-hidden rounded-[20px] border p-5 transition-all duration-300",
             enabled
-              ? "border-[#3B82F6]/30 bg-[#EEF4FF] dark:border-[#3B82F6]/20 dark:bg-[#1a2e52]/50"
-              : "border-[#DFE7F3] bg-slate-50/60 dark:border-white/10 dark:bg-white/[0.03]"
+              ? "border-[#3B82F6]/25 bg-gradient-to-br from-[#EEF4FF] to-[#E6F0FF] shadow-[0_4px_20px_rgba(37,99,235,0.10)] dark:border-[#3B82F6]/20 dark:from-[#1a2e52]/60 dark:to-[#162444]/60"
+              : "border-[#DFE7F3] bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.03]"
           )}>
-            <div>
-              <div className="text-[15px] font-semibold text-slate-800 dark:text-white">
-                Enable confirmation calls
+            {enabled && (
+              <div className="pointer-events-none absolute -right-4 -top-4 h-20 w-20 rounded-full bg-[#3B82F6]/10 blur-xl" />
+            )}
+            <div className="relative flex items-center justify-between gap-4">
+              <div>
+                <div className="text-[15px] font-bold text-slate-800 dark:text-white">
+                  Enable confirmation calls
+                </div>
+                <div className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
+                  Auto-call invitee after every booking
+                </div>
               </div>
-              <div className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-                Auto-call invitee after every booking
-              </div>
+              <Toggle
+                checked={enabled}
+                onChange={() => saveSettings({ enable_confirmation_calls: !enabled })}
+              />
             </div>
-            <Toggle
-              checked={enabled}
-              onChange={() => saveSettings({ enable_confirmation_calls: !enabled })}
-            />
+            {enabled && (
+              <div className="relative mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-[#2563EB] dark:text-[#93BBFF]">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.8)]" />
+                Calls will fire automatically on new bookings
+              </div>
+            )}
           </div>
 
           {/* Call delay */}
-          <div className={cn("space-y-2 transition-all duration-300", enabled ? "opacity-100" : "pointer-events-none opacity-40")}>
-            <label className="block text-[13px] font-semibold text-slate-600 dark:text-slate-300">
+          <div className={cn("space-y-3 transition-all duration-300", enabled ? "opacity-100" : "pointer-events-none opacity-35")}>
+            <label className="block text-[13px] font-bold text-slate-600 dark:text-slate-300">
               When to call
             </label>
             <div className="relative">
-              <Clock size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-lg bg-[#EEF4FF] dark:bg-[#1a2e52]">
+                <Clock size={12} className="text-[#3B82F6]" />
+              </div>
               <select
                 value={settings?.call_delay_minutes ?? 5}
                 onChange={(e) => saveSettings({ call_delay_minutes: Number(e.target.value) })}
-                className="w-full appearance-none rounded-2xl border border-[#DFE7F3] bg-white py-3 pl-9 pr-4 text-[14px] text-slate-800 shadow-sm outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 dark:border-white/10 dark:bg-white/[0.06] dark:text-white"
+                className="w-full appearance-none rounded-2xl border-2 border-[#DFE7F3] bg-white py-3.5 pl-11 pr-4 text-[14px] font-medium text-slate-800 outline-none transition-all focus:border-[#3B82F6] focus:shadow-[0_0_0_4px_rgba(59,130,246,0.12)] dark:border-white/10 dark:bg-white/[0.06] dark:text-white"
               >
                 {DELAY_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -283,7 +303,7 @@ export default function IvrSettingsPanel() {
           {/* Save feedback */}
           {saveStatus && (
             <div className={cn(
-              "mt-4 flex items-center gap-2 rounded-2xl px-4 py-3 text-[13px] font-medium",
+              "mt-4 flex items-center gap-2 rounded-2xl px-4 py-3 text-[13px] font-semibold",
               saveStatus === "saved"
                 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
                 : "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400"
@@ -300,11 +320,13 @@ export default function IvrSettingsPanel() {
 
           {/* Twilio warning */}
           {!settings?.twilio_configured && (
-            <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10">
+            <div className="mt-5 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 dark:border-amber-500/20 dark:from-amber-500/10 dark:to-orange-500/10">
               <div className="flex items-start gap-3">
-                <AlertCircle size={15} className="mt-0.5 shrink-0 text-amber-500 dark:text-amber-400" />
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-500/20">
+                  <AlertCircle size={13} className="text-amber-600 dark:text-amber-400" />
+                </div>
                 <div>
-                  <div className="text-[13px] font-semibold text-amber-800 dark:text-amber-300">Twilio not configured</div>
+                  <div className="text-[13px] font-bold text-amber-800 dark:text-amber-300">Twilio not configured</div>
                   <div className="mt-1 text-[12px] leading-relaxed text-amber-700 dark:text-amber-400">
                     Add <code className="rounded bg-amber-100 px-1 dark:bg-amber-500/20">TWILIO_ACCOUNT_SID</code>, <code className="rounded bg-amber-100 px-1 dark:bg-amber-500/20">TWILIO_AUTH_TOKEN</code>, and <code className="rounded bg-amber-100 px-1 dark:bg-amber-500/20">TWILIO_PHONE_NUMBER</code> to your <code className="rounded bg-amber-100 px-1 dark:bg-amber-500/20">.env</code> file.
                   </div>

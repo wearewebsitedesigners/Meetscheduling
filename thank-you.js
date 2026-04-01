@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const hostAvatarEl = document.getElementById("host-avatar");
   const hostNameEl = document.getElementById("host-name");
   const returnBookingLink = document.getElementById("return-booking-link");
-  const viewHomeLink = document.getElementById("view-home-link");
+  const openInvitationBtn = document.getElementById("open-invitation-btn");
 
   const applyFallback = () => {
     if (titleEl) titleEl.textContent = "Booking confirmed";
@@ -160,7 +160,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (hostAvatarEl) hostAvatarEl.textContent = "MS";
     if (hostNameEl) hostNameEl.textContent = "MeetScheduling";
     if (returnBookingLink) returnBookingLink.href = "/";
-    if (viewHomeLink) viewHomeLink.href = "/";
+    if (openInvitationBtn) openInvitationBtn.href = "https://mail.google.com/mail/u/0/";
   };
 
   const applyPayload = (data) => {
@@ -182,9 +182,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (returnBookingLink) {
       returnBookingLink.href = safeHref(data.publicBookingUrl, "/");
     }
-    if (viewHomeLink) {
-      const fallbackLanding = event?.username ? `/${encodeURIComponent(event.username)}` : "/";
-      viewHomeLink.href = safeHref(data.landingUrl, fallbackLanding);
+    if (openInvitationBtn) {
+      const hostEmail = String(event.hostEmail || "").trim();
+      const senderParts = [];
+      if (hostEmail) senderParts.push(`from:${hostEmail}`);
+      senderParts.push("from:no-reply@meetscheduling.com", "from:notifications@meetscheduling.com");
+      const gmailSearch = `{${senderParts.join(" ")}} in:anywhere newer_than:1d`;
+      openInvitationBtn.href = `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(gmailSearch)}`;
     }
 
     document.title = `${event.title || "Booking confirmed"} | MeetScheduling`;

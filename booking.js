@@ -673,17 +673,12 @@ async function loadEvent() {
 
     renderCalendar();
 
-    // Auto select first available if we don't have one and there are dates
-    if (!selectedDate && data.dates.length > 0) {
-      const firstYmd = data.dates[0];
-      const parts = firstYmd.split("-");
-      // Update view date so that month calendar aligns
-      currentViewDate = new Date(parts[0], parseInt(parts[1], 10) - 1, 1);
-      renderCalendar();
-      await selectDate(firstYmd);
-    } else if (selectedDate) {
-      // re-render slots for selected
+    // Do NOT auto-select — user must explicitly click a date.
+    if (selectedDate) {
       await fetchSlotsForDate(selectedDate);
+    } else {
+      slotsList.innerHTML = '<div style="color:var(--tx-3);padding:14px 4px;font-size:0.84rem;text-align:center;line-height:1.7;">Select a date on the calendar<br>to see available times</div>';
+      if (slotsHeader) { slotsHeader.textContent = 'Available times'; slotsHeader.style.opacity = '1'; }
     }
 
   } catch (error) {

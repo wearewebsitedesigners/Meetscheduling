@@ -395,8 +395,12 @@ async function copyCurrentLink() {
 
 if (topbarMenuBtn instanceof HTMLButtonElement) {
   topbarMenuBtn.addEventListener("click", () => {
-    if (viewLandingLink instanceof HTMLAnchorElement) {
+    if (history.length > 1) {
+      history.back();
+    } else if (viewLandingLink instanceof HTMLAnchorElement && viewLandingLink.href) {
       window.location.href = viewLandingLink.href;
+    } else {
+      window.location.href = "/";
     }
   });
 }

@@ -395,13 +395,7 @@ async function copyCurrentLink() {
 
 if (topbarMenuBtn instanceof HTMLButtonElement) {
   topbarMenuBtn.addEventListener("click", () => {
-    if (history.length > 1) {
-      history.back();
-    } else if (viewLandingLink instanceof HTMLAnchorElement && viewLandingLink.href) {
-      window.location.href = viewLandingLink.href;
-    } else {
-      window.location.href = "/";
-    }
+    window.location.href = "/";
   });
 }
 
@@ -730,9 +724,11 @@ function goBackToStep1() {
   syncStepPills("select");
 }
 
-formBackBtn.addEventListener("click", () => {
-  goBackToStep1();
-});
+if (formBackBtn instanceof HTMLButtonElement) {
+  formBackBtn.addEventListener("click", () => {
+    goBackToStep1();
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Country dial code picker

@@ -1,92 +1,137 @@
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Booking Confirmed | MeetScheduling</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
   <link rel="shortcut icon" href="/assets/favicon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
   <style>
-    :root {
-      --bg-color: #eef4ff;
-      --bg-strong: #f7fbff;
-      --card-bg: rgba(255, 255, 255, 0.96);
-      --panel-border: rgba(214, 225, 244, 0.92);
-      --text-main: #143254;
-      --text-muted: #6b7c96;
-      --text-soft: #97a4bb;
-      --brand-color: #1d63ea;
-      --brand-hover: #174eb8;
-      --brand-light: #edf3ff;
-      --success: #10b981;
-      --success-soft: rgba(16, 185, 129, 0.12);
-      --warning-soft: rgba(245, 158, 11, 0.12);
-      --shadow-xl: 0 28px 90px rgba(15, 35, 74, 0.12);
-      --shadow-md: 0 18px 40px rgba(29, 99, 234, 0.14);
-      --radius-xl: 32px;
-      --radius-lg: 24px;
-      --radius-md: 18px;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { min-height: 100%; }
-
-    body {
-      font-family: 'Manrope', sans-serif;
-      color: var(--text-main);
-      background:
-        radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 32%),
-        radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent 28%),
-        linear-gradient(180deg, #f6faff 0%, #eef4ff 45%, #f7fbff 100%);
-      padding: 26px 14px;
-    }
-
-    h1, h2, h3, h4, strong { font-family: 'Sora', sans-serif; letter-spacing: -0.03em; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     a { color: inherit; text-decoration: none; }
+    button { font: inherit; cursor: pointer; }
 
-    .page-shell {
-      width: 100%;
-      max-width: 1160px;
-      margin: 0 auto;
+    :root {
+      --surface:     #ffffff;
+      --border:      #e4e8f0;
+      --border-soft: #edf0f7;
+      --brand:       #2563eb;
+      --brand-tint:  #eff4ff;
+      --brand-ring:  rgba(37,99,235,.13);
+      --tx:          #0f172a;
+      --tx-2:        #4b5975;
+      --tx-3:        #94a3b8;
+      --success:     #10b981;
+      --success-bg:  #ecfdf5;
+      --success-border: rgba(16,185,129,.2);
+      --shadow:      0 8px 40px rgba(15,23,42,.10), 0 1px 4px rgba(15,23,42,.05);
+      --r-md:  10px;
+      --r-lg:  14px;
+      --r-xl:  18px;
+      --r-2xl: 24px;
     }
 
+    /* ── Animated gradient background — same as booking page ── */
+    html, body {
+      min-height: 100dvh;
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+      color: var(--tx);
+      font-size: 13px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      background: linear-gradient(-40deg, #e8eeff, #edf3ff, #f0ebff, #e4f0ff, #eafcf3);
+      background-size: 500% 500%;
+      animation: bgPulse 20s ease infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 20px;
+    }
+
+    @keyframes bgPulse {
+      0%, 100% { background-position: 0% 60%; }
+      25%       { background-position: 100% 40%; }
+      50%       { background-position: 80% 0%; }
+      75%       { background-position: 20% 100%; }
+    }
+
+    /* ── Confetti particles ── */
+    .confetti-wrap {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .confetti-piece {
+      position: absolute;
+      top: -20px;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      opacity: 0;
+      animation: confettiFall linear forwards;
+    }
+    @keyframes confettiFall {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+      80%  { opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+
+    /* ── Shell ── */
+    .page-shell {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1620px;
+    }
+
+    /* ── Card — matches booking page ── */
     .confirm-card {
       overflow: hidden;
-      background: var(--card-bg);
-      border: 1px solid rgba(214, 225, 244, 0.84);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-xl);
-      backdrop-filter: blur(18px);
+      background: var(--surface);
+      border: 1px solid rgba(228,232,240,.9);
+      border-radius: var(--r-2xl);
+      box-shadow: var(--shadow);
+      animation: cardEntrance .6s cubic-bezier(.22,.68,0,1.2) both;
+    }
+
+    @keyframes cardEntrance {
+      from { opacity: 0; transform: translateY(24px) scale(.98); }
+      to   { opacity: 1; transform: none; }
     }
 
     .confirm-grid {
       display: grid;
-      min-height: 720px;
+      min-height: clamp(540px, 74dvh, 840px);
     }
 
-    @media (min-width: 980px) {
+    @media (min-width: 620px) {
       .confirm-grid {
-        grid-template-columns: 340px minmax(0, 1fr);
+        grid-template-columns: 320px minmax(0, 1fr);
       }
     }
 
+    /* ── Sidebar ── */
     .confirm-sidebar {
-      padding: 30px 24px;
-      border-bottom: 1px solid var(--panel-border);
-      background:
-        radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 38%),
-        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      padding: 28px 22px;
+      border-bottom: 1px solid var(--border-soft);
+      background: #fafbfd;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      animation: sidebarSlide .55s .1s cubic-bezier(.22,.68,0,1.1) both;
     }
 
-    @media (min-width: 980px) {
+    @keyframes sidebarSlide {
+      from { opacity: 0; transform: translateX(-16px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    @media (min-width: 620px) {
       .confirm-sidebar {
-        padding: 34px 28px;
         border-bottom: none;
-        border-right: 1px solid var(--panel-border);
+        border-right: 1px solid var(--border-soft);
       }
     }
 
@@ -94,277 +139,405 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
-      padding-bottom: 22px;
-      border-bottom: 1px solid var(--panel-border);
+      gap: 10px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border-soft);
       text-align: center;
     }
 
     .host-avatar {
-      width: 92px;
-      height: 92px;
-      border-radius: 24px;
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(180deg, #8a5a3e 0%, #2c1d16 62%, #080808 100%);
-      color: #d8a37b;
-      font-size: 2.05rem;
-      font-weight: 800;
-      box-shadow: 0 22px 46px rgba(0, 0, 0, 0.24);
+      background: linear-gradient(135deg, #1e3a5f 0%, #0a1628 100%);
+      color: #93b4d8;
+      font-size: 1.6rem;
+      font-weight: 700;
+      box-shadow: 0 12px 32px rgba(10,22,40,.22);
+      animation: avatarPop .5s .3s cubic-bezier(.34,1.56,.64,1) both;
+    }
+
+    @keyframes avatarPop {
+      from { opacity: 0; transform: scale(.6); }
+      to   { opacity: 1; transform: scale(1); }
     }
 
     .host-label {
-      color: var(--text-soft);
-      font-size: 0.76rem;
-      font-weight: 800;
-      letter-spacing: 0.18em;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: .14em;
       text-transform: uppercase;
+      color: var(--tx-3);
     }
 
     .host-name {
-      color: var(--text-main);
-      font-size: 1rem;
-      font-weight: 800;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--tx);
     }
 
-    .sidebar-card,
-    .meeting-summary-card,
-    .next-steps-card {
-      margin-top: 20px;
-      padding: 18px;
-      border-radius: 24px;
-      border: 1px solid var(--panel-border);
-      background: rgba(255, 255, 255, 0.84);
-      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+    .sidebar-info-card {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: var(--r-xl);
+      border: 1px solid var(--border-soft);
+      background: var(--surface);
     }
 
-    .sidebar-card-title,
-    .summary-card-title,
-    .next-steps-title {
-      font-size: 0.82rem;
-      font-weight: 800;
-      letter-spacing: 0.14em;
+    .sidebar-info-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: .12em;
       text-transform: uppercase;
-      color: var(--text-soft);
-      margin-bottom: 14px;
+      color: var(--tx-3);
+      margin-bottom: 12px;
     }
 
-    .sidebar-summary-item,
-    .summary-row {
+    .sidebar-info-item {
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      color: var(--text-muted);
-      font-size: 0.94rem;
-      font-weight: 700;
+      color: var(--tx-2);
+      font-size: 0.84rem;
+      font-weight: 500;
       line-height: 1.6;
     }
 
-    .sidebar-summary-item + .sidebar-summary-item,
-    .summary-row + .summary-row {
-      margin-top: 12px;
-    }
+    .sidebar-info-item + .sidebar-info-item { margin-top: 10px; }
 
-    .sidebar-summary-item svg,
-    .summary-row svg,
-    .next-step-item svg,
-    .success-badge svg {
-      width: 18px;
-      height: 18px;
-      flex: 0 0 18px;
+    .sidebar-info-item svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
       stroke: currentColor;
       fill: none;
       stroke-width: 1.9;
       margin-top: 2px;
+      color: var(--brand);
     }
 
-    .booking-legal-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 18px;
-      margin-top: 20px;
-      font-size: 0.85rem;
-      font-weight: 700;
-    }
-
-    .booking-legal-links a {
-      color: var(--brand-color);
-    }
-
-    .confirm-main {
-      padding: 28px 20px 32px;
-      background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-    }
-
-    @media (min-width: 768px) {
-      .confirm-main {
-        padding: 34px 28px 36px;
-      }
-    }
-
-    @media (min-width: 1180px) {
-      .confirm-main {
-        padding: 40px 36px 42px;
-      }
-    }
-
-    .success-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(236, 253, 245, 0.94);
-      color: #0f8a66;
-      border: 1px solid rgba(16, 185, 129, 0.18);
-      font-size: 0.78rem;
-      font-weight: 800;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-    }
-
-    .confirm-title {
-      margin-top: 22px;
-      font-size: clamp(2rem, 4vw, 3rem);
-      line-height: 1.08;
-      color: var(--text-main);
-    }
-
-    .confirm-copy {
+    .sidebar-next-card {
       margin-top: 14px;
-      max-width: 620px;
-      color: var(--text-muted);
-      font-size: 1.02rem;
-      line-height: 1.8;
-    }
-
-    .confirm-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 24px;
-    }
-
-    .btn-primary,
-    .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      min-height: 50px;
-      padding: 0 20px;
-      border-radius: 16px;
-      border: 1px solid transparent;
-      font-weight: 800;
-      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #1d63ea 0%, #3b82f6 100%);
-      color: #fff;
-      box-shadow: var(--shadow-md);
-    }
-
-    .btn-secondary {
-      background: #fff;
-      color: var(--text-main);
-      border-color: rgba(29, 99, 234, 0.14);
-      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
-    }
-
-    .btn-primary:hover,
-    .btn-secondary:hover {
-      transform: translateY(-1px);
-    }
-
-    .meeting-summary-grid {
-      display: grid;
-      gap: 20px;
-      margin-top: 28px;
-    }
-
-    @media (min-width: 1080px) {
-      .meeting-summary-grid {
-        grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.82fr);
-      }
-    }
-
-    .meeting-summary-title {
-      font-size: 1.2rem;
-      margin-bottom: 6px;
-    }
-
-    .meeting-summary-copy {
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      line-height: 1.7;
-      margin-bottom: 18px;
-    }
-
-    .meeting-link-status {
-      margin-top: 18px;
-      padding: 16px 18px;
-      border-radius: 20px;
-      background: rgba(248, 251, 255, 0.84);
-      border: 1px solid rgba(29, 99, 234, 0.1);
-    }
-
-    .meeting-link-label {
-      display: block;
-      color: var(--text-soft);
-      font-size: 0.78rem;
-      font-weight: 800;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-
-    .meeting-link-value {
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      line-height: 1.7;
-    }
-
-    .meeting-link-value a {
-      color: var(--brand-color);
-      font-weight: 800;
+      padding: 14px 16px;
+      border-radius: var(--r-xl);
+      border: 1px solid var(--border-soft);
+      background: var(--surface);
     }
 
     .next-step-item {
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      color: var(--text-muted);
-      font-size: 0.94rem;
-      line-height: 1.7;
+      color: var(--tx-2);
+      font-size: 0.84rem;
+      line-height: 1.6;
     }
 
-    .next-step-item + .next-step-item {
+    .next-step-item + .next-step-item { margin-top: 10px; }
+
+    .next-step-item svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+      margin-top: 3px;
+      color: var(--tx-3);
+    }
+
+    .sidebar-legal {
+      display: flex;
+      gap: 14px;
+      margin-top: auto;
+      padding-top: 16px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      flex-wrap: wrap;
+    }
+    .sidebar-legal a { color: var(--brand); }
+
+    /* ── Main content ── */
+    .confirm-main {
+      padding: 32px 28px 36px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media (max-width: 619px) {
+      .confirm-main { padding: 22px 18px 28px; }
+    }
+
+    /* ── Success badge — animated ── */
+    .success-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: var(--success-bg);
+      color: #0f8a66;
+      border: 1px solid var(--success-border);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      width: fit-content;
+      animation: badgeEntrance .5s .4s cubic-bezier(.34,1.56,.64,1) both;
+    }
+
+    @keyframes badgeEntrance {
+      from { opacity: 0; transform: scale(.7) translateY(8px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .success-badge svg {
+      width: 16px; height: 16px;
+      stroke: currentColor; fill: none; stroke-width: 2.2;
+      animation: checkDraw .6s .7s ease both;
+    }
+
+    @keyframes checkDraw {
+      from { stroke-dasharray: 30; stroke-dashoffset: 30; }
+      to   { stroke-dasharray: 30; stroke-dashoffset: 0; }
+    }
+
+    /* Pulsing glow on badge */
+    .success-badge::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 999px;
+      background: rgba(16,185,129,.15);
+      animation: badgeGlow 2s 1s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .success-badge { position: relative; }
+
+    @keyframes badgeGlow {
+      0%, 100% { opacity: 0; transform: scale(1); }
+      50%       { opacity: 1; transform: scale(1.08); }
+    }
+
+    /* ── Title ── */
+    .confirm-title {
+      margin-top: 18px;
+      font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -.03em;
+      color: var(--tx);
+      animation: titleSlide .55s .5s cubic-bezier(.22,.68,0,1.1) both;
+    }
+
+    @keyframes titleSlide {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .confirm-copy {
       margin-top: 12px;
+      max-width: 580px;
+      color: var(--tx-2);
+      font-size: 0.95rem;
+      line-height: 1.75;
+      animation: titleSlide .55s .6s cubic-bezier(.22,.68,0,1.1) both;
     }
 
-    @media (max-width: 640px) {
-      body {
-        padding: 16px 10px;
-      }
+    /* ── Action buttons ── */
+    .confirm-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+      animation: titleSlide .5s .7s cubic-bezier(.22,.68,0,1.1) both;
+    }
 
-      .confirm-actions {
-        flex-direction: column;
-      }
+    .btn-primary, .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 20px;
+      border-radius: var(--r-lg);
+      border: 1px solid transparent;
+      font-weight: 700;
+      font-size: 0.88rem;
+      transition: transform .18s, box-shadow .18s, background .18s, border-color .18s;
+    }
 
-      .btn-primary,
-      .btn-secondary {
-        width: 100%;
+    .btn-primary {
+      background: linear-gradient(135deg, var(--brand) 0%, #3b82f6 100%);
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(37,99,235,.32);
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--tx);
+      border-color: var(--border);
+      box-shadow: 0 2px 8px rgba(15,23,42,.05);
+    }
+
+    .btn-primary:hover  { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(37,99,235,.38); }
+    .btn-secondary:hover { transform: translateY(-1px); border-color: rgba(37,99,235,.3); color: var(--brand); }
+
+    /* ── Summary grid ── */
+    .meeting-summary-grid {
+      display: grid;
+      gap: 16px;
+      margin-top: 24px;
+      flex: 1;
+    }
+
+    @media (min-width: 860px) {
+      .meeting-summary-grid {
+        grid-template-columns: minmax(0, 1.1fr) minmax(240px, .8fr);
       }
+    }
+
+    .summary-card, .checklist-card {
+      padding: 18px 20px;
+      border-radius: var(--r-xl);
+      border: 1px solid var(--border-soft);
+      background: var(--surface);
+      animation: cardFadeUp .5s cubic-bezier(.22,.68,0,1.1) both;
+    }
+
+    .summary-card  { animation-delay: .8s; }
+    .checklist-card { animation-delay: .95s; }
+
+    @keyframes cardFadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .summary-card-title, .checklist-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--tx-3);
+      margin-bottom: 14px;
+    }
+
+    .event-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--tx);
+      margin-bottom: 4px;
+    }
+
+    .summary-copy {
+      color: var(--tx-2);
+      font-size: 0.88rem;
+      line-height: 1.65;
+      margin-bottom: 14px;
+    }
+
+    .summary-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: var(--tx-2);
+      font-size: 0.9rem;
+      font-weight: 600;
+      line-height: 1.55;
+    }
+
+    .summary-row + .summary-row { margin-top: 10px; }
+
+    .summary-row svg {
+      width: 15px; height: 15px;
+      flex-shrink: 0;
+      stroke: currentColor; fill: none; stroke-width: 1.9;
+      margin-top: 2px;
+      color: var(--brand);
+    }
+
+    .meeting-link-box {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: var(--r-lg);
+      background: var(--brand-tint);
+      border: 1px solid rgba(37,99,235,.12);
+    }
+
+    .meeting-link-label {
+      display: block;
+      color: var(--tx-3);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .meeting-link-value {
+      color: var(--tx-2);
+      font-size: 0.88rem;
+      line-height: 1.65;
+    }
+
+    .meeting-link-value a {
+      color: var(--brand);
+      font-weight: 700;
+    }
+
+    /* Checklist items with stagger */
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: var(--tx-2);
+      font-size: 0.88rem;
+      line-height: 1.65;
+      opacity: 0;
+      animation: checklistPop .4s cubic-bezier(.34,1.56,.64,1) forwards;
+    }
+
+    .checklist-item:nth-child(2) { animation-delay: 1.05s; }
+    .checklist-item:nth-child(3) { animation-delay: 1.15s; }
+    .checklist-item:nth-child(4) { animation-delay: 1.25s; }
+
+    @keyframes checklistPop {
+      from { opacity: 0; transform: translateX(10px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .checklist-item + .checklist-item { margin-top: 12px; }
+
+    .checklist-item svg {
+      width: 16px; height: 16px;
+      flex-shrink: 0;
+      stroke: currentColor; fill: none; stroke-width: 2;
+      margin-top: 2px;
+      color: var(--success);
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 619px) {
+      html, body { align-items: flex-start; padding: 10px 10px 24px; }
+      .confirm-grid { min-height: auto; }
+      .confirm-actions { flex-direction: column; }
+      .btn-primary, .btn-secondary { width: 100%; }
     }
   </style>
 </head>
 
 <body>
+  <!-- Confetti (injected by JS below) -->
+  <div class="confetti-wrap" id="confetti-wrap" aria-hidden="true"></div>
+
   <div class="page-shell">
     <div class="confirm-card">
       <div class="confirm-grid">
+
         <aside class="confirm-sidebar">
           <div class="brand-lockup">
             <div id="host-avatar" class="host-avatar">MS</div>
@@ -372,20 +545,20 @@
             <div id="host-name" class="host-name">MeetScheduling</div>
           </div>
 
-          <div class="sidebar-card">
-            <div class="sidebar-card-title">What happens next</div>
-            <div class="sidebar-summary-item">
+          <div class="sidebar-info-card">
+            <div class="sidebar-info-title">What happens next</div>
+            <div class="sidebar-info-item">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" /></svg>
               <span>Your calendar invitation and booking details are on their way to your inbox.</span>
             </div>
-            <div class="sidebar-summary-item">
+            <div class="sidebar-info-item">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z" /></svg>
               <span>If a video link is required, we will show it here and include it in email reminders.</span>
             </div>
           </div>
 
-          <div class="next-steps-card">
-            <div class="next-steps-title">Need anything else?</div>
+          <div class="sidebar-next-card">
+            <div class="sidebar-info-title">Need anything else?</div>
             <div class="next-step-item">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12M12 6l6 6-6 6" /></svg>
               <span>Save the calendar invite and keep an eye on your inbox for reminders.</span>
@@ -396,7 +569,7 @@
             </div>
           </div>
 
-          <div class="booking-legal-links">
+          <div class="sidebar-legal">
             <a href="/cookie-settings">Cookie settings</a>
             <a href="/privacy">Privacy Policy</a>
           </div>
@@ -408,8 +581,8 @@
             Booking secured
           </div>
 
-          <h1 class="confirm-title">You’re scheduled.</h1>
-          <p class="confirm-copy">Your meeting is locked in. We’ve prepared the details below so you can quickly verify the time, timezone, and video link status without digging through email.</p>
+          <h1 class="confirm-title">You're scheduled.</h1>
+          <p class="confirm-copy">Your meeting is locked in. We've prepared the details below so you can quickly verify the time, timezone, and video link status without digging through email.</p>
 
           <div class="confirm-actions">
             <a id="meeting-link-button" class="btn-primary" href="#" target="_blank" rel="noopener" style="display:none;">Open meeting link</a>
@@ -418,46 +591,74 @@
           </div>
 
           <div class="meeting-summary-grid">
-            <section class="meeting-summary-card">
-              <h2 id="event-title" class="meeting-summary-title">Meeting scheduled</h2>
-              <p class="meeting-summary-copy">A confirmation email has been sent to your inbox with the same booking information shown below.</p>
+            <section class="summary-card">
+              <div class="summary-card-title">Your booking</div>
+              <div id="event-title" class="event-name">Meeting scheduled</div>
+              <p class="summary-copy">A confirmation email has been sent to your inbox with the same booking information shown below.</p>
 
               <div class="summary-row">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" /></svg>
                 <div>
                   <strong id="event-datetime">Check your email for details.</strong>
-                  <div id="event-timezone" class="meeting-summary-copy" style="margin:6px 0 0; font-size:0.92rem;">UTC</div>
+                  <div id="event-timezone" class="summary-copy" style="margin:4px 0 0; font-size:0.85rem;">UTC</div>
                 </div>
               </div>
 
-              <div class="meeting-link-status">
+              <div class="meeting-link-box">
                 <span id="meeting-link-title" class="meeting-link-label">Web conferencing details</span>
                 <div id="meeting-link-value" class="meeting-link-value">Meeting details are in your email.</div>
               </div>
             </section>
 
-            <aside class="next-steps-card" style="margin-top:0;">
-              <div class="next-steps-title">Confirmation checklist</div>
-              <div class="next-step-item">
+            <aside class="checklist-card">
+              <div class="checklist-title">Confirmation checklist</div>
+              <div class="checklist-item">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 12.75 2.25 2.25L15.75 9.75" /><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                <span>The appointment is booked against the host’s live availability.</span>
+                <span>The appointment is booked against the host's live availability.</span>
               </div>
-              <div class="next-step-item">
+              <div class="checklist-item">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                 <span>Reminder emails will use the timezone shown in your booking summary.</span>
               </div>
-              <div class="next-step-item">
+              <div class="checklist-item">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z" /></svg>
                 <span>If the host uses Google Meet or Zoom, the active link will appear here once generated.</span>
               </div>
             </aside>
           </div>
         </main>
+
       </div>
     </div>
   </div>
 
+  <!-- Confetti burst animation -->
+  <script>
+  (function() {
+    var colors = ['#2563eb','#3b82f6','#10b981','#6366f1','#f59e0b','#ec4899','#06b6d4'];
+    var wrap = document.getElementById('confetti-wrap');
+    var count = 60;
+    for (var i = 0; i < count; i++) {
+      var el = document.createElement('div');
+      el.className = 'confetti-piece';
+      var color = colors[Math.floor(Math.random() * colors.length)];
+      var left = Math.random() * 100;
+      var delay = Math.random() * 1.4;
+      var duration = 2.2 + Math.random() * 1.8;
+      var size = 5 + Math.random() * 7;
+      var borderRadius = Math.random() > .5 ? '50%' : '2px';
+      el.style.cssText =
+        'left:' + left + '%;' +
+        'background:' + color + ';' +
+        'width:' + size + 'px;height:' + size + 'px;' +
+        'border-radius:' + borderRadius + ';' +
+        'animation-duration:' + duration + 's;' +
+        'animation-delay:' + delay + 's;';
+      wrap.appendChild(el);
+    }
+  })();
+  </script>
+
   <script src="/thank-you.js"></script>
 </body>
-
 </html>

@@ -29,6 +29,9 @@ function buildEventTypeSelect(prefix = "") {
     ${table}color,
     ${table}notice_minimum_hours,
     ${table}is_active,
+    ${table}brand_logo_url,
+    ${table}brand_tagline,
+    ${table}sidebar_message,
     ${table}created_at,
     ${table}updated_at
   `;
@@ -67,6 +70,9 @@ function normalizeEventTypeInput(input, { partial = false } = {}) {
     assertInteger(value, "noticeMinimumHours", { min: 0, max: 720 })
   );
   maybe("color", (value) => assertHexColor(value, "color"));
+  maybe("brandLogoUrl", (value) => assertOptionalString(value, "brandLogoUrl", { max: 1000 }));
+  maybe("brandTagline", (value) => assertOptionalString(value, "brandTagline", { max: 200 }));
+  maybe("sidebarMessage", (value) => assertOptionalString(value, "sidebarMessage", { max: 1000 }));
 
   if (!partial) {
     const customLocationRequired =
@@ -177,9 +183,12 @@ async function createEventType(workspaceId, payload, client = null) {
           max_bookings_per_day,
           color,
           notice_minimum_hours,
-          is_active
+          is_active,
+          brand_logo_url,
+          brand_tagline,
+          sidebar_message
         )
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,TRUE)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,TRUE,$14,$15,$16)
         RETURNING
 ${buildEventTypeSelect()}
       `,
@@ -197,6 +206,9 @@ ${buildEventTypeSelect()}
         input.maxBookingsPerDay ?? 0,
         input.color || "#2563eb",
         input.noticeMinimumHours ?? 0,
+        input.brandLogoUrl || null,
+        input.brandTagline || null,
+        input.sidebarMessage || null,
       ],
       client
     );
@@ -229,6 +241,9 @@ async function updateEventType(workspaceId, eventTypeId, payload, client = null)
     color: input.color ?? existing.color ?? "#2563eb",
     noticeMinimumHours:
       input.noticeMinimumHours ?? existing.notice_minimum_hours ?? 0,
+    brandLogoUrl: input.brandLogoUrl !== undefined ? input.brandLogoUrl : (existing.brand_logo_url || null),
+    brandTagline: input.brandTagline !== undefined ? input.brandTagline : (existing.brand_tagline || null),
+    sidebarMessage: input.sidebarMessage !== undefined ? input.sidebarMessage : (existing.sidebar_message || null),
   };
 
   if (next.locationType === "custom" && !String(next.customLocation || "").trim()) {
@@ -251,8 +266,11 @@ async function updateEventType(workspaceId, eventTypeId, payload, client = null)
           max_bookings_per_day = $9,
           color = $10,
           notice_minimum_hours = $11,
+          brand_logo_url = $12,
+          brand_tagline = $13,
+          sidebar_message = $14,
           updated_at = NOW()
-        WHERE id = $12 AND workspace_id = $13
+        WHERE id = $15 AND workspace_id = $16
         RETURNING
 ${buildEventTypeSelect()}
       `,
@@ -268,6 +286,9 @@ ${buildEventTypeSelect()}
         next.maxBookingsPerDay,
         next.color,
         next.noticeMinimumHours,
+        next.brandLogoUrl || null,
+        next.brandTagline || null,
+        next.sidebarMessage || null,
         eventTypeId,
         workspaceId,
       ],

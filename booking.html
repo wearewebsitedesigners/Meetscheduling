@@ -213,7 +213,12 @@
 
     @media (min-width: 620px) {
       .booking-wrapper {
-        grid-template-columns: 320px minmax(0, 1fr);
+        grid-template-columns: 300px minmax(0, 1fr);
+      }
+    }
+    @media (min-width: 900px) {
+      .booking-wrapper {
+        grid-template-columns: 340px minmax(0, 1fr);
       }
     }
 
@@ -358,6 +363,46 @@
       flex-wrap: wrap;
     }
     .booking-sidebar-legal a { color: var(--brand); }
+
+    /* ── Sidebar branding additions ─────────────── */
+    .brand-logo-wrap {
+      display: none;
+      justify-content: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-soft);
+      margin-bottom: 2px;
+    }
+    .brand-logo-wrap.has-logo { display: flex; }
+    .brand-logo-img {
+      max-width: 130px;
+      max-height: 48px;
+      object-fit: contain;
+      border-radius: 6px;
+    }
+    .brand-tagline {
+      display: none;
+      font-size: 0.78rem;
+      color: var(--tx-2);
+      text-align: center;
+      line-height: 1.45;
+      margin: 4px 0 2px;
+      font-style: italic;
+    }
+    .brand-tagline.has-tagline { display: block; }
+    .sidebar-message-box {
+      display: none;
+      margin-top: 8px;
+      padding: 10px 12px;
+      background: var(--brand-tint);
+      border: 1px solid rgba(37,99,235,.12);
+      border-radius: var(--r-md);
+      font-size: 0.8rem;
+      color: var(--tx-2);
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .sidebar-message-box.has-message { display: block; }
 
     /* ── Right panel / Steps ─────────────────── */
     .step-container {
@@ -1175,11 +1220,15 @@
       <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
 
       <aside class="event-details">
+        <div id="brand-logo-wrap" class="brand-logo-wrap">
+          <img id="brand-logo-img" class="brand-logo-img" src="" alt="Company logo" />
+        </div>
         <div class="host-profile">
           <div id="host-avatar" class="host-avatar">MS</div>
           <div id="host-name" class="host-name">Loading...</div>
         </div>
         <h1 id="event-title" class="event-title">Loading event...</h1>
+        <div id="brand-tagline" class="brand-tagline"></div>
         <ul class="event-meta-list">
           <li class="event-meta-item">
             <svg class="event-meta-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -1201,6 +1250,7 @@
           </li>
         </ul>
         <div id="event-desc" class="event-desc"></div>
+        <div id="sidebar-message-box" class="sidebar-message-box"></div>
         <div class="booking-sidebar-legal">
           <a href="/cookie-settings">Cookie settings</a>
           <a href="/privacy">Privacy</a>

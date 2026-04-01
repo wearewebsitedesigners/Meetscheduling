@@ -267,6 +267,9 @@ const defaultForm = {
   noticeMinimumHours: 0,
   maxBookingsPerDay: 0,
   isActive: true,
+  brandLogoUrl: "",
+  brandTagline: "",
+  sidebarMessage: "",
 };
 
 const createEventOptions = [
@@ -329,6 +332,9 @@ function normalizeEventType(row) {
     maxBookingsPerDay: Number(row.max_bookings_per_day ?? row.maxBookingsPerDay ?? 0),
     color: row.color || "#2563eb",
     isActive: Boolean(row.is_active ?? row.isActive),
+    brandLogoUrl: row.brand_logo_url || row.brandLogoUrl || "",
+    brandTagline: row.brand_tagline || row.brandTagline || "",
+    sidebarMessage: row.sidebar_message || row.sidebarMessage || "",
     createdAt: row.created_at || row.createdAt || "",
   };
 }
@@ -434,6 +440,51 @@ function EventTypeFormModal({
               placeholder="Describe what this booking is for and how invitees should prepare."
             />
           </label>
+
+          {/* ── Sidebar branding ── */}
+          <div className="lg:col-span-2 rounded-2xl border border-slate-200/70 bg-slate-50/60 px-5 py-4 dark:border-white/10 dark:bg-white/5">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Sidebar Branding</p>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <label className="grid gap-2 text-sm text-slate-600 dark:text-slate-300 lg:col-span-2">
+                <span className="font-medium">Company logo URL</span>
+                {form.brandLogoUrl && (
+                  <img src={form.brandLogoUrl} alt="Logo preview" className="mb-1 h-10 max-w-[140px] rounded-lg object-contain border border-slate-200 bg-white p-1 dark:border-white/10" />
+                )}
+                <input
+                  value={form.brandLogoUrl}
+                  onChange={(event) => onChange("brandLogoUrl", event.target.value)}
+                  className="h-12 rounded-2xl border border-slate-200 bg-white/90 px-4 text-slate-900 outline-none transition focus:border-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                  placeholder="https://yourdomain.com/logo.png"
+                />
+                <span className="text-xs text-slate-400">Shown at the top of the booking sidebar. Use a transparent PNG for best results.</span>
+              </label>
+
+              <label className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <span className="font-medium">Short tagline</span>
+                <input
+                  value={form.brandTagline}
+                  onChange={(event) => onChange("brandTagline", event.target.value)}
+                  maxLength={200}
+                  className="h-12 rounded-2xl border border-slate-200 bg-white/90 px-4 text-slate-900 outline-none transition focus:border-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                  placeholder="e.g. Experts in digital strategy"
+                />
+                <span className="text-xs text-slate-400">Italic line shown below the event title.</span>
+              </label>
+
+              <label className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <span className="font-medium">Sidebar message</span>
+                <textarea
+                  value={form.sidebarMessage}
+                  onChange={(event) => onChange("sidebarMessage", event.target.value)}
+                  maxLength={1000}
+                  rows={3}
+                  className="rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white resize-none"
+                  placeholder="e.g. Please have your project brief ready before the call."
+                />
+                <span className="text-xs text-slate-400">Highlighted note shown at the bottom of the sidebar.</span>
+              </label>
+            </div>
+          </div>
 
           <label className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
             <span className="font-medium">Duration (minutes)</span>
@@ -805,6 +856,9 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
       noticeMinimumHours: eventType.noticeMinimumHours,
       maxBookingsPerDay: eventType.maxBookingsPerDay,
       isActive: eventType.isActive,
+      brandLogoUrl: eventType.brandLogoUrl || "",
+      brandTagline: eventType.brandTagline || "",
+      sidebarMessage: eventType.sidebarMessage || "",
     });
     setValidationErrors({});
     setModalOpen(true);
@@ -868,6 +922,9 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
         bufferAfterMin: Number(form.bufferAfterMin || 0),
         noticeMinimumHours: Number(form.noticeMinimumHours || 0),
         maxBookingsPerDay: Number(form.maxBookingsPerDay || 0),
+        brandLogoUrl: String(form.brandLogoUrl || "").trim(),
+        brandTagline: String(form.brandTagline || "").trim(),
+        sidebarMessage: String(form.sidebarMessage || "").trim(),
       };
 
       let savedEventType;

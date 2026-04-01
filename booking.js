@@ -310,6 +310,45 @@ function renderSidebarEventDetails(event) {
   } else {
     eventDesc.textContent = "";
   }
+
+  // Brand logo
+  const brandLogoWrap = document.getElementById("brand-logo-wrap");
+  const brandLogoImg  = document.getElementById("brand-logo-img");
+  if (brandLogoWrap && brandLogoImg) {
+    const logoUrl = String(event.brandLogoUrl || event.brand_logo_url || "").trim();
+    if (logoUrl) {
+      brandLogoImg.src = logoUrl;
+      brandLogoWrap.classList.add("has-logo");
+    } else {
+      brandLogoWrap.classList.remove("has-logo");
+    }
+  }
+
+  // Brand tagline
+  const brandTaglineEl = document.getElementById("brand-tagline");
+  if (brandTaglineEl) {
+    const tagline = String(event.brandTagline || event.brand_tagline || "").trim();
+    if (tagline) {
+      brandTaglineEl.textContent = tagline;
+      brandTaglineEl.classList.add("has-tagline");
+    } else {
+      brandTaglineEl.textContent = "";
+      brandTaglineEl.classList.remove("has-tagline");
+    }
+  }
+
+  // Sidebar message
+  const sidebarMsgBox = document.getElementById("sidebar-message-box");
+  if (sidebarMsgBox) {
+    const msg = String(event.sidebarMessage || event.sidebar_message || "").trim();
+    if (msg) {
+      sidebarMsgBox.textContent = msg;
+      sidebarMsgBox.classList.add("has-message");
+    } else {
+      sidebarMsgBox.textContent = "";
+      sidebarMsgBox.classList.remove("has-message");
+    }
+  }
 }
 
 function setLandingLink() {

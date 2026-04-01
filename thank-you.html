@@ -672,7 +672,25 @@
           <p class="confirm-copy">Your meeting is locked in. We've prepared the details below so you can quickly verify the time, timezone, and video link status without digging through email.</p>
 
           <div class="confirm-actions">
-            <a id="meeting-link-button" class="btn-primary" href="#" target="_blank" rel="noopener" style="display:none;">Open meeting link</a>
+            <a id="meeting-link-button" class="btn-primary" href="#" target="_blank" rel="noopener" style="display:none;">
+              <svg width="22" height="22" viewBox="0 0 40 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="flex-shrink:0;">
+                <defs>
+                  <clipPath id="gmeet-body">
+                    <rect x="0" y="0" width="26" height="28" rx="5.5"/>
+                  </clipPath>
+                </defs>
+                <g clip-path="url(#gmeet-body)">
+                  <rect x="0"  y="0"  width="13" height="14" fill="#EA4335"/>
+                  <rect x="13" y="0"  width="13" height="14" fill="#FBBC05"/>
+                  <rect x="0"  y="14" width="13" height="14" fill="#4285F4"/>
+                  <rect x="13" y="14" width="13" height="14" fill="#34A853"/>
+                  <rect x="5.5" y="5.5" width="15" height="17" fill="#ffffff" rx="1"/>
+                </g>
+                <polygon points="26,8 39,3 39,25 26,20" fill="#34A853"/>
+                <polygon points="26,14 39,14 26,20"    fill="#188038"/>
+              </svg>
+              Open meeting link
+            </a>
             <a id="return-booking-link" class="btn-secondary" href="/">Back to booking page</a>
             <a id="view-home-link" class="btn-secondary" href="/">View landing page</a>
           </div>

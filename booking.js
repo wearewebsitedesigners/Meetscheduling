@@ -534,6 +534,7 @@ nextMonthBtn.addEventListener("click", () => changeMonth(1));
 async function selectDate(ymd, btnElem) {
   selectedDate = ymd;
   selectedSlot = null;
+  if (stepPillDetails) stepPillDetails.classList.remove("is-clickable");
 
   // Visual update
   document.querySelectorAll(".calendar-day").forEach(el => el.classList.remove("selected"));
@@ -595,6 +596,7 @@ function renderSlots(slots) {
       btn.classList.add("active");
       confirmSlotBtn.style.display = "block";
       selectedSlot = slot;
+      if (stepPillDetails) stepPillDetails.classList.add("is-clickable");
     });
 
     confirmSlotBtn.addEventListener("click", () => goToStep2());
@@ -770,6 +772,24 @@ function goBackToStep1() {
 if (formBackBtn instanceof HTMLButtonElement) {
   formBackBtn.addEventListener("click", () => {
     goBackToStep1();
+  });
+}
+
+// Step pill navigation: SELECT ↔ DETAILS only
+if (stepPillSelect) {
+  stepPillSelect.addEventListener("click", () => {
+    if (stepPillSelect.classList.contains("is-done")) {
+      goBackToStep1();
+    }
+  });
+}
+
+if (stepPillDetails) {
+  stepPillDetails.addEventListener("click", () => {
+    // Forward: only if a slot is already chosen and we're on select step
+    if (selectedSlot && !stepPillDetails.classList.contains("is-active")) {
+      goToStep2();
+    }
   });
 }
 

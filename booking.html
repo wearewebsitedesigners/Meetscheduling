@@ -75,7 +75,7 @@
     /* ── Shell — centered card, not full-height ── */
     .page-shell {
       width: 100%;
-      max-width: 1200px;
+      max-width: 1440px;
       height: auto;
       display: flex;
       flex-direction: column;
@@ -449,7 +449,10 @@
       box-shadow: 0 2px 8px rgba(37,99,235,.28);
     }
 
-    .step-pill.is-done { color: var(--brand); }
+    .step-pill.is-done { color: var(--brand); cursor: pointer; }
+    .step-pill.is-done:hover { background: rgba(37,99,235,.08); }
+    .step-pill.is-clickable { cursor: pointer; }
+    .step-pill.is-clickable:hover { background: rgba(37,99,235,.08); color: var(--brand); }
 
     /* ── Step panels ─────────────────────────── */
     .step-panel {

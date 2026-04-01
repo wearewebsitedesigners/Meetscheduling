@@ -597,10 +597,11 @@ async function createPublicBooking({
                 calendar_event_id,
                 email_sent_host,
                 email_sent_invitee,
-                status
+                status,
+                invitee_phone
               )
               VALUES (
-                $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13,$14,$15,$16,$17,FALSE,FALSE,'confirmed'
+                $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13,$14,$15,$16,$17,FALSE,FALSE,'confirmed',$18
               )
               RETURNING *
             `,
@@ -609,6 +610,7 @@ async function createPublicBooking({
               baseMeetingState.meetingLinkStatus,
               baseMeetingState.calendarProvider,
               baseMeetingState.calendarEventId,
+              cleanPhone || null,
             ],
             client
           )
@@ -629,14 +631,15 @@ async function createPublicBooking({
                 buffer_after_min,
                 location_type,
                 meeting_link,
-                status
+                status,
+                invitee_phone
               )
               VALUES (
-                $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13,$14,'confirmed'
+                $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13,$14,'confirmed',$15
               )
               RETURNING *
             `,
-            baseValues,
+            [...baseValues, cleanPhone || null],
             client
           );
 
@@ -662,10 +665,11 @@ async function createPublicBooking({
               buffer_after_min,
               location_type,
               meeting_link,
-              status
+              status,
+              invitee_phone
             )
             VALUES (
-              $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13,$14,'confirmed'
+              $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13,$14,'confirmed',$15
             )
             RETURNING *
           `,
@@ -684,6 +688,7 @@ async function createPublicBooking({
             event.bufferAfterMin,
             event.locationType,
             baseMeetingState.meetingLink,
+            cleanPhone || null,
           ],
           client
         );

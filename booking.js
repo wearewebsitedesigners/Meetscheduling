@@ -936,9 +936,9 @@ bookingForm.addEventListener("submit", async (e) => {
       throw new Error("Please enter your phone number.");
     }
 
-    if (!/^[\d\s\-\(\)\.]{4,18}$/.test(localNumber)) {
+    if (!/^\d{7,10}$/.test(localNumber)) {
       phoneInput.focus();
-      throw new Error("Phone number should contain digits only — e.g. 98765 43210");
+      throw new Error("Enter 7–10 digits — e.g. 9876543210");
     }
 
     confirmBtn.disabled = true;

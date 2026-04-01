@@ -49,9 +49,9 @@
 
     /* ── Base + animated gradient ───────────── */
     html, body {
-      height: 100dvh;
-      max-height: 100dvh;
-      overflow: hidden;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      overflow-y: auto;
       font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
       color: var(--tx);
       font-size: 10px;
@@ -60,10 +60,9 @@
       background: linear-gradient(-40deg, #e8eeff, #edf3ff, #f0ebff, #e4f0ff, #eafcf3);
       background-size: 500% 500%;
       animation: bgPulse 20s ease infinite;
-      /* Center the page-shell horizontally */
       display: flex;
       justify-content: center;
-      align-items: flex-start;
+      align-items: center;
     }
 
     @keyframes bgPulse {
@@ -73,15 +72,15 @@
       75%       { background-position: 20% 100%; }
     }
 
-    /* ── Shell — centered, max 800px ──────────── */
+    /* ── Shell — centered card, not full-height ── */
     .page-shell {
       width: 100%;
-      max-width: 800px;
-      height: 100dvh;
-      max-height: 100dvh;
+      max-width: 840px;
+      height: auto;
       display: flex;
       flex-direction: column;
-      padding: 8px 10px;
+      padding: 16px 12px;
+      gap: 8px;
     }
 
     /* ── Top bar ─────────────────────────────── */
@@ -175,13 +174,12 @@
       background: rgba(240,253,244,.9);
     }
 
-    /* ── Main wrapper card ───────────────────── */
+    /* ── Main wrapper card — compact fixed height ─ */
     .booking-wrapper {
       position: relative;
       overflow: hidden;
       display: grid;
-      flex: 1;
-      min-height: 0;
+      height: clamp(400px, 52dvh, 540px);
       background: var(--surface);
       border: 1px solid rgba(228,232,240,.9);
       border-radius: var(--r-2xl);
@@ -190,7 +188,7 @@
 
     @media (min-width: 620px) {
       .booking-wrapper {
-        grid-template-columns: 165px minmax(0, 1fr);
+        grid-template-columns: 200px minmax(0, 1fr);
       }
     }
 
@@ -410,7 +408,7 @@
 
     @media (min-width: 620px) {
       .calendar-slots-layout {
-        grid-template-columns: minmax(0, 1fr) 134px;
+        grid-template-columns: minmax(0, 1fr) 128px;
         grid-template-rows: 1fr;
         height: 100%;
       }
@@ -526,13 +524,13 @@
     }
 
     .calendar-day {
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
       margin: 0 auto;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      border-radius: var(--r-sm);
+      border-radius: 999px;
       border: 1px solid transparent;
       background: transparent;
       color: var(--brand);
@@ -960,17 +958,17 @@
     /* ── Mobile overrides ────────────────────── */
     @media (max-width: 619px) {
       html, body {
-        height: auto;
-        max-height: none;
-        overflow: auto;
+        align-items: flex-start;
       }
 
       .page-shell {
-        height: auto;
-        padding: 8px 8px 16px;
+        padding: 10px 8px 16px;
       }
 
-      .booking-wrapper { min-height: 420px; }
+      .booking-wrapper {
+        height: auto;
+        min-height: 420px;
+      }
 
       .step-inner, .calendar-slots-layout {
         overflow: visible;

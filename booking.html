@@ -83,6 +83,33 @@
       gap: 12px;
     }
 
+    /* ── Powered-by footer ───────────────────────── */
+    .powered-by {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 10px 0 4px;
+      color: var(--tx-3);
+      font-size: 0.72rem;
+      letter-spacing: .02em;
+      text-decoration: none;
+      opacity: .75;
+      transition: opacity .15s;
+    }
+    .powered-by:hover { opacity: 1; }
+    .powered-by-logo {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      background: linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .powered-by-logo svg { width: 11px; height: 11px; fill: #fff; }
+
     /* ── Top bar ─────────────────────────────── */
     .booking-page-topbar {
       display: flex;
@@ -1133,7 +1160,6 @@
         </div>
       </div>
       <div class="booking-page-actions">
-        <a id="view-landing-link" class="topbar-link" href="#">View page</a>
         <button id="copy-link-btn" class="topbar-btn topbar-copy-btn" type="button" aria-label="Copy booking link">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M9 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2M5 9h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" />
@@ -1318,6 +1344,14 @@
         </div>
       </main>
     </div>
+
+    <a href="https://meetscheduling.com" target="_blank" rel="noopener noreferrer" class="powered-by" aria-label="Powered by MeetScheduling">
+      <span class="powered-by-logo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+      </span>
+      Powered by <strong style="color:var(--tx-2);font-weight:600;">MeetScheduling</strong>
+    </a>
+
   </div>
 
   <script defer src="/booking.js"></script>

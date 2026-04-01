@@ -164,7 +164,7 @@ export default function IvrSettingsPanel() {
     setSaving(true);
     setSaveStatus(null);
     try {
-      await apiFetch("/api/dashboard/ivr-settings", { method: "PATCH", body: JSON.stringify(patch) });
+      await apiFetch("/api/dashboard/ivr-settings", { method: "PATCH", body: patch });
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus(null), 3000);
     } catch {

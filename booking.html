@@ -754,22 +754,24 @@
     }
 
     .back-btn {
-      width: 21px;
-      height: 21px;
       flex-shrink: 0;
       display: inline-flex;
       align-items: center;
-      justify-content: center;
+      gap: 6px;
+      padding: 6px 12px;
       border-radius: var(--r-sm);
       border: 1px solid var(--border);
       background: var(--surface);
       color: var(--tx-2);
+      font-size: .8rem;
+      font-weight: 500;
       cursor: pointer;
-      transition: border-color .15s, color .15s;
+      transition: border-color .15s, color .15s, background .15s;
+      white-space: nowrap;
     }
 
-    .back-btn:hover { border-color: rgba(37,99,235,.3); color: var(--brand); }
-    .back-btn svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .back-btn:hover { border-color: rgba(37,99,235,.4); color: var(--brand); background: var(--brand-tint); }
+    .back-btn svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.5; flex-shrink: 0; }
 
     /* ── Details summary bar ─────────────────── */
     .details-summary-card {
@@ -1251,6 +1253,7 @@
                 </div>
                 <button id="form-back-btn" class="back-btn" type="button" aria-label="Back to date selection">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+                  Change date &amp; time
                 </button>
               </div>
 

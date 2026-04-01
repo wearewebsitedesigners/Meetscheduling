@@ -10,7 +10,7 @@
 }
 
 .book-page-shell {
-  width: min(1360px, 100% - 40px);
+  width: min(1700px, 100% - 40px);
   margin: 0 auto;
   padding: 24px 0 32px;
 }

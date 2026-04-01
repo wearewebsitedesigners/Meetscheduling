@@ -866,12 +866,13 @@ function detectCountryFromTimezone(tz) {
 
 // Real-time inline validation feedback
 function setFieldError(input, message) {
-  let hint = input.parentElement.querySelector(".field-inline-error");
+  const container = input.closest(".form-group") || input.parentElement;
+  let hint = container.querySelector(".field-inline-error");
   if (!hint) {
     hint = document.createElement("p");
     hint.className = "field-inline-error";
     hint.style.cssText = "color:#cf4664;font-size:0.8rem;margin-top:4px;margin-bottom:0;";
-    input.parentElement.appendChild(hint);
+    container.appendChild(hint);
   }
   hint.textContent = message;
   input.style.borderColor = message ? "#cf4664" : "";

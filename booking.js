@@ -853,7 +853,8 @@ function detectCountryFromTimezone(tz) {
 
 (function initPhoneCountrySelect() {
   if (!phoneCountrySelect) return;
-  const sorted = [...COUNTRIES].sort((a, b) => a.name.localeCompare(b.name));
+  const TOP_50 = new Set(["United States","India","United Kingdom","Canada","Australia","Germany","France","Brazil","Mexico","Japan","China","South Korea","Singapore","UAE","Saudi Arabia","Italy","Spain","Netherlands","Sweden","Switzerland","Norway","Denmark","Finland","Poland","Russia","Turkey","South Africa","Nigeria","Kenya","Egypt","Israel","Pakistan","Bangladesh","Indonesia","Malaysia","Philippines","Thailand","Vietnam","Argentina","Chile","Colombia","New Zealand","Ireland","Portugal","Belgium","Austria","Greece","Romania","Czech Republic","Hong Kong"]);
+  const sorted = [...COUNTRIES].filter(c => TOP_50.has(c.name)).sort((a, b) => a.name.localeCompare(b.name));
   sorted.forEach(c => {
     const opt = document.createElement("option");
     opt.value = c.dial;
@@ -899,10 +900,12 @@ if (phoneInput) {
     const v = phoneInput.value.trim();
     if (!v) { setFieldError(phoneInput, "Phone number is required"); return; }
     setFieldError(phoneInput,
-      /^[\d\s\-\(\)\.]{4,18}$/.test(v) ? "" : "Use digits only — e.g. 98765 43210"
+      /^\d{7,10}$/.test(v) ? "" : "Enter 7–10 digits — e.g. 9876543210"
     );
   });
   phoneInput.addEventListener("input", () => {
+    const digits = phoneInput.value.replace(/\D/g, "").slice(0, 10);
+    if (phoneInput.value !== digits) phoneInput.value = digits;
     if (phoneInput.style.borderColor) setFieldError(phoneInput, "");
   });
 }

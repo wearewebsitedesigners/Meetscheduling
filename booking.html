@@ -99,16 +99,14 @@
     }
     .powered-by:hover { opacity: 1; }
     .powered-by-logo {
-      width: 18px;
-      height: 18px;
-      border-radius: 5px;
-      background: linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%);
+      width: 34px;
+      height: 20px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
     }
-    .powered-by-logo svg { width: 11px; height: 11px; fill: #fff; }
+    .powered-by-logo svg { width: 34px; height: 20px; }
 
     /* ── Top bar ─────────────────────────────── */
     .booking-page-topbar {
@@ -912,7 +910,7 @@
 
     .form-group textarea {
       min-height: 59px;
-      resize: vertical;
+      resize: none;
       line-height: 1.55;
     }
 
@@ -1317,7 +1315,7 @@
                     <label for="phone-input">Phone <span style="color:#cf4664">*</span></label>
                     <div class="phone-field-wrap">
                       <select id="phone-country-select" class="phone-country-select" aria-label="Country dial code"></select>
-                      <input type="tel" id="phone-input" placeholder="98765 43210" inputmode="numeric" autocomplete="tel-national" />
+                      <input type="tel" id="phone-input" placeholder="98765 43210" inputmode="numeric" autocomplete="tel-national" maxlength="10" />
                     </div>
                   </div>
                   <div class="form-group">
@@ -1328,7 +1326,7 @@
 
                 <div class="form-group">
                   <label for="notes-input">Message <span style="font-weight:400;color:var(--tx-3)">(optional)</span></label>
-                  <textarea id="notes-input" rows="3" placeholder="Share goals or anything helpful before the meeting."></textarea>
+                  <textarea id="notes-input" rows="3" placeholder="Share goals or anything helpful before the meeting." style="max-height:120px;resize:none;overflow-y:auto;"></textarea>
                 </div>
 
                 <p class="booking-legal-copy">
@@ -1347,7 +1345,10 @@
 
     <a href="https://meetscheduling.com" target="_blank" rel="noopener noreferrer" class="powered-by" aria-label="Powered by MeetScheduling">
       <span class="powered-by-logo">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        <svg viewBox="0 0 34 20" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="11" cy="10" r="8.5" fill="none" stroke="#111111" stroke-width="3"/>
+          <circle cx="23" cy="10" r="8.5" fill="none" stroke="#2563eb" stroke-width="3"/>
+        </svg>
       </span>
       Powered by <strong style="color:var(--tx-2);font-weight:600;">MeetScheduling</strong>
     </a>

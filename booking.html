@@ -75,7 +75,7 @@
     /* ── Shell — centered card, not full-height ── */
     .page-shell {
       width: 100%;
-      max-width: 3590px;
+      max-width: 1600px;
       height: auto;
       display: flex;
       flex-direction: column;
@@ -204,8 +204,9 @@
       position: relative;
       overflow: hidden;
       display: grid;
-      width: 3550px;
-      height: 2398px;
+      width: 80%;
+      height: clamp(560px, 80vh, 960px);
+      margin: 0 auto;
       background: var(--surface);
       border: 1px solid rgba(228,232,240,.9);
       border-radius: var(--r-2xl);
@@ -1070,7 +1071,7 @@
 
       /* --- card: fluid on mobile --- */
       .booking-wrapper {
-        width: 100%;
+        width: 96%;
         height: auto;
         min-height: unset;
         border-radius: var(--r-xl);

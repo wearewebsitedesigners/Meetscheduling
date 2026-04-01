@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Book Meeting | MeetScheduling</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
   <link rel="shortcut icon" href="/assets/favicon.svg" />
@@ -970,74 +970,151 @@
       flex-shrink: 0;
     }
 
-    /* ── Mobile overrides ────────────────────── */
+    /* ══════════════════════════════════════════
+       MOBILE  (≤ 619 px)
+       ══════════════════════════════════════════ */
     @media (max-width: 619px) {
+      /* --- layout & scroll --- */
       html, body {
         align-items: flex-start;
+        overflow-y: auto;
       }
 
       .page-shell {
-        padding: 10px 10px 20px;
-        gap: 8px;
+        padding: 8px 8px 24px;
+        gap: 6px;
       }
 
+      /* --- topbar --- */
+      .booking-page-topbar {
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .booking-page-host { min-width: 0; }
+      .topbar-link, .topbar-btn {
+        height: 32px;
+        padding: 0 10px;
+        font-size: 10px;
+      }
+
+      /* --- card: no fixed height --- */
       .booking-wrapper {
         height: auto;
-        min-height: 500px;
+        min-height: unset;
         border-radius: var(--r-xl);
       }
 
-      .step-inner, .calendar-slots-layout {
+      /* --- sidebar: compact horizontal profile --- */
+      .event-details {
+        padding: 12px 12px;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        overflow: visible;
+      }
+      .host-profile {
+        flex-direction: row;
+        align-items: center;
+        text-align: left;
+        gap: 10px;
+        padding-bottom: 8px;
+      }
+      .host-avatar { width: 34px; height: 34px; flex-shrink: 0; }
+      .event-title { text-align: left; margin-top: 6px; }
+      .event-meta-list { gap: 5px; margin: 6px 0; }
+      .event-meta-item { font-size: 9px; padding: 4px 6px; }
+      .event-desc { font-size: 9px; padding: 6px 8px; }
+      .booking-sidebar-legal { margin-top: 6px; }
+
+      /* --- step inner --- */
+      .step-inner {
+        padding: 10px 10px;
         overflow: visible;
         height: auto;
       }
 
-      .slots-card, .slots-list {
+      /* --- calendar + slots stack vertically --- */
+      .calendar-slots-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        overflow: visible;
+        height: auto;
+      }
+
+      .calendar-card {
+        overflow: visible;
+        padding: 10px;
+      }
+
+      .slots-card {
         height: auto;
         overflow: visible;
         flex: none;
+        padding: 8px 8px;
+      }
+      .slots-list {
+        overflow: visible;
+        flex: none;
         max-height: none;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
       }
 
-      /* Larger touch targets on mobile */
+      /* --- calendar: full-width, bigger circles --- */
       .calendar-day {
-        width: 34px;
-        height: 34px;
-        font-size: 12px;
-      }
-
-      .slot-btn, .confirm-slot-btn {
-        min-height: 36px;
-        font-size: 12px;
-      }
-
-      .submit-btn {
-        min-height: 44px;
+        width: 38px;
+        height: 38px;
         font-size: 13px;
       }
+      .calendar-day-name { font-size: 10px; }
+      .calendar-nav-btn { width: 32px; height: 32px; }
 
+      /* --- timezone: bigger touch target --- */
+      .timezone-picker { padding: 9px 12px; }
+      .timezone-picker select { font-size: 13px; }
+
+      /* --- slot buttons: pill, taller --- */
+      .slot-btn, .confirm-slot-btn {
+        min-height: 42px;
+        font-size: 13px;
+        border-radius: 999px;
+      }
+      .slot-action-row { grid-template-columns: 1fr; gap: 6px; }
+      .confirm-slot-btn { min-width: unset; }
+
+      /* --- details form --- */
+      .details-card { padding: 12px 12px; }
+      .form-grid.form-grid--two { grid-template-columns: 1fr; }
+
+      /* --- CRITICAL: 16px font prevents iOS auto-zoom on focus --- */
       .form-group input,
       .form-group textarea,
-      .form-group select:not(.phone-country-select) {
-        font-size: 14px; /* prevent iOS zoom on focus */
-        padding: 10px 12px;
+      .form-group select:not(.phone-country-select),
+      .phone-country-select,
+      .timezone-picker select {
+        font-size: 16px;
+        padding: 11px 12px;
       }
 
-      .phone-country-select {
-        font-size: 14px;
+      /* --- submit button: big tap target --- */
+      .submit-btn {
+        min-height: 50px;
+        font-size: 15px;
+        border-radius: var(--r-lg);
       }
     }
 
-    @media (max-width: 400px) {
+    /* ── Very small phones (≤ 380px) ── */
+    @media (max-width: 380px) {
       .topbar-link, .topbar-btn {
-        height: 26px;
-        padding: 0 9px;
+        height: 28px;
+        padding: 0 7px;
         font-size: 9px;
       }
-
-      .page-shell {
-        padding: 8px 8px 16px;
-      }
+      .page-shell { padding: 6px 6px 20px; }
+      .calendar-day { width: 32px; height: 32px; font-size: 11px; }
+      .slots-list { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>

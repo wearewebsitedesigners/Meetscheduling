@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Booking Confirmed | MeetScheduling</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
   <link rel="shortcut icon" href="/assets/favicon.svg" />
@@ -520,12 +520,99 @@
       color: var(--success);
     }
 
-    /* ── Mobile ── */
+    /* ══════════════════════════════════════════
+       MOBILE  (≤ 619 px)
+       ══════════════════════════════════════════ */
     @media (max-width: 619px) {
-      html, body { align-items: flex-start; padding: 10px 10px 24px; }
+      html, body {
+        align-items: flex-start;
+        padding: 8px 8px 28px;
+      }
+
+      .page-shell { max-width: 100%; }
+
+      /* card */
+      .confirm-card { border-radius: 18px; }
       .confirm-grid { min-height: auto; }
-      .confirm-actions { flex-direction: column; }
-      .btn-primary, .btn-secondary { width: 100%; }
+
+      /* sidebar: compact horizontal lockup */
+      .confirm-sidebar { padding: 16px 14px; }
+      .brand-lockup {
+        flex-direction: row;
+        align-items: center;
+        text-align: left;
+        gap: 12px;
+        padding-bottom: 14px;
+      }
+      .host-avatar {
+        width: 52px;
+        height: 52px;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+      }
+      .sidebar-info-card, .sidebar-next-card {
+        margin-top: 12px;
+        padding: 12px 13px;
+      }
+      .sidebar-info-item, .next-step-item {
+        font-size: 0.82rem;
+      }
+      .sidebar-legal { padding-top: 14px; }
+
+      /* main */
+      .confirm-main { padding: 18px 14px 24px; }
+
+      .success-badge {
+        font-size: 0.7rem;
+        padding: 7px 13px;
+      }
+
+      .confirm-title {
+        font-size: 1.75rem;
+        margin-top: 14px;
+      }
+
+      .confirm-copy { font-size: 0.88rem; }
+
+      /* buttons: full-width stack */
+      .confirm-actions {
+        flex-direction: column;
+        gap: 8px;
+      }
+      .btn-primary, .btn-secondary {
+        width: 100%;
+        min-height: 50px;
+        font-size: 0.95rem;
+        border-radius: 14px;
+      }
+
+      /* summary grid: single column */
+      .meeting-summary-grid {
+        grid-template-columns: 1fr;
+        margin-top: 18px;
+        gap: 12px;
+      }
+
+      .summary-card, .checklist-card {
+        padding: 14px 14px;
+        animation-delay: 0s !important; /* remove stagger on mobile */
+      }
+
+      .event-name { font-size: 1rem; }
+      .summary-copy { font-size: 0.84rem; }
+      .summary-row { font-size: 0.86rem; }
+      .meeting-link-box { padding: 10px 12px; }
+      .checklist-item { font-size: 0.84rem; }
+      .checklist-title { margin-bottom: 12px; }
+    }
+
+    /* ── Very small phones (≤ 380px) ── */
+    @media (max-width: 380px) {
+      html, body { padding: 6px 6px 20px; }
+      .confirm-sidebar { padding: 14px 12px; }
+      .confirm-main { padding: 14px 12px 20px; }
+      .confirm-title { font-size: 1.5rem; }
+      .btn-primary, .btn-secondary { min-height: 46px; font-size: 0.88rem; }
     }
   </style>
 </head>

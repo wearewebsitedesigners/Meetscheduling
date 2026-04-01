@@ -73,7 +73,8 @@ function renderMeetingLinkStatus(booking) {
     valueEl.textContent = "Use the button above to join when it is time for your meeting.";
     buttonEl.href = meetingLink;
     buttonEl.style.display = "inline-flex";
-    buttonEl.textContent =
+    const labelEl = document.getElementById("meeting-link-button-label");
+    if (labelEl) labelEl.textContent =
       locationType === "google_meet" ? "Open Google Meet" : "Open meeting link";
     return;
   }

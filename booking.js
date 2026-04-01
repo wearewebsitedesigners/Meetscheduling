@@ -395,7 +395,11 @@ async function copyCurrentLink() {
 
 if (topbarMenuBtn instanceof HTMLButtonElement) {
   topbarMenuBtn.addEventListener("click", () => {
-    window.location.href = "/";
+    if (stepDetails && !stepDetails.classList.contains("hidden")) {
+      goBackToStep1();
+    } else {
+      window.location.href = "/";
+    }
   });
 }
 
@@ -893,7 +897,7 @@ emailInput.addEventListener("input", () => {
 if (phoneInput) {
   phoneInput.addEventListener("blur", () => {
     const v = phoneInput.value.trim();
-    if (!v) { setFieldError(phoneInput, ""); return; }
+    if (!v) { setFieldError(phoneInput, "Phone number is required"); return; }
     setFieldError(phoneInput,
       /^[\d\s\-\(\)\.]{4,18}$/.test(v) ? "" : "Use digits only — e.g. 98765 43210"
     );
@@ -924,7 +928,12 @@ bookingForm.addEventListener("submit", async (e) => {
       throw new Error("Please enter a valid email address (e.g. name@gmail.com).");
     }
 
-    if (localNumber && !/^[\d\s\-\(\)\.]{4,18}$/.test(localNumber)) {
+    if (!localNumber) {
+      phoneInput?.focus();
+      throw new Error("Please enter your phone number.");
+    }
+
+    if (!/^[\d\s\-\(\)\.]{4,18}$/.test(localNumber)) {
       phoneInput.focus();
       throw new Error("Phone number should contain digits only — e.g. 98765 43210");
     }

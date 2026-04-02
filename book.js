@@ -674,7 +674,7 @@
       state.selectedServiceId = services[0].id;
       state.currentMonth = monthStartKey(renderer.toDateKey(new Date()));
 
-      if (hostLinkEl instanceof HTMLAnchorElement) {
+      if (hostLinkEl instanceof HTMLAnchorElement && payload.page?.username) {
         hostLinkEl.href = `/${encodeURIComponent(payload.page.username)}`;
       }
 

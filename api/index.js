@@ -9,6 +9,7 @@ const contactsRoutes = require("../src/routes/contacts.routes");
 const workflowsRoutes = require("../src/routes/workflows.routes");
 const routingRoutes = require("../src/routes/routing.routes");
 const landingPageRoutes = require("../src/routes/landing-page.routes");
+const pagePublicRoutes = require("../src/routes/page-public.routes");
 const { notFoundHandler, errorHandler } = require("../src/middleware/error-handler");
 
 const app = express();
@@ -38,6 +39,7 @@ app.use("/api/contacts", contactsRoutes);
 app.use("/api/workflows", workflowsRoutes);
 app.use("/api/routing", routingRoutes);
 app.use("/api/landing-page", landingPageRoutes);
+app.use("/api", pagePublicRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

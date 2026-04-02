@@ -43,6 +43,7 @@ const LandingPageBuilder = lazy(() => import("./dashboard/landing-builder/Landin
 const IvrSettingsPanel = lazy(() => import("./dashboard/panels/ivr-settings-panel.jsx"));
 const UpgradePanel = lazy(() => import("./dashboard/panels/upgrade-panel.jsx"));
 const IntegrationsPanel = lazy(() => import("./dashboard/panels/integrations-panel.jsx"));
+const AccountPanel = lazy(() => import("./dashboard/panels/account-panel.jsx"));
 
 const COLLAPSE_KEY = "meetscheduling_react_sidebar_collapsed_v1";
 const THEME_KEY = "meetscheduling_react_theme_v1";
@@ -1033,6 +1034,7 @@ function App() {
     if (currentKey === "confirmation-calls") return <IvrSettingsPanel />;
     if (currentKey === "upgrade") return <UpgradePanel />;
     if (currentKey === "integrations") return <IntegrationsPanel />;
+    if (currentKey === "account") return <AccountPanel user={user} onUserUpdate={syncUserState} />;
     return <GenericSectionPanel section={currentSection || genericSections.workflows} />;
   };
 

@@ -696,7 +696,7 @@ function SidebarButton({ item, active, collapsed, onClick }) {
       onClick={onClick}
       className={cn(
         "group flex w-full items-center text-left transition-all duration-300",
-        collapsed ? "mx-auto h-[38px] w-[38px] justify-center rounded-[12px]" : "h-12 gap-3 rounded-2xl px-3",
+        collapsed ? "mx-auto h-[54px] w-[54px] justify-center rounded-[18px]" : "h-12 gap-3 rounded-2xl px-3",
         active ? "bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]" : "text-slate-300 hover:bg-white/[0.06] hover:text-white"
       )}
     >
@@ -1684,12 +1684,12 @@ function App() {
             </div>
 
             <div className="mt-9 space-y-3">
-              <button type="button" className={cn("flex items-center justify-center overflow-hidden rounded-[22px] border border-[#4C7CFF]/40 bg-gradient-to-r from-[#2563EB] to-[#4F8BFF] text-white shadow-[0_20px_40px_rgba(37,99,235,0.32)] transition-all duration-300 hover:brightness-105", collapsed ? "mx-auto h-[38px] w-[38px] rounded-full" : "h-14 w-full gap-2 px-4")}>
+              <button type="button" className={cn("flex items-center justify-center overflow-hidden rounded-[22px] border border-[#4C7CFF]/40 bg-gradient-to-r from-[#2563EB] to-[#4F8BFF] text-white shadow-[0_20px_40px_rgba(37,99,235,0.32)] transition-all duration-300 hover:brightness-105", collapsed ? "mx-auto h-[58px] w-[58px] rounded-full" : "h-14 w-full gap-2 px-4")}>
                 <Plus className="h-5 w-5 shrink-0" />
                 {!collapsed && <span className="text-[15px] font-semibold tracking-[-0.02em]">Create</span>}
               </button>
 
-              <button type="button" onClick={() => navigateBuilder("home")} className={cn("flex items-center justify-center rounded-[20px] border border-[#79A6FF]/40 bg-white/[0.03] text-[#E6EEFF] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all duration-300 hover:bg-white/[0.06]", collapsed ? "mx-auto h-[38px] w-[38px]" : "h-14 w-full gap-2 px-4")}>
+              <button type="button" onClick={() => navigateBuilder("home")} className={cn("flex items-center justify-center rounded-[20px] border border-[#79A6FF]/40 bg-white/[0.03] text-[#E6EEFF] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all duration-300 hover:bg-white/[0.06]", collapsed ? "mx-auto h-[58px] w-[58px]" : "h-14 w-full gap-2 px-4")}>
                 <LayoutTemplate className="h-5 w-5 shrink-0" />
                 {!collapsed && <span className="text-[15px] font-semibold tracking-[-0.02em]">Landing Page</span>}
               </button>
@@ -1713,8 +1713,8 @@ function App() {
                         "group flex w-full items-center text-left transition-all duration-300",
                         collapsed
                           ? item.accent
-                            ? "mx-auto h-[38px] w-[38px] justify-center rounded-[12px] border border-[#7FA8FF]/30 bg-white/[0.06] text-white"
-                            : "mx-auto h-[38px] w-[38px] justify-center rounded-[12px] text-slate-300 hover:bg-white/[0.06] hover:text-white"
+                            ? "mx-auto h-[58px] w-[58px] justify-center rounded-[18px] border border-[#7FA8FF]/30 bg-white/[0.06] text-white"
+                            : "mx-auto h-[54px] w-[54px] justify-center rounded-[18px] text-slate-300 hover:bg-white/[0.06] hover:text-white"
                           : item.accent
                             ? "h-12 gap-3 rounded-2xl border border-[#7FA8FF]/30 bg-white/[0.06] px-3 text-white"
                             : active

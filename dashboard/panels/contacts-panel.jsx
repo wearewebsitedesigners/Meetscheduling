@@ -25,23 +25,38 @@ import { apiFetch, cn, getInitials } from "../shared.jsx";
 // ─── Column definitions ────────────────────────────────────────────────────────
 const ALL_COLUMNS = [
   { key: "name",          label: "Name",            alwaysVisible: true },
-  { key: "email",         label: "Email" },
-  { key: "phone",         label: "Phone number" },
-  { key: "company",       label: "Company" },
-  { key: "source",        label: "Source" },
-  { key: "createdAt",     label: "Created on" },
-  { key: "timezone",      label: "Time zone" },
-  { key: "jobTitle",      label: "Job title" },
-  { key: "city",          label: "City" },
-  { key: "state",         label: "State" },
-  { key: "country",       label: "Country" },
-  { key: "lastMeeting",   label: "Last meeting" },
-  { key: "nextMeeting",   label: "Next meeting" },
+  { key: "email",         label: "Email",           defaultOn: true },
+  { key: "phone",         label: "Phone number",    defaultOn: true },
+  { key: "source",        label: "Source",          defaultOn: true },
+  { key: "createdAt",     label: "Created on",      defaultOn: true },
+  { key: "lastMeeting",   label: "Last meeting",    defaultOn: true },
+  { key: "nextMeeting",   label: "Next meeting",    defaultOn: true },
+  { key: "company",       label: "Company",         defaultOn: false },
+  { key: "timezone",      label: "Time zone",       defaultOn: false },
+  { key: "jobTitle",      label: "Job title",       defaultOn: false },
+  { key: "city",          label: "City",            defaultOn: false },
+  { key: "state",         label: "State",           defaultOn: false },
+  { key: "country",       label: "Country",         defaultOn: false },
 ];
 
 const SOURCE_OPTIONS = ["Booking page", "CSV import", "Google Calendar", "Manually added"];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
+const SOURCE_LABEL_MAP = {
+  booking_link: "Booking page",
+  booking_page: "Booking page",
+  csv:          "CSV import",
+  csv_import:   "CSV import",
+  google:       "Google Calendar",
+  google_calendar: "Google Calendar",
+  manual:       "Manually added",
+  manually_added: "Manually added",
+};
+function normalizeSource(raw) {
+  if (!raw) return "Booking page";
+  return SOURCE_LABEL_MAP[raw.toLowerCase()] || raw;
+}
+
 function normalizeContact(row) {
   return {
     id: row.id,
@@ -50,7 +65,7 @@ function normalizeContact(row) {
     phone: row.phone || "",
     company: row.company || "",
     type: row.type || "Lead",
-    source: row.source || "Booking page",
+    source: normalizeSource(row.source),
     tags: Array.isArray(row.tags) ? row.tags : [],
     notes: row.notes || "",
     timezone: row.timezone || "",
@@ -666,7 +681,7 @@ export default function ContactsPanel() {
   const [form, setForm]                 = useState(defaultForm);
   const [visibleColumns, setVisibleColumns] = useState(() => {
     const init = {};
-    ALL_COLUMNS.filter((c) => !c.alwaysVisible).forEach((c) => { init[c.key] = true; });
+    ALL_COLUMNS.filter((c) => !c.alwaysVisible).forEach((c) => { init[c.key] = c.defaultOn !== false; });
     return init;
   });
 
@@ -846,7 +861,7 @@ export default function ContactsPanel() {
   const displayCols = ALL_COLUMNS.filter((c) => c.alwaysVisible || visibleColumns[c.key]);
 
   return (
-    <div className="min-h-full rounded-[34px] border border-[#DFE7F3] bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(168,85,247,0.13),_transparent_24%),linear-gradient(180deg,#eef4ff_0%,#edf2f7_35%,#f7fbff_100%)] p-5 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:p-6 xl:p-8 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.12),_transparent_24%),linear-gradient(180deg,#081120_0%,#0b1424_35%,#0d182b_100%)]">
+    <div className="min-h-full rounded-[34px] border border-[#DFE7F3] bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(168,85,247,0.13),_transparent_24%),linear-gradient(180deg,#eef4ff_0%,#edf2f7_35%,#f7fbff_100%)] p-3 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:p-4 xl:p-5 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.12),_transparent_24%),linear-gradient(180deg,#081120_0%,#0b1424_35%,#0d182b_100%)]">
       <div className="mx-auto max-w-7xl">
 
         {/* ── Header ──────────────────────────────────────────────────────── */}

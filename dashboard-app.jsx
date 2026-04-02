@@ -4,14 +4,19 @@ import { createRoot } from "react-dom/client";
 import {
   Activity,
   ArrowUpRight,
+  AtSign,
   BarChart3,
   BellRing,
   Camera,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   CircleHelp,
   CreditCard,
+  ExternalLink,
   LayoutTemplate,
+  Link2,
+  Lock,
   LogOut,
   Mail,
   MoonStar,
@@ -694,6 +699,338 @@ function SidebarButton({ item, active, collapsed, onClick }) {
   );
 }
 
+const SETTINGS_TABS = [
+  { key: "profile", label: "Profile", icon: User },
+  { key: "my-link", label: "My Link", icon: Link2 },
+  { key: "security", label: "Security", icon: Lock },
+  { key: "billing", label: "Billing", icon: CreditCard },
+];
+
+function SettingsOverlay({ open, tab, user, avatarUrl, dark, initials, onClose, onTabChange, onUserUpdate, onChangePhoto, avatarUploading, avatarMessage, avatarError }) {
+  const [displayName, setDisplayName] = React.useState(user?.displayName || "");
+  const [username, setUsername] = React.useState(user?.username || "");
+  const [saving, setSaving] = React.useState(false);
+  const [successMsg, setSuccessMsg] = React.useState("");
+  const [errorMsg, setErrorMsg] = React.useState("");
+
+  React.useEffect(() => {
+    if (open) {
+      setDisplayName(user?.displayName || "");
+      setUsername(user?.username || "");
+      setSuccessMsg("");
+      setErrorMsg("");
+    }
+  }, [open, user?.displayName, user?.username]);
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const handleEsc = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [open, onClose]);
+
+  const isDirty =
+    displayName.trim() !== (user?.displayName || "").trim() ||
+    username.trim() !== (user?.username || "").trim();
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    if (!isDirty) return;
+    const trimmedName = displayName.trim();
+    const trimmedUsername = username.trim().toLowerCase();
+    if (!trimmedName || trimmedName.length < 2) { setErrorMsg("Display name must be at least 2 characters."); return; }
+    if (!trimmedUsername || trimmedUsername.length < 2) { setErrorMsg("Username must be at least 2 characters."); return; }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(trimmedUsername)) { setErrorMsg("Username may only contain lowercase letters, numbers, and hyphens."); return; }
+    setSaving(true); setSuccessMsg(""); setErrorMsg("");
+    try {
+      const payload = await apiFetch("/api/auth/me", { method: "PATCH", body: { displayName: trimmedName, username: trimmedUsername } });
+      if (!payload?.user) throw new Error("Unexpected response.");
+      onUserUpdate?.(payload.user);
+      setDisplayName(payload.user.displayName || trimmedName);
+      setUsername(payload.user.username || trimmedUsername);
+      setSuccessMsg("Profile updated successfully.");
+    } catch (err) {
+      setErrorMsg(err?.message || "Failed to save profile.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!open) return null;
+
+  const email = user?.email || "";
+  const bookingUrl = username ? `https://www.meetscheduling.com/${username}` : "";
+
+  const renderTabContent = () => {
+    if (tab === "profile") {
+      return (
+        <div className="max-w-xl">
+          <div className="mb-8">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Account details</p>
+            <h2 className="mt-1 font-['Sora'] text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Profile</h2>
+          </div>
+
+          {/* Avatar section */}
+          <div className="mb-8 flex items-center gap-5 rounded-[20px] border border-[#E2EAF4] bg-[#F8FAFE] p-5 dark:border-white/10 dark:bg-white/[0.04]">
+            <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#3b82f6,#7c3aed)] p-[2px] shadow-[0_8px_20px_rgba(37,99,235,0.18)]">
+              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[radial-gradient(circle_at_30%_20%,#5a3a28,#24160f_65%)] text-2xl font-black tracking-tight text-[#f4c38a]">
+                {avatarUrl ? <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" /> : initials}
+              </div>
+            </div>
+            <div>
+              <p className="text-[14px] font-semibold text-slate-800 dark:text-slate-200">Profile photo</p>
+              <p className="mt-0.5 text-[12px] text-slate-400 dark:text-slate-500">PNG, JPG, WEBP or GIF, up to 5MB</p>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onChangePhoto}
+                  disabled={avatarUploading}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#D7E1F0] bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 shadow-sm transition hover:bg-[#F0F5FF] disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+                >
+                  {avatarUploading ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
+                  {avatarUploading ? "Uploading..." : "Update"}
+                </button>
+              </div>
+              {(avatarMessage || avatarError) ? (
+                <p className={cn("mt-1.5 text-[11px]", avatarError ? "text-rose-500" : "text-emerald-600")}>{avatarError || avatarMessage}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <form onSubmit={handleSaveProfile} noValidate className="space-y-5">
+            {/* Email read-only */}
+            <div>
+              <label className="mb-1.5 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">Email</label>
+              <div className="flex items-center gap-2 rounded-[14px] border border-[#E2EAF4] bg-[#F7FAFE] px-4 py-3 text-[14px] text-slate-400 dark:border-white/10 dark:bg-white/5 dark:text-slate-500">
+                <Mail className="h-4 w-4 shrink-0" />
+                <span className="truncate">{email}</span>
+              </div>
+            </div>
+
+            {/* Display name */}
+            <div>
+              <label className="mb-1.5 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">Name</label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => { setDisplayName(e.target.value); setSuccessMsg(""); setErrorMsg(""); }}
+                maxLength={100}
+                placeholder="Your name"
+                className="w-full rounded-[14px] border border-[#D7E1F0] bg-white px-4 py-3 text-[14px] text-slate-900 outline-none transition focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-[#8DB2FF]"
+              />
+            </div>
+
+            {/* Username */}
+            <div>
+              <label className="mb-1.5 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">Username</label>
+              <div className="relative">
+                <AtSign className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => { setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")); setSuccessMsg(""); setErrorMsg(""); }}
+                  maxLength={80}
+                  placeholder="your-username"
+                  className="w-full rounded-[14px] border border-[#D7E1F0] bg-white pl-10 pr-4 py-3 text-[14px] text-slate-900 outline-none transition focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-[#8DB2FF]"
+                />
+              </div>
+              {username ? (
+                <p className="mt-1.5 text-[12px] text-slate-400 dark:text-slate-500">
+                  Booking page: <span className="font-semibold text-slate-600 dark:text-slate-300">meetscheduling.com/{username}</span>
+                </p>
+              ) : null}
+            </div>
+
+            {successMsg ? (
+              <div className="flex items-center gap-2 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />{successMsg}
+              </div>
+            ) : null}
+            {errorMsg ? (
+              <div className="flex items-center gap-2 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
+                <Shield className="h-4 w-4 shrink-0" />{errorMsg}
+              </div>
+            ) : null}
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={saving || !isDirty}
+                className="inline-flex items-center gap-2 rounded-full bg-[#2563EB] px-6 py-2.5 text-[14px] font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.35)] transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+                {saving ? "Saving…" : "Save changes"}
+              </button>
+            </div>
+          </form>
+        </div>
+      );
+    }
+
+    if (tab === "my-link") {
+      return (
+        <div className="max-w-xl">
+          <div className="mb-8">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Public URL</p>
+            <h2 className="mt-1 font-['Sora'] text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">My Link</h2>
+            <p className="mt-2 text-[15px] text-slate-500 dark:text-slate-400">Your personal scheduling link that invitees use to book time with you.</p>
+          </div>
+
+          <div className="rounded-[20px] border border-[#D7E1F0] bg-white p-5 shadow-[0_8px_24px_rgba(15,31,61,0.06)] dark:border-white/10 dark:bg-white/5">
+            <div className="flex items-center gap-3 rounded-[14px] border border-[#E2EAF4] bg-[#F7FAFE] px-4 py-3 dark:border-white/10 dark:bg-white/[0.04]">
+              <Link2 className="h-4 w-4 shrink-0 text-slate-400" />
+              <span className="flex-1 truncate text-[14px] font-medium text-slate-700 dark:text-slate-200">
+                {bookingUrl || "Set a username to see your link"}
+              </span>
+              {bookingUrl ? (
+                <a href={bookingUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-lg border border-[#D7E1F0] bg-white px-2.5 py-1 text-[12px] font-semibold text-blue-600 transition hover:bg-[#F0F5FF] dark:border-white/10 dark:bg-white/5 dark:text-blue-400">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              ) : null}
+            </div>
+            <p className="mt-4 text-[13px] text-slate-500 dark:text-slate-400">
+              To change your link, update your <button type="button" onClick={() => onTabChange("profile")} className="font-semibold text-blue-600 underline underline-offset-2 dark:text-blue-400">username in Profile</button>.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (tab === "security") {
+      return (
+        <div className="max-w-xl">
+          <div className="mb-8">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Account settings</p>
+            <h2 className="mt-1 font-['Sora'] text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Security</h2>
+            <p className="mt-2 text-[15px] text-slate-500 dark:text-slate-400">Manage your password and two-factor authentication.</p>
+          </div>
+          <div className="space-y-4">
+            {[
+              { label: "Password", value: "••••••••••", action: "Change password" },
+              { label: "Two-factor authentication", value: "Not enabled", action: "Enable 2FA" },
+            ].map((row) => (
+              <div key={row.label} className="flex items-center justify-between rounded-[20px] border border-[#D7E1F0] bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
+                <div>
+                  <p className="text-[14px] font-semibold text-slate-800 dark:text-slate-200">{row.label}</p>
+                  <p className="mt-0.5 text-[13px] text-slate-400 dark:text-slate-500">{row.value}</p>
+                </div>
+                <button className="rounded-full border border-[#D7E1F0] bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-[#F0F5FF] dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                  {row.action}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (tab === "billing") {
+      return (
+        <div className="max-w-xl">
+          <div className="mb-8">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Subscription</p>
+            <h2 className="mt-1 font-['Sora'] text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Billing</h2>
+            <p className="mt-2 text-[15px] text-slate-500 dark:text-slate-400">Manage your plan and payment details.</p>
+          </div>
+          <div className="rounded-[24px] border border-[#D7E1F0] bg-gradient-to-br from-[#0F1F3D] to-[#15376D] p-6 text-white shadow-[0_24px_60px_rgba(15,31,61,0.18)]">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-blue-200">Current plan</p>
+            <p className="mt-1 font-['Sora'] text-2xl font-semibold">Free</p>
+            <p className="mt-2 text-[14px] leading-6 text-slate-300">Upgrade to unlock more event types, team seats, and advanced automations.</p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[14px] font-semibold text-[#0F1F3D] shadow-[0_12px_28px_rgba(255,255,255,0.14)] transition hover:brightness-105"
+            >
+              <Sparkles className="h-4 w-4" />
+              Upgrade plan
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  return typeof document !== "undefined" ? createPortal(
+    <div className={cn(
+      "fixed inset-0 z-[300] transition-all duration-300",
+      open ? "opacity-100" : "pointer-events-none opacity-0"
+    )}>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Panel */}
+      <div className={cn(
+        "absolute inset-y-0 right-0 flex w-full max-w-5xl overflow-hidden rounded-l-[32px] bg-[#F5F7FB] shadow-[−40px_0_120px_rgba(15,23,42,0.20)] transition-transform duration-300 dark:bg-[#0b1324]",
+        open ? "translate-x-0" : "translate-x-full"
+      )}>
+        {/* Left sidebar */}
+        <div className="flex w-56 shrink-0 flex-col border-r border-[#DFE7F2] bg-white dark:border-white/10 dark:bg-[#0d1829]">
+          <div className="flex items-center gap-3 border-b border-[#DFE7F2] px-5 py-5 dark:border-white/10">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-1.5 text-[13px] font-medium text-blue-600 transition hover:text-blue-700 dark:text-blue-400"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-3 py-4">
+            <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Account settings</p>
+            <nav className="space-y-1">
+              {SETTINGS_TABS.map((item) => {
+                const Icon = item.icon;
+                const active = tab === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => onTabChange(item.key)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] font-medium transition",
+                      active
+                        ? "bg-[#EEF4FF] text-[#2563EB] dark:bg-[#132544] dark:text-[#8DB2FF]"
+                        : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                    {active ? <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-50" /> : null}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* User mini card at bottom */}
+          <div className="border-t border-[#DFE7F2] p-4 dark:border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#3b82f6,#7c3aed)] p-[2px]">
+                <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[radial-gradient(circle_at_30%_20%,#5a3a28,#24160f_65%)] text-[11px] font-black text-[#f4c38a]">
+                  {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : initials}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-semibold text-slate-800 dark:text-slate-200">{user?.displayName || user?.username || "User"}</p>
+                <p className="truncate text-[11px] text-slate-400 dark:text-slate-500">{user?.email || ""}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 overflow-y-auto px-8 py-10 md:px-12">
+          {renderTabContent()}
+        </div>
+      </div>
+    </div>,
+    document.body
+  ) : null;
+}
+
 function App() {
   const previewMode = isLocalPreviewHost();
   const [collapsed, setCollapsed] = useState(() => {
@@ -717,6 +1054,8 @@ function App() {
   const [avatarMessage, setAvatarMessage] = useState("");
   const [avatarError, setAvatarError] = useState("");
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState("profile");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
@@ -935,9 +1274,24 @@ function App() {
   };
 
   const handleMenuAction = (action) => {
-    if (action === "profile-settings") return navigate("account");
-    if (action === "account-settings") return navigate("admin");
-    if (action === "billing") return navigate("upgrade");
+    if (action === "profile-settings") {
+      setSettingsTab("profile");
+      setSettingsOpen(true);
+      setProfileMenuOpen(false);
+      return;
+    }
+    if (action === "account-settings") {
+      setSettingsTab("security");
+      setSettingsOpen(true);
+      setProfileMenuOpen(false);
+      return;
+    }
+    if (action === "billing") {
+      setSettingsTab("billing");
+      setSettingsOpen(true);
+      setProfileMenuOpen(false);
+      return;
+    }
     if (action === "logout") {
       apiFetch("/api/auth/logout", { method: "POST" })
         .catch(() => null)
@@ -1268,6 +1622,21 @@ function App() {
         </div>,
         document.body
       )}
+      <SettingsOverlay
+        open={settingsOpen}
+        tab={settingsTab}
+        user={user}
+        avatarUrl={avatarUrl}
+        dark={dark}
+        initials={initials}
+        onClose={() => setSettingsOpen(false)}
+        onTabChange={setSettingsTab}
+        onUserUpdate={syncUserState}
+        onChangePhoto={handleChangePhotoClick}
+        avatarUploading={avatarUploading}
+        avatarMessage={avatarMessage}
+        avatarError={avatarError}
+      />
       <InviteUserModal open={inviteOpen} dark={dark} email={inviteEmail} role={inviteRole} message={inviteMessage} error={inviteError} submitting={inviteSubmitting} onEmailChange={setInviteEmail} onRoleChange={setInviteRole} onClose={() => { setInviteOpen(false); showInviteFeedback("", ""); }} onSubmit={handleInviteSubmit} />
     </div>
   );

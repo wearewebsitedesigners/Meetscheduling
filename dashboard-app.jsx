@@ -1381,7 +1381,7 @@ function App() {
 
   const renderPanel = () => {
     if (currentKey === "dashboard") return <OverviewPanel />;
-    if (currentKey === "scheduling") return <SchedulingPanel initials={initials} displayName={displayName} avatarUrl={avatarUrl} />;
+    if (currentKey === "scheduling") return <SchedulingPanel initials={initials} displayName={displayName} avatarUrl={avatarUrl} usernameProp={user?.username || ""} />;
     if (currentKey === "meetings") return <MeetingsPanel />;
     if (currentKey === "availability") return <AvailabilityPanel />;
     if (currentKey === "contacts") return <ContactsPanel />;

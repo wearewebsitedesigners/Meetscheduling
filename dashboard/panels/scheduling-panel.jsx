@@ -668,7 +668,7 @@ function EmptyState({ title, description, action, actionLabel }) {
   );
 }
 
-export default function SchedulingPanel({ initials = "WU", displayName = "Workspace User", avatarUrl = "" }) {
+export default function SchedulingPanel({ initials = "WU", displayName = "Workspace User", avatarUrl = "", usernameProp = "" }) {
   const cachedGoogleStatus = readCachedGoogleCalendarStatus();
   const [activeTab, setActiveTab] = useState("Event types");
   const [query, setQuery] = useState("");
@@ -676,7 +676,14 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [eventTypes, setEventTypes] = useState([]);
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(usernameProp || "");
+
+  // Sync username when parent updates it (e.g. after settings overlay save)
+  useEffect(() => {
+    if (usernameProp && usernameProp !== username) {
+      setUsername(usernameProp);
+    }
+  }, [usernameProp]);
   const [calendars, setCalendars] = useState([]);
   const [googleConnected, setGoogleConnected] = useState(Boolean(cachedGoogleStatus?.connected));
   const [gcalNoticeDismissed, setGcalNoticeDismissed] = useState(() => {

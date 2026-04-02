@@ -3,6 +3,11 @@ const asyncHandler = require("../middleware/async-handler");
 const { requireAuth } = require("../middleware/auth");
 const { assertBoolean, assertOptionalString } = require("../utils/validation");
 const {
+  getCalendarReminderSettings,
+  saveCalendarReminderSettings,
+} = require("../services/calendar-reminders.service");
+const { sendBookingConfirmation, isSmtpConfigured } = require("../services/email.service");
+const {
   resolveGoogleRedirectUri,
   resolveGoogleCalendarReturnPath,
   buildGoogleCalendarAppRedirect,
@@ -313,6 +318,134 @@ router.delete(
   asyncHandler(async (req, res) => {
     const result = await removeIntegration(req.auth.workspaceId, req.params.provider);
     res.json(result);
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Calendar Reminders integration
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/integrations/calendar-reminders/settings
+ * Returns the current calendar reminder settings for the authenticated workspace.
+ */
+router.get(
+  "/calendar-reminders/settings",
+  asyncHandler(async (req, res) => {
+    const settings = await getCalendarReminderSettings(req.auth.workspaceId);
+    res.json({ settings });
+  })
+);
+
+/**
+ * POST /api/integrations/calendar-reminders/settings
+ * Save calendar reminder settings for the authenticated workspace.
+ *
+ * Body: { enabled, reminderTimings, eventTitleTemplate, emailRemindersEnabled }
+ */
+router.post(
+  "/calendar-reminders/settings",
+  asyncHandler(async (req, res) => {
+    const body = req.body || {};
+
+    const enabled = assertBoolean(body.enabled ?? false, "enabled");
+    const emailRemindersEnabled = assertBoolean(
+      body.emailRemindersEnabled ?? false,
+      "emailRemindersEnabled"
+    );
+    const eventTitleTemplate = assertOptionalString(
+      body.eventTitleTemplate,
+      "eventTitleTemplate",
+      { max: 200 }
+    ) || "{{eventTitle}} with {{inviteeName}}";
+
+    // reminderTimings: array of integers (minutes), default [1440, 60, 15]
+    const rawTimings = Array.isArray(body.reminderTimings)
+      ? body.reminderTimings
+      : [1440, 60, 15];
+    const reminderTimings = rawTimings
+      .map(Number)
+      .filter((t) => Number.isFinite(t) && t > 0 && t <= 10080)
+      .slice(0, 5);
+
+    const settings = await saveCalendarReminderSettings(req.auth.workspaceId, {
+      enabled,
+      reminderTimings,
+      eventTitleTemplate,
+      emailRemindersEnabled,
+    });
+
+    res.json({ settings });
+  })
+);
+
+/**
+ * POST /api/integrations/calendar-reminders/test
+ * Send a test calendar invite to the authenticated user's email.
+ */
+router.post(
+  "/calendar-reminders/test",
+  asyncHandler(async (req, res) => {
+    if (!isSmtpConfigured()) {
+      return res.status(400).json({
+        error: "SMTP is not configured. Add SMTP_HOST, SMTP_USER, SMTP_PASS, and EMAIL_FROM to your environment.",
+      });
+    }
+
+    const { query } = require("../db/pool");
+    const userRes = await query(
+      "SELECT email, display_name FROM users WHERE id = $1",
+      [req.auth.userId]
+    );
+    const user = userRes.rows[0];
+    if (!user?.email) {
+      return res.status(400).json({ error: "User email not found." });
+    }
+
+    const settings = await getCalendarReminderSettings(req.auth.workspaceId);
+    const now = new Date();
+    const startUtc = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+    const endUtc = new Date(now.getTime() + 90 * 60 * 1000);   // 1.5 hours from now
+
+    const startLocal = {
+      date: startUtc.toISOString().slice(0, 10),
+      time: startUtc.toTimeString().slice(0, 5),
+    };
+    const endLocal = {
+      date: endUtc.toISOString().slice(0, 10),
+      time: endUtc.toTimeString().slice(0, 5),
+    };
+
+    try {
+      await sendBookingConfirmation({
+        toEmail: user.email,
+        inviteeName: user.display_name || "You",
+        hostEmail: user.email,
+        hostName: user.display_name || "MeetScheduling",
+        eventTitle: "Test Meeting",
+        startLocal,
+        endLocal,
+        timezone: "UTC",
+        startUtc,
+        endUtc,
+        locationType: "online",
+        meetingLink: "",
+        meetingLinkStatus: "unavailable",
+        reminderTimingsMinutes: settings.reminderTimings,
+        organizerEmail: user.email,
+        organizerName: user.display_name || "MeetScheduling",
+      });
+
+      res.json({
+        sent: true,
+        message: `Test calendar invite sent to ${user.email}. Check your inbox for an .ics attachment.`,
+      });
+    } catch (err) {
+      res.status(500).json({
+        sent: false,
+        error: "Failed to send test invite: " + (err?.message || "Unknown error"),
+      });
+    }
   })
 );
 

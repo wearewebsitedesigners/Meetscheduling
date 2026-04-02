@@ -17,6 +17,7 @@ const {
 const { verifySlotToken } = require("../utils/booking-token");
 const { conflict, notFound } = require("../utils/http-error");
 const { assertEmail, assertOptionalString, assertString } = require("../utils/validation");
+const { getCalendarReminderSettings } = require("./calendar-reminders.service");
 
 const BOOKING_COLUMN_CACHE_TTL_MS = 5 * 60 * 1000;
 let bookingColumnCache = {
@@ -863,6 +864,14 @@ async function createPublicBooking({
   );
   const hostEmail = userRes.rows[0]?.email || "";
 
+  // Fetch calendar reminder settings so ICS invites include correct VALARM blocks
+  let calendarReminderSettings = { enabled: false, reminderTimings: [1440, 60, 15] };
+  try {
+    calendarReminderSettings = await getCalendarReminderSettings(hostWorkspaceId);
+  } catch {
+    // Non-fatal — fall back to default timings
+  }
+
   let emailStatus = { sent: false, reason: "Not attempted" };
   try {
     emailStatus = await sendBookingConfirmation({
@@ -879,6 +888,10 @@ async function createPublicBooking({
       locationType: booking.location_type || event.locationType,
       meetingLink: booking.meeting_link || null,
       meetingLinkStatus: booking.meeting_link_status || baseMeetingState.meetingLinkStatus,
+      // Calendar Reminders: pass timings so ICS VALARM blocks match user preferences
+      reminderTimingsMinutes: calendarReminderSettings.reminderTimings,
+      organizerEmail: hostEmail,
+      organizerName: event.hostName,
     });
   } catch (error) {
     emailStatus = {

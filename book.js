@@ -381,23 +381,68 @@
 
   function createIcsDataUri(booking, service, page) {
     const uid = `ms-${booking.id || Date.now()}@meetscheduling.com`;
+    const meetDesc = booking.meetingLink ? `Meeting link: ${booking.meetingLink}` : "";
+    const desc = [booking?.notes || "", meetDesc].filter(Boolean).join("\\n");
+
+    // Build VALARM blocks for default reminder timings (24h, 1h, 15min)
+    const vAlarms = [1440, 60, 15].map((mins) => {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      const trigger = h > 0 && m === 0 ? `-PT${h}H` : `-PT${mins}M`;
+      return [
+        "BEGIN:VALARM",
+        `TRIGGER:${trigger}`,
+        "ACTION:DISPLAY",
+        "DESCRIPTION:Upcoming meeting reminder",
+        "END:VALARM",
+      ].join("\r\n");
+    }).join("\r\n");
+
     const lines = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
       "PRODID:-//MeetScheduling//Booking//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:REQUEST",
       "BEGIN:VEVENT",
       `UID:${uid}`,
       `DTSTAMP:${toCalendarStamp(new Date().toISOString())}`,
       `DTSTART:${toCalendarStamp(booking.startAtUtc)}`,
       `DTEND:${toCalendarStamp(booking.endAtUtc)}`,
       `SUMMARY:${(service?.title || "Meeting").replace(/,/g, "\\,")}`,
-      `DESCRIPTION:${(`Meeting with ${page?.businessName || "host"}${booking.meetingLink ? `\\n${booking.meetingLink}` : ""}`).replace(/,/g, "\\,")}`,
+      `DESCRIPTION:${desc}`,
       `LOCATION:${(booking.meetingLink || "Online meeting").replace(/,/g, "\\,")}`,
+      vAlarms,
       "END:VEVENT",
       "END:VCALENDAR",
     ];
 
     return `data:text/calendar;charset=utf-8,${encodeURIComponent(lines.join("\r\n"))}`;
+  }
+
+  function createOutlookCalendarUrl(booking, service, page) {
+    const subject = `${service?.title || "Meeting"} with ${page?.businessName || "host"}`;
+    const body = [
+      booking?.notes || "",
+      booking?.meetingLink ? `Meeting link: ${booking.meetingLink}` : "",
+    ].filter(Boolean).join("\n");
+
+    const toIso = (iso) => {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toISOString().replace(/\.\d{3}Z$/, "");
+    };
+
+    const params = new URLSearchParams({
+      path: "/calendar/action/compose",
+      rru: "addevent",
+      subject,
+      startdt: toIso(booking.startAtUtc),
+      enddt: toIso(booking.endAtUtc),
+      body,
+      location: booking?.meetingLink || "Online",
+    });
+    return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
   }
 
   async function submitBooking() {
@@ -468,6 +513,7 @@
         meetingLink: booking.meetingLink || "",
         googleCalendarUrl: createGoogleCalendarUrl(booking, servicePayload, page),
         icsUrl: createIcsDataUri(booking, servicePayload, page),
+        outlookCalendarUrl: createOutlookCalendarUrl(booking, servicePayload, page),
       };
       state.step = "confirmed";
       state.submitting = false;

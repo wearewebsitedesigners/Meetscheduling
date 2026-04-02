@@ -643,26 +643,29 @@
               )}" target="_blank" rel="noopener">Join Google Meet</a>`
             : ""
         }
-        ${
-          settings.showAddToCalendar
-            ? `<div class="pb-confirm-actions">
-              ${
-                confirmation.googleCalendarUrl
-                  ? `<a class="pb-secondary-btn" href="${escapeHtml(
-                      confirmation.googleCalendarUrl
-                    )}" target="_blank" rel="noopener">Add to Google Calendar</a>`
-                  : ""
-              }
-              ${
-                confirmation.icsUrl
-                  ? `<a class="pb-secondary-btn" href="${escapeHtml(
-                      confirmation.icsUrl
-                    )}" download="meeting.ics">Download .ics</a>`
-                  : ""
-              }
-            </div>`
-            : ""
-        }
+        <div class="pb-confirm-actions">
+          ${
+            confirmation.googleCalendarUrl
+              ? `<a class="pb-secondary-btn" href="${escapeHtml(
+                  confirmation.googleCalendarUrl
+                )}" target="_blank" rel="noopener">Add to Google Calendar</a>`
+              : ""
+          }
+          ${
+            confirmation.outlookCalendarUrl
+              ? `<a class="pb-secondary-btn" href="${escapeHtml(
+                  confirmation.outlookCalendarUrl
+                )}" target="_blank" rel="noopener">Add to Outlook</a>`
+              : ""
+          }
+          ${
+            confirmation.icsUrl
+              ? `<a class="pb-secondary-btn" href="${escapeHtml(
+                  confirmation.icsUrl
+                )}" download="meeting.ics">Download .ics (Apple Calendar)</a>`
+              : ""
+          }
+        </div>
       </div>`
     );
   }

@@ -3,6 +3,7 @@ const fs = require("fs/promises");
 const nodemailer = require("nodemailer");
 const path = require("path");
 const env = require("../config/env");
+const { generateIcs } = require("./ics.service");
 
 let transport = null;
 
@@ -641,15 +642,15 @@ async function sendBookingConfirmation({
   locationType,
   meetingLink,
   meetingLinkStatus,
+  // Calendar Reminders integration: optional enhanced ICS params
+  reminderTimingsMinutes = [1440, 60, 15],
+  organizerEmail = "",
+  organizerName = "",
 }) {
   const mailer = getTransport();
   if (!mailer) return { sent: false, reason: "SMTP not configured" };
   let inviteeSent = false;
   let hostSent = false;
-
-  const formatIcsDate = (dateObj) => {
-    return new Date(dateObj).toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-  };
 
   const inviteeMeetingLines = getMeetingLinkLines({
     locationType,
@@ -664,21 +665,44 @@ async function sendBookingConfirmation({
     hostFacing: true,
   });
 
-  const icsData = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Meetscheduling//EN",
-    "METHOD:PUBLISH",
-    "BEGIN:VEVENT",
-    `UID:${Date.now()}@meetscheduling.com`,
-    `DTSTAMP:${formatIcsDate(new Date())}`,
-    `DTSTART:${formatIcsDate(startUtc)}`,
-    `DTEND:${formatIcsDate(endUtc)}`,
-    `SUMMARY:${eventTitle} with ${inviteeName}`,
-    `DESCRIPTION:${(inviteeMeetingLines[0] || "Details to follow.").replace(/\r?\n/g, " ")}`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n");
+  const locationStr = String(meetingLink || "").trim() || "Online";
+  const descriptionStr = [
+    inviteeMeetingLines[0] || "",
+    timezone ? `Timezone: ${timezone}` : "",
+  ].filter(Boolean).join(" | ");
+
+  // Generate ICS for invitee — includes VALARM blocks for calendar reminders
+  const inviteeIcs = generateIcs({
+    startUtc,
+    endUtc,
+    summary: `${eventTitle} with ${hostName || "host"}`,
+    description: descriptionStr,
+    location: locationStr,
+    organizerEmail: organizerEmail || hostEmail || "",
+    organizerName: organizerName || hostName || "",
+    attendeeEmail: toEmail,
+    attendeeName: inviteeName,
+    reminderTimingsMinutes,
+  });
+
+  // Generate ICS for owner — same event, attendee/organizer roles swapped
+  const ownerIcs = generateIcs({
+    startUtc,
+    endUtc,
+    summary: `${eventTitle} with ${inviteeName}`,
+    description: [
+      hostMeetingLines[0] || "",
+      timezone ? `Timezone: ${timezone}` : "",
+    ].filter(Boolean).join(" | "),
+    location: locationStr,
+    organizerEmail: organizerEmail || hostEmail || "",
+    organizerName: organizerName || hostName || "",
+    attendeeEmail: toEmail,
+    attendeeName: inviteeName,
+    reminderTimingsMinutes,
+  });
+
+  const icsData = inviteeIcs; // keep legacy reference in scope
 
   const lines = [
     `Hi ${inviteeName},`,
@@ -700,8 +724,8 @@ async function sendBookingConfirmation({
     attachments: [
       {
         filename: "invite.ics",
-        content: icsData,
-        contentType: "text/calendar",
+        content: inviteeIcs,
+        contentType: "text/calendar; method=REQUEST",
       },
     ],
   };
@@ -731,8 +755,8 @@ async function sendBookingConfirmation({
       attachments: [
         {
           filename: "invite.ics",
-          content: icsData,
-          contentType: "text/calendar",
+          content: ownerIcs,
+          contentType: "text/calendar; method=REQUEST",
         },
       ],
     });

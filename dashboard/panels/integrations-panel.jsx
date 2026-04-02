@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search, X, CheckCircle2, ChevronDown, ExternalLink, Zap,
   Globe, Mail, BarChart3, Video, Calendar, Filter, RefreshCw,
+  Bell, Clock, ToggleLeft, ToggleRight, Save, Send, AlertCircle,
 } from "lucide-react";
 import { cn } from "../shared.jsx";
 
@@ -19,6 +20,15 @@ function saveState(state) {
 // ── Integration definitions ───────────────────────────────────────────────────
 
 const INTEGRATIONS = [
+  {
+    id: "calendar-reminders",
+    name: "Calendar Reminders",
+    category: "calendar",
+    description: "Send calendar invites with built-in reminders to attendees and yourself. Works with Apple Calendar, Google Calendar, Outlook, and any ICS-compatible app.",
+    logo: CalendarRemindersLogo,
+    badge: null,
+    isNative: true, // handled by custom modal, not generic OAuth
+  },
   {
     id: "google-calendar",
     name: "Google Calendar",
@@ -262,6 +272,273 @@ function SalesforceLogo() {
   );
 }
 
+function CalendarRemindersLogo() {
+  return (
+    <svg viewBox="0 0 48 48" className="h-full w-full">
+      <rect width="48" height="48" rx="8" fill="#EEF4FF"/>
+      <rect x="8" y="12" width="32" height="28" rx="4" fill="#fff" stroke="#C7DBFF" strokeWidth="1.5"/>
+      <rect x="8" y="12" width="32" height="9" rx="4" fill="#3B82F6"/>
+      <rect x="8" y="18" width="32" height="3" fill="#3B82F6"/>
+      <rect x="16" y="8" width="3" height="7" rx="1.5" fill="#2563EB"/>
+      <rect x="29" y="8" width="3" height="7" rx="1.5" fill="#2563EB"/>
+      <circle cx="24" cy="30" r="6" fill="#EEF4FF" stroke="#3B82F6" strokeWidth="1.5"/>
+      <path d="M24 27v3.5l2 2" stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+// ── Calendar Reminders Modal ───────────────────────────────────────────────────
+
+const TIMING_OPTIONS = [
+  { value: 1440, label: "24 hours before" },
+  { value: 60,   label: "1 hour before" },
+  { value: 30,   label: "30 minutes before" },
+  { value: 15,   label: "15 minutes before" },
+];
+
+function CalendarRemindersModal({ onClose, onSaved }) {
+  const [settings, setSettings] = useState({
+    enabled: false,
+    reminderTimings: [1440, 60, 15],
+    eventTitleTemplate: "{{eventTitle}} with {{inviteeName}}",
+    emailRemindersEnabled: false,
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [toast, setToast] = useState(null); // { type: 'success'|'error', message }
+
+  // Load settings on mount
+  useEffect(() => {
+    fetch("/api/integrations/calendar-reminders/settings", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.settings) setSettings(data.settings);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  function showToast(type, message) {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  function toggleTiming(value) {
+    setSettings((prev) => {
+      const has = prev.reminderTimings.includes(value);
+      const next = has
+        ? prev.reminderTimings.filter((t) => t !== value)
+        : [...prev.reminderTimings, value].sort((a, b) => b - a);
+      return { ...prev, reminderTimings: next };
+    });
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/integrations/calendar-reminders/settings", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      setSettings(data.settings);
+      showToast("success", "Calendar Reminders settings saved.");
+      if (onSaved) onSaved(data.settings);
+    } catch (err) {
+      showToast("error", err.message || "Failed to save settings.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleTest() {
+    setTesting(true);
+    try {
+      const res = await fetch("/api/integrations/calendar-reminders/test", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Test failed");
+      showToast("success", data.message || "Test invite sent. Check your inbox.");
+    } catch (err) {
+      showToast("error", err.message || "Test failed. Check SMTP configuration.");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 px-4 backdrop-blur-sm">
+      <div className="relative w-full max-w-[520px] overflow-hidden rounded-[28px] border border-[#DFE7F3] bg-white shadow-[0_32px_80px_rgba(15,23,42,0.20)] dark:border-white/10 dark:bg-[#0e1929]">
+
+        {/* Toast */}
+        {toast && (
+          <div className={cn(
+            "absolute left-4 right-4 top-4 z-10 flex items-center gap-2 rounded-2xl px-4 py-3 text-[13px] font-semibold shadow-lg",
+            toast.type === "success"
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20"
+              : "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/20"
+          )}>
+            {toast.type === "success" ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+            {toast.message}
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#DFE7F3] px-6 py-5 dark:border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 overflow-hidden rounded-[12px] border border-[#DFE7F3] dark:border-white/10">
+              <CalendarRemindersLogo />
+            </div>
+            <div>
+              <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">Calendar Reminders</h3>
+              <p className="text-[12px] text-slate-400">ICS invites · Apple, Google, Outlook</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#DFE7F3] bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="max-h-[60vh] overflow-y-auto px-6 py-5 space-y-5">
+          {loading ? (
+            <div className="flex items-center justify-center py-8 text-slate-400 text-[14px]">Loading settings…</div>
+          ) : (
+            <>
+              {/* Info banner */}
+              <div className="rounded-2xl border border-[#C7DBFF] bg-[#EEF4FF] p-4 text-[13px] text-[#2563EB] dark:border-[#2a4a80] dark:bg-[#1a2e52]/60 dark:text-[#93BBFF]">
+                <p className="font-semibold mb-1">How it works</p>
+                <p className="leading-relaxed text-[#3b5cc4] dark:text-[#93BBFF]/80">
+                  When a meeting is booked, both you and the attendee receive an email with an <strong>.ics calendar invite</strong> attached. The invite includes built-in alarm reminders so it works automatically with Apple Calendar, Google Calendar, Outlook, and any ICS-compatible app.
+                </p>
+              </div>
+
+              {/* Enable toggle */}
+              <div className="flex items-center justify-between rounded-2xl border border-[#DFE7F3] bg-slate-50 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
+                <div>
+                  <div className="text-[14px] font-semibold text-slate-800 dark:text-white">Enable Calendar Reminders</div>
+                  <div className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">Attach ICS invites with VALARM reminders to booking confirmation emails</div>
+                </div>
+                <button
+                  onClick={() => setSettings((p) => ({ ...p, enabled: !p.enabled }))}
+                  className="ml-4 shrink-0"
+                  aria-label="Toggle calendar reminders"
+                >
+                  {settings.enabled
+                    ? <ToggleRight size={32} className="text-[#3B82F6]" />
+                    : <ToggleLeft size={32} className="text-slate-300 dark:text-slate-600" />
+                  }
+                </button>
+              </div>
+
+              {/* Reminder timings */}
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-slate-700 dark:text-slate-200">
+                  <Clock size={14} /> Reminder timings
+                </div>
+                <p className="mb-3 text-[12px] text-slate-500 dark:text-slate-400">
+                  These timings become VALARM blocks inside the .ics file — your calendar app will alert you automatically.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {TIMING_OPTIONS.map((opt) => {
+                    const active = settings.reminderTimings.includes(opt.value);
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => toggleTiming(opt.value)}
+                        className={cn(
+                          "flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-[13px] font-medium transition",
+                          active
+                            ? "border-[#3B82F6] bg-[#EEF4FF] text-[#2563EB] dark:border-[#2a4a80] dark:bg-[#1a2e52]/60 dark:text-[#93BBFF]"
+                            : "border-[#DFE7F3] bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400"
+                        )}
+                      >
+                        <div className={cn(
+                          "h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0",
+                          active ? "border-[#3B82F6] bg-[#3B82F6]" : "border-slate-300 dark:border-slate-600"
+                        )}>
+                          {active && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                        </div>
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Event title template */}
+              <div>
+                <label className="mb-1.5 block text-[13px] font-semibold text-slate-700 dark:text-slate-200">
+                  Event title template
+                </label>
+                <p className="mb-2 text-[12px] text-slate-500 dark:text-slate-400">
+                  Use <code className="rounded bg-slate-100 px-1 dark:bg-white/10">{"{{eventTitle}}"}</code> and{" "}
+                  <code className="rounded bg-slate-100 px-1 dark:bg-white/10">{"{{inviteeName}}"}</code> as placeholders.
+                </p>
+                <input
+                  value={settings.eventTitleTemplate}
+                  onChange={(e) => setSettings((p) => ({ ...p, eventTitleTemplate: e.target.value }))}
+                  placeholder="{{eventTitle}} with {{inviteeName}}"
+                  maxLength={200}
+                  className="w-full rounded-2xl border border-[#DFE7F3] bg-white px-4 py-3 text-[14px] text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/10 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500"
+                />
+              </div>
+
+              {/* Email reminders toggle */}
+              <div className="flex items-center justify-between rounded-2xl border border-[#DFE7F3] bg-slate-50 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03]">
+                <div>
+                  <div className="text-[14px] font-semibold text-slate-800 dark:text-white">Also send reminder emails</div>
+                  <div className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">Send separate reminder emails 24 h and 1 h before (in addition to the ICS VALARM blocks)</div>
+                </div>
+                <button
+                  onClick={() => setSettings((p) => ({ ...p, emailRemindersEnabled: !p.emailRemindersEnabled }))}
+                  className="ml-4 shrink-0"
+                  aria-label="Toggle email reminders"
+                >
+                  {settings.emailRemindersEnabled
+                    ? <ToggleRight size={32} className="text-[#3B82F6]" />
+                    : <ToggleLeft size={32} className="text-slate-300 dark:text-slate-600" />
+                  }
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 border-t border-[#DFE7F3] px-6 py-4 dark:border-white/10">
+          <button
+            onClick={handleTest}
+            disabled={testing || loading}
+            className="flex items-center gap-2 rounded-2xl border border-[#DFE7F3] bg-white px-4 py-2.5 text-[13px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+          >
+            <Send size={13} />
+            {testing ? "Sending…" : "Send test invite"}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || loading}
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#2563EB] py-2.5 text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.28)] transition hover:brightness-105 disabled:opacity-50"
+          >
+            <Save size={13} />
+            {saving ? "Saving…" : "Save settings"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Connect Modal ─────────────────────────────────────────────────────────────
 
 function ConnectModal({ integration, onConfirm, onCancel }) {
@@ -311,7 +588,7 @@ function ConnectModal({ integration, onConfirm, onCancel }) {
 
 // ── Integration Card ──────────────────────────────────────────────────────────
 
-function IntegrationCard({ integration, connected, onConnect, onDisconnect }) {
+function IntegrationCard({ integration, connected, onConnect, onDisconnect, onConfigure }) {
   const Logo = integration.logo;
   return (
     <div className={cn(
@@ -353,7 +630,15 @@ function IntegrationCard({ integration, connected, onConnect, onDisconnect }) {
 
       {/* Action */}
       <div className="mt-4">
-        {connected ? (
+        {integration.isNative ? (
+          // Native integrations open a settings modal instead of OAuth
+          <button
+            onClick={() => onConfigure(integration)}
+            className="w-full rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#2563EB] py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(37,99,235,0.22)] transition hover:brightness-105"
+          >
+            {connected ? "Configure" : "Set up"}
+          </button>
+        ) : connected ? (
           <button
             onClick={() => onDisconnect(integration.id)}
             className="w-full rounded-2xl border border-[#DFE7F3] bg-white py-2.5 text-[13px] font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-rose-500/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
@@ -382,8 +667,21 @@ export default function IntegrationsPanel() {
   const [category, setCategory] = useState("all");
   const [showFilter, setShowFilter] = useState(false);
   const [connectingIntegration, setConnectingIntegration] = useState(null);
+  const [configuringIntegration, setConfiguringIntegration] = useState(null);
   const [banner, setBanner] = useState(true);
   const filterRef = useRef(null);
+
+  // Load calendar reminders enabled state from API on mount
+  useEffect(() => {
+    fetch("/api/integrations/calendar-reminders/settings", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.settings?.enabled) {
+          setConnected((prev) => ({ ...prev, "calendar-reminders": true }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => { saveState(connected); }, [connected]);
 
@@ -411,6 +709,10 @@ export default function IntegrationsPanel() {
     setConnectingIntegration(integration);
   }
 
+  function handleConfigure(integration) {
+    setConfiguringIntegration(integration);
+  }
+
   function handleConfirm() {
     setConnected((prev) => ({ ...prev, [connectingIntegration.id]: true }));
     setConnectingIntegration(null);
@@ -418,6 +720,12 @@ export default function IntegrationsPanel() {
 
   function handleDisconnect(id) {
     setConnected((prev) => ({ ...prev, [id]: false }));
+  }
+
+  function handleCalendarRemindersSaved(settings) {
+    // Reflect enabled state in connected map
+    setConnected((prev) => ({ ...prev, "calendar-reminders": Boolean(settings.enabled) }));
+    setConfiguringIntegration(null);
   }
 
   return (
@@ -572,6 +880,7 @@ export default function IntegrationsPanel() {
               connected={Boolean(connected[integration.id])}
               onConnect={handleConnect}
               onDisconnect={handleDisconnect}
+              onConfigure={handleConfigure}
             />
           ))}
         </div>
@@ -582,6 +891,13 @@ export default function IntegrationsPanel() {
         onConfirm={handleConfirm}
         onCancel={() => setConnectingIntegration(null)}
       />
+
+      {configuringIntegration?.id === "calendar-reminders" && (
+        <CalendarRemindersModal
+          onClose={() => setConfiguringIntegration(null)}
+          onSaved={handleCalendarRemindersSaved}
+        />
+      )}
     </div>
   );
 }

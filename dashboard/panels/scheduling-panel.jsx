@@ -1086,13 +1086,13 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[34px] border border-[#DFE7F3] bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(168,85,247,0.13),_transparent_24%),linear-gradient(180deg,#eef4ff_0%,#edf2f7_35%,#f7fbff_100%)] p-4 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:p-6 xl:p-8 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.12),_transparent_24%),linear-gradient(180deg,#081120_0%,#0b1424_35%,#0d182b_100%)]">
+    <div className="relative overflow-hidden rounded-[34px] border border-[#DFE7F3] bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(168,85,247,0.13),_transparent_24%),linear-gradient(180deg,#eef4ff_0%,#edf2f7_35%,#f7fbff_100%)] px-2 py-4 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:px-3 sm:py-6 xl:px-4 xl:py-8 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.12),_transparent_24%),linear-gradient(180deg,#081120_0%,#0b1424_35%,#0d182b_100%)]">
       <GlassOrb className="left-[-80px] top-[120px] h-72 w-72" />
       <GlassOrb className="right-[8%] top-[10%] h-80 w-80 bg-blue-400/10" />
       <GlassOrb className="bottom-[-40px] left-[20%] h-64 w-64 bg-cyan-300/10" />
 
       <div className="relative z-10">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="flex flex-col gap-4 px-3 xl:flex-row xl:items-end xl:justify-between sm:px-4 xl:px-5">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/50 px-3 py-1 text-xs font-medium text-slate-600 backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
               <Sparkles className="h-3.5 w-3.5 text-blue-600" />
@@ -1222,7 +1222,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
           </div>
         ) : null}
 
-        <div className="mt-8 flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="mt-8 flex flex-col gap-5 px-3 xl:flex-row xl:items-center xl:justify-between sm:px-4 xl:px-5">
           <div className="flex flex-wrap gap-2 rounded-2xl border border-white/40 bg-white/40 p-1.5 backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
             {schedulingTabs.map((tab) => (
               <button

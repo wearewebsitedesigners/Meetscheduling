@@ -16,6 +16,7 @@ import {
   Users,
   Vote,
   Wand2,
+  X,
 } from "lucide-react";
 import {
   apiFetch,
@@ -672,6 +673,9 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
   const [username, setUsername] = useState("");
   const [calendars, setCalendars] = useState([]);
   const [googleConnected, setGoogleConnected] = useState(Boolean(cachedGoogleStatus?.connected));
+  const [gcalNoticeDismissed, setGcalNoticeDismissed] = useState(() => {
+    try { return localStorage.getItem("ms_gcal_notice_dismissed") === "1"; } catch { return false; }
+  });
   const [googleCalendarStatus, setGoogleCalendarStatus] = useState(
     cachedGoogleStatus || normalizeGoogleCalendarStatus()
   );
@@ -684,6 +688,9 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
   const [busyEventId, setBusyEventId] = useState("");
   const [form, setForm] = useState(defaultForm);
   const [validationErrors, setValidationErrors] = useState({});
+  const [editingSlugId, setEditingSlugId] = useState("");
+  const [slugDraft, setSlugDraft] = useState("");
+  const [savingSlugId, setSavingSlugId] = useState("");
   const createMenuRef = useRef(null);
 
   const loadPanel = async ({ preserveMessages = false } = {}) => {
@@ -972,6 +979,31 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
     }
   };
 
+  const handleSaveSlug = async (eventType) => {
+    const newSlug = slugDraft.trim().toLowerCase();
+    if (!newSlug || newSlug === eventType.slug) { setEditingSlugId(""); return; }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(newSlug)) {
+      setError("Slug may only contain lowercase letters, numbers, and hyphens.");
+      return;
+    }
+    setSavingSlugId(eventType.id);
+    setError("");
+    try {
+      const payload = await apiFetch(`/api/event-types/${eventType.id}`, {
+        method: "PATCH",
+        body: { slug: newSlug },
+      });
+      const updated = normalizeEventType(payload?.eventType || {});
+      setEventTypes((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      setNotice("Booking link updated.");
+      setEditingSlugId("");
+    } catch (slugError) {
+      setError(slugError.message || "Could not update the booking link.");
+    } finally {
+      setSavingSlugId("");
+    }
+  };
+
   const handleCopyLink = async (eventType) => {
     const copied = await copyToClipboard(buildBookingLink(username, eventType.slug));
     setNotice(copied ? `Copied booking link for ${eventType.title}.` : "Unable to copy the booking link.");
@@ -1053,8 +1085,8 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
               },
             ].map((stat) => (
               <div key={stat.label} className="rounded-[24px] border border-white/50 bg-white/55 px-5 py-4 shadow-[0_18px_42px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.04]">
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{stat.label}</div>
-                <div className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{stat.value}</div>
+                <div className="flex h-8 items-start text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{stat.label}</div>
+                <div className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{stat.value}</div>
               </div>
             ))}
           </div>
@@ -1089,7 +1121,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
               Loading
             </div>
           </div>
-        ) : googleConnected ? (
+        ) : googleConnected && !gcalNoticeDismissed ? (
           <div className="mt-6 flex flex-col gap-4 rounded-[28px] border border-emerald-200 bg-emerald-50/85 px-5 py-5 shadow-[0_18px_42px_rgba(15,23,42,0.05)] backdrop-blur-2xl md:flex-row md:items-center md:justify-between dark:border-emerald-400/20 dark:bg-emerald-500/10">
             <div>
               <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Google Calendar is connected.</p>
@@ -1097,9 +1129,22 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                 Google Meet event types can now generate real meeting links and keep calendar availability in sync.
               </p>
             </div>
-            <div className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white/80 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm dark:border-emerald-400/20 dark:bg-white/5 dark:text-emerald-200">
-              <CheckCircle2 className="h-4 w-4" />
-              Connected
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white/80 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm dark:border-emerald-400/20 dark:bg-white/5 dark:text-emerald-200">
+                <CheckCircle2 className="h-4 w-4" />
+                Connected
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setGcalNoticeDismissed(true);
+                  try { localStorage.setItem("ms_gcal_notice_dismissed", "1"); } catch {}
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-emerald-200 bg-white/70 text-emerald-600 transition hover:bg-white dark:border-emerald-400/20 dark:bg-white/5 dark:text-emerald-300 dark:hover:bg-white/10"
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
         ) : (
@@ -1249,7 +1294,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
               actionLabel="Create your first event type"
             />
           ) : (
-            <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="grid gap-6">
               <section className="space-y-4">
                 <div className="flex items-center justify-between px-1">
                   <div className="flex items-center gap-3">
@@ -1286,74 +1331,73 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                 {filteredEventTypes.map((eventType) => {
                   const bookingLink = buildBookingLink(username, eventType.slug);
                   const isBusy = busyEventId === eventType.id;
+                  const isEditingSlug = editingSlugId === eventType.id;
+                  const isSavingSlug = savingSlugId === eventType.id;
+                  const baseUrl = bookingLink ? bookingLink.replace(`/${eventType.slug}`, "") : `https://www.meetscheduling.com/${username || "username"}`;
+
                   return (
                     <div
                       key={eventType.id}
-                      className="group relative overflow-hidden rounded-[30px] border border-white/50 bg-white/55 p-[1px] shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition duration-300 hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/[0.04]"
+                      className="group relative overflow-hidden rounded-[24px] border border-slate-200/70 bg-white shadow-[0_4px_24px_rgba(15,23,42,0.06)] transition duration-200 hover:shadow-[0_8px_32px_rgba(15,23,42,0.10)] dark:border-white/10 dark:bg-[#0d1729]"
                     >
-                      <div className="absolute inset-y-6 left-0 w-1.5 rounded-r-full" style={{ backgroundColor: eventType.color }} />
-                      <div className="absolute right-[-40px] top-[-50px] h-32 w-32 rounded-full bg-white/30 blur-2xl transition duration-500 group-hover:scale-125" />
-                      <div className="rounded-[29px] bg-white/65 px-5 py-5 backdrop-blur-2xl dark:bg-[#0d1729]/90 md:px-6">
-                        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                          <div className="flex items-start gap-4">
-                            <div className="mt-1 flex h-5 w-5 items-center justify-center rounded-md border border-slate-300 bg-white/80 shadow-inner dark:border-white/15 dark:bg-white/10">
-                              <Link2 className="h-3 w-3 text-slate-500 dark:text-slate-300" />
-                            </div>
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="font-['Sora'] text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
-                                  {eventType.title}
-                                </h3>
-                                <span className={cn(
-                                  "rounded-full px-2.5 py-1 text-xs font-semibold",
-                                  eventType.isActive
-                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
-                                    : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300"
-                                )}>
-                                  {eventType.isActive ? "Active" : "Paused"}
+                      {/* Color accent bar */}
+                      <div className="absolute inset-y-0 left-0 w-1 rounded-l-[24px]" style={{ backgroundColor: eventType.color }} />
+
+                      <div className="pl-5 pr-5 py-5 md:pl-6 md:pr-6">
+                        {/* Top row: title + status + actions */}
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-['Sora'] text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
+                                {eventType.title}
+                              </h3>
+                              <span className={cn(
+                                "rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                                eventType.isActive
+                                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                                  : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-400"
+                              )}>
+                                {eventType.isActive ? "Active" : "Paused"}
+                              </span>
+                              {eventType.locationType === "google_meet" && !googleConnected ? (
+                                <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                                  Needs Google
                                 </span>
-                                {eventType.locationType === "google_meet" && !googleConnected ? (
-                                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
-                                    Needs Google
-                                  </span>
-                                ) : null}
-                              </div>
-                              <div className="mt-2 text-sm text-slate-600 md:text-base dark:text-slate-300">
-                                {eventType.durationMinutes} min · {locationLabel(eventType.locationType)}
-                                {eventType.noticeMinimumHours > 0 ? ` · ${eventType.noticeMinimumHours}h notice` : ""}
-                              </div>
-                              <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                                {eventType.description || "No description yet. Add context so invitees know what happens in this meeting."}
-                              </div>
-                              <div className="mt-3 rounded-2xl border border-slate-200/80 bg-white/85 px-4 py-3 text-sm text-slate-500 shadow-inner dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300">
-                                {bookingLink || `/${username || "username"}/${eventType.slug}`}
-                              </div>
+                              ) : null}
                             </div>
+                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                              {eventType.durationMinutes} min · {locationLabel(eventType.locationType)}
+                              {eventType.noticeMinimumHours > 0 ? ` · ${eventType.noticeMinimumHours}h notice` : ""}
+                            </p>
+                            {eventType.description ? (
+                              <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">{eventType.description}</p>
+                            ) : null}
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+                          {/* Action buttons */}
+                          <div className="flex shrink-0 flex-wrap items-center gap-2">
                             <button
                               type="button"
                               onClick={() => openEditModal(eventType)}
-                              className="rounded-2xl border border-white/60 bg-white/80 px-4 py-2.5 text-sm font-medium text-slate-700 backdrop-blur-xl transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                              className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                             >
                               Edit
                             </button>
                             <button
                               type="button"
                               onClick={() => handleCopyLink(eventType)}
-                              className="flex items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50/80 px-4 py-2.5 text-sm font-semibold text-blue-700 backdrop-blur-xl transition hover:bg-white dark:border-[#2A4E8A] dark:bg-[#13284b] dark:text-[#9CC0FF] dark:hover:bg-[#18355f]"
+                              className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 dark:border-[#2A4E8A] dark:bg-[#13284b] dark:text-[#9CC0FF] dark:hover:bg-[#18355f]"
                             >
-                              <Copy className="h-4 w-4" />
-                              Copy link
+                              <Copy className="h-3.5 w-3.5" />
+                              Copy
                             </button>
                             <button
                               type="button"
                               onClick={() => bookingLink && window.open(bookingLink, "_blank", "noopener,noreferrer")}
                               disabled={!bookingLink}
-                              className="flex items-center gap-2 rounded-2xl border border-white/60 bg-white/80 px-4 py-2.5 text-sm font-medium text-slate-700 backdrop-blur-xl transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                             >
-                              <ExternalLink className="h-4 w-4" />
+                              <ExternalLink className="h-3.5 w-3.5" />
                               Open
                             </button>
                             <button
@@ -1361,16 +1405,65 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                               onClick={() => handleToggleActive(eventType)}
                               disabled={isBusy}
                               className={cn(
-                                "inline-flex min-w-[122px] items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
+                                "inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
                                 eventType.isActive
-                                  ? "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/15"
-                                  : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/15"
+                                  ? "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/15"
+                                  : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/15"
                               )}
                             >
-                              {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                              {eventType.isActive ? "Pause link" : "Activate"}
+                              {isBusy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : null}
+                              {eventType.isActive ? "Pause" : "Activate"}
                             </button>
                           </div>
+                        </div>
+
+                        {/* Editable booking link row */}
+                        <div className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.04]">
+                          <Link2 className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
+                          <span className="shrink-0 text-sm text-slate-400 dark:text-slate-500">{baseUrl}/</span>
+                          {isEditingSlug ? (
+                            <>
+                              <input
+                                autoFocus
+                                type="text"
+                                value={slugDraft}
+                                onChange={(e) => setSlugDraft(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveSlug(eventType);
+                                  if (e.key === "Escape") setEditingSlugId("");
+                                }}
+                                className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-900 outline-none dark:text-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSaveSlug(eventType)}
+                                disabled={isSavingSlug}
+                                className="shrink-0 rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+                              >
+                                {isSavingSlug ? "Saving…" : "Save"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingSlugId("")}
+                                className="shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-500 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700 dark:text-slate-200">
+                                {eventType.slug}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => { setEditingSlugId(eventType.id); setSlugDraft(eventType.slug); setError(""); }}
+                                className="shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:bg-slate-50 hover:text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10"
+                              >
+                                Edit link
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1378,64 +1471,6 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                 })}
               </section>
 
-              <aside className="space-y-4">
-                <div className="rounded-[30px] border border-white/50 bg-white/55 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.04]">
-                  <div className="mb-4 flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Selected event</div>
-                      <div className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">
-                        {selectedEvent?.title || "Choose an event type"}
-                      </div>
-                    </div>
-                    {selectedEvent ? (
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-white/10 dark:text-slate-300">
-                        {selectedEvent.durationMinutes} min
-                      </span>
-                    ) : null}
-                  </div>
-                  {selectedEvent ? (
-                    <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                      <div className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-white/10 dark:bg-white/[0.05]">
-                        Public link<br />
-                        <span className="font-medium text-slate-900 dark:text-white">/{username || "username"}/{selectedEvent.slug}</span>
-                      </div>
-                      <div className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-white/10 dark:bg-white/[0.05]">
-                        Buffers: {selectedEvent.bufferBeforeMin}m before · {selectedEvent.bufferAfterMin}m after
-                      </div>
-                      <div className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-white/10 dark:bg-white/[0.05]">
-                        Daily cap: {selectedEvent.maxBookingsPerDay > 0 ? selectedEvent.maxBookingsPerDay : "Unlimited"}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Select an event type to inspect its booking behavior.</p>
-                  )}
-                </div>
-
-                <div className="rounded-[30px] border border-white/50 bg-white/55 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.04]">
-                  <div className="text-base font-semibold text-slate-900 dark:text-white">Quick starts</div>
-                  <div className="mt-4 space-y-2">
-                    {eventTypePresets.map((preset) => {
-                      const Icon = preset.icon;
-                      return (
-                        <button
-                          key={preset.title}
-                          type="button"
-                          onClick={() => openCreateModal(preset)}
-                          className="flex w-full items-start gap-3 rounded-2xl border border-white/60 bg-white/80 px-4 py-4 text-left transition hover:bg-white dark:border-white/10 dark:bg-white/[0.05] dark:hover:bg-white/10"
-                        >
-                          <span className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-[#13284b] dark:text-[#8DB2FF]">
-                            <Icon className="h-4 w-4" />
-                          </span>
-                          <span>
-                            <div className="text-sm font-semibold text-slate-900 dark:text-white">{preset.title}</div>
-                            <div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{preset.description}</div>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </aside>
             </div>
           )}
         </div>

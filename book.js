@@ -300,6 +300,8 @@
     if (summaryTitleEl) {
       if (state.step === "details") {
         summaryTitleEl.textContent = "Confirm your details";
+      } else if (state.step === "questions") {
+        summaryTitleEl.textContent = "A few quick questions";
       } else if (state.step === "confirmed") {
         summaryTitleEl.textContent = "Booking confirmed";
       } else {
@@ -570,8 +572,30 @@
       return;
     }
 
+    if (action === "continue-to-questions") {
+      const name = String(state.form.name || "").trim();
+      const email = String(state.form.email || "").trim();
+      if (!name || !email) {
+        state.formError = "Name and email are required.";
+        render();
+        return;
+      }
+      state.step = "questions";
+      state.formError = "";
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     if (action === "back-to-schedule") {
       state.step = "schedule";
+      state.formError = "";
+      render();
+      return;
+    }
+
+    if (action === "back-to-details") {
+      state.step = "details";
       state.formError = "";
       render();
       return;

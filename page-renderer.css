@@ -574,6 +574,53 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--pb-brand) 42%, #ffffff 58%);
 }
 
+.pb-step-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pb-step-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--pb-border);
+  background: transparent;
+  color: var(--pb-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
+}
+
+.pb-step-item.is-active {
+  background: var(--pb-brand);
+  border-color: var(--pb-brand);
+  color: #ffffff;
+}
+
+.pb-step-item.is-done {
+  background: color-mix(in srgb, var(--pb-brand) 12%, var(--pb-surface) 88%);
+  border-color: color-mix(in srgb, var(--pb-brand) 30%, var(--pb-border) 70%);
+  color: var(--pb-brand);
+}
+
+.pb-step-sep {
+  display: inline-block;
+  width: 20px;
+  height: 1px;
+  background: var(--pb-border);
+  flex-shrink: 0;
+  align-self: center;
+}
+
 @keyframes pb-skeleton {
   from {
     background-position: 0 0;

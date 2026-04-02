@@ -366,6 +366,28 @@
     >${escapeHtml(String(cell.day))}</button>`;
   }
 
+  function hasCustomQuestions(config) {
+    const section = resolveSection(config, "detailsForm");
+    const questions = section?.settings?.customQuestions;
+    return Array.isArray(questions) && questions.length > 0;
+  }
+
+  function renderStepBar(currentStep, withQuestions) {
+    const steps = withQuestions
+      ? [["schedule", "Select"], ["details", "Details"], ["questions", "Questions"], ["confirmed", "Confirm"]]
+      : [["schedule", "Select"], ["details", "Details"], ["confirmed", "Confirm"]];
+
+    const currentIndex = steps.findIndex(([key]) => key === currentStep);
+
+    const items = steps.map(([key, label], index) => {
+      const done = index < currentIndex;
+      const active = index === currentIndex;
+      return `<span class="pb-step-item${done ? " is-done" : ""}${active ? " is-active" : ""}">${escapeHtml(label)}</span>`;
+    }).join('<span class="pb-step-sep" aria-hidden="true"></span>');
+
+    return `<div class="pb-step-bar" role="navigation" aria-label="Booking steps">${items}</div>`;
+  }
+
   function renderBookingWidget(section, mode, state, services, payload, config, selectedSectionId) {
     const settings = section.settings || {};
     const step = safeText(state.step, "schedule");
@@ -408,11 +430,14 @@
       )
       .join("");
 
+    const withQuestions = hasCustomQuestions(config);
+
     return sectionWrap(
       section,
       mode,
       selectedSectionId,
       `<div class="pb-booking-inner" id="booking">
+        ${renderStepBar("schedule", withQuestions)}
         <div class="pb-booking-head">
           <h2 class="pb-section-title">${escapeHtml(settings.title || "Select a date and time")}</h2>
           ${state.statusText ? `<p class="pb-booking-status">${escapeHtml(state.statusText)}</p>` : ""}
@@ -464,78 +489,118 @@
     );
   }
 
+  function buildQuestionFields(questions, answers, mode) {
+    const visible = questions.slice(0, 5);
+    return visible.map((question) => {
+      const qId = safeText(question.id, "");
+      const qLabel = safeText(question.label, "Question");
+      const qType = safeText(question.type, "text") === "textarea" ? "textarea" : "text";
+      const answer = safeText(answers[qId], "");
+
+      if (qType === "textarea") {
+        return `<label class="pb-field pb-field-full"><span>${escapeHtml(qLabel)}</span><textarea data-action="field-change" data-field="question:${escapeHtml(
+          qId
+        )}" rows="3" ${question.required ? "required" : ""} ${mode === "preview" ? "disabled" : ""}>${escapeHtml(answer)}</textarea></label>`;
+      }
+
+      return `<label class="pb-field"><span>${escapeHtml(qLabel)}</span><input type="text" data-action="field-change" data-field="question:${escapeHtml(
+        qId
+      )}" value="${escapeHtml(answer)}" ${question.required ? "required" : ""} ${mode === "preview" ? "disabled" : ""} /></label>`;
+    }).join("");
+  }
+
   function renderDetailsForm(section, mode, state, services, payload, config, selectedSectionId) {
     const settings = section.settings || {};
     const step = safeText(state.step, "schedule");
-    const showSection = mode === "preview" ? true : step === "details";
-    if (!showSection) return "";
+    const questions = Array.isArray(settings.customQuestions) ? settings.customQuestions.slice(0, 5) : [];
+    const withQuestions = questions.length > 0;
 
-    const form = state.form && typeof state.form === "object" ? state.form : {};
-    const answers = form.answers && typeof form.answers === "object" ? form.answers : {};
-    const questions = Array.isArray(settings.customQuestions) ? settings.customQuestions : [];
+    // DETAILS step — name, email, phone, notes
+    if (mode === "preview" || step === "details") {
+      const form = state.form && typeof state.form === "object" ? state.form : {};
+      const nextAction = withQuestions ? "continue-to-questions" : "submit-booking";
+      const nextLabel = withQuestions ? "Continue" : (state.submitting ? "Booking..." : "Confirm booking");
 
-    const questionFields = questions
-      .map((question) => {
-        const qId = safeText(question.id, "");
-        const qLabel = safeText(question.label, "Question");
-        const qType = safeText(question.type, "text") === "textarea" ? "textarea" : "text";
-        const answer = safeText(answers[qId], "");
+      return sectionWrap(
+        section,
+        mode,
+        selectedSectionId,
+        `<div class="pb-details-inner">
+          ${renderStepBar("details", withQuestions)}
+          <h2 class="pb-section-title">${escapeHtml(settings.title || "Enter your details")}</h2>
+          <p class="pb-section-subtitle">${escapeHtml(
+            settings.description || "We'll send your confirmation and meeting link."
+          )}</p>
+          <form class="pb-form" data-action="${withQuestions ? "" : "submit-booking"}">
+            <div class="pb-form-grid">
+              <label class="pb-field"><span>Name *</span><input type="text" required data-action="field-change" data-field="name" value="${escapeHtml(
+                form.name || ""
+              )}" ${mode === "preview" ? "disabled" : ""} /></label>
+              <label class="pb-field"><span>Email *</span><input type="email" required data-action="field-change" data-field="email" value="${escapeHtml(
+                form.email || ""
+              )}" ${mode === "preview" ? "disabled" : ""} /></label>
+              ${
+                settings.phoneEnabled
+                  ? `<label class="pb-field"><span>Phone${settings.phoneRequired ? " *" : ""}</span><input type="tel" data-action="field-change" data-field="phone" value="${escapeHtml(
+                      form.phone || ""
+                    )}" ${settings.phoneRequired ? "required" : ""} ${
+                      mode === "preview" ? "disabled" : ""
+                    } /></label>`
+                  : ""
+              }
+              <label class="pb-field pb-field-full"><span>Notes</span><textarea rows="4" data-action="field-change" data-field="notes" ${
+                mode === "preview" ? "disabled" : ""
+              }>${escapeHtml(form.notes || "")}</textarea></label>
+            </div>
+            ${state.formError && !withQuestions ? `<p class="pb-form-error">${escapeHtml(state.formError)}</p>` : ""}
+            <div class="pb-form-actions">
+              <button type="button" class="pb-secondary-btn" data-action="back-to-schedule" ${
+                mode === "preview" ? "disabled" : ""
+              }>Back</button>
+              ${withQuestions
+                ? `<button type="button" class="pb-primary-btn" data-action="continue-to-questions" ${mode === "preview" ? "disabled" : ""}>${nextLabel}</button>`
+                : `<button type="submit" class="pb-primary-btn" ${mode === "preview" || state.submitting ? "disabled" : ""}>${nextLabel}</button>`
+              }
+            </div>
+          </form>
+        </div>`
+      );
+    }
 
-        if (qType === "textarea") {
-          return `<label class="pb-field pb-field-full"><span>${escapeHtml(qLabel)}</span><textarea data-action="field-change" data-field="question:${escapeHtml(
-            qId
-          )}" rows="3" ${question.required ? "required" : ""}>${escapeHtml(answer)}</textarea></label>`;
-        }
+    // QUESTIONS step
+    if (step === "questions") {
+      const form = state.form && typeof state.form === "object" ? state.form : {};
+      const answers = form.answers && typeof form.answers === "object" ? form.answers : {};
 
-        return `<label class="pb-field"><span>${escapeHtml(qLabel)}</span><input type="text" data-action="field-change" data-field="question:${escapeHtml(
-          qId
-        )}" value="${escapeHtml(answer)}" ${question.required ? "required" : ""} /></label>`;
-      })
-      .join("");
+      return sectionWrap(
+        section,
+        mode,
+        selectedSectionId,
+        `<div class="pb-details-inner">
+          ${renderStepBar("questions", true)}
+          <h2 class="pb-section-title">${escapeHtml(settings.questionsTitle || "A few quick questions")}</h2>
+          <p class="pb-section-subtitle">${escapeHtml(
+            settings.questionsDescription || "Help us prepare for your meeting."
+          )}</p>
+          <form class="pb-form" data-action="submit-booking">
+            <div class="pb-form-grid">
+              ${buildQuestionFields(questions, answers, mode)}
+            </div>
+            ${state.formError ? `<p class="pb-form-error">${escapeHtml(state.formError)}</p>` : ""}
+            <div class="pb-form-actions">
+              <button type="button" class="pb-secondary-btn" data-action="back-to-details" ${
+                mode === "preview" ? "disabled" : ""
+              }>Back</button>
+              <button type="submit" class="pb-primary-btn" ${
+                mode === "preview" || state.submitting ? "disabled" : ""
+              }>${state.submitting ? "Booking..." : "Confirm booking"}</button>
+            </div>
+          </form>
+        </div>`
+      );
+    }
 
-    return sectionWrap(
-      section,
-      mode,
-      selectedSectionId,
-      `<div class="pb-details-inner">
-        <h2 class="pb-section-title">${escapeHtml(settings.title || "Enter your details")}</h2>
-        <p class="pb-section-subtitle">${escapeHtml(
-          settings.description || "We'll send your confirmation and meeting link."
-        )}</p>
-        <form class="pb-form" data-action="submit-booking">
-          <div class="pb-form-grid">
-            <label class="pb-field"><span>Name *</span><input type="text" required data-action="field-change" data-field="name" value="${escapeHtml(
-              form.name || ""
-            )}" ${mode === "preview" ? "disabled" : ""} /></label>
-            <label class="pb-field"><span>Email *</span><input type="email" required data-action="field-change" data-field="email" value="${escapeHtml(
-              form.email || ""
-            )}" ${mode === "preview" ? "disabled" : ""} /></label>
-            ${
-              settings.phoneEnabled
-                ? `<label class="pb-field"><span>Phone${settings.phoneRequired ? " *" : ""}</span><input type="tel" data-action="field-change" data-field="phone" value="${escapeHtml(
-                    form.phone || ""
-                  )}" ${settings.phoneRequired ? "required" : ""} ${
-                    mode === "preview" ? "disabled" : ""
-                  } /></label>`
-                : ""
-            }
-            <label class="pb-field pb-field-full"><span>Notes</span><textarea rows="4" data-action="field-change" data-field="notes" ${
-              mode === "preview" ? "disabled" : ""
-            }>${escapeHtml(form.notes || "")}</textarea></label>
-            ${questionFields}
-          </div>
-          ${state.formError ? `<p class="pb-form-error">${escapeHtml(state.formError)}</p>` : ""}
-          <div class="pb-form-actions">
-            <button type="button" class="pb-secondary-btn" data-action="back-to-schedule" ${
-              mode === "preview" ? "disabled" : ""
-            }>Back</button>
-            <button type="submit" class="pb-primary-btn" ${
-              mode === "preview" || state.submitting ? "disabled" : ""
-            }>${state.submitting ? "Booking..." : "Confirm booking"}</button>
-          </div>
-        </form>
-      </div>`
-    );
+    return "";
   }
 
   function renderConfirmation(section, mode, state, services, payload, config, selectedSectionId) {
@@ -553,6 +618,7 @@
       mode,
       selectedSectionId,
       `<div class="pb-confirmation-inner">
+        ${renderStepBar("confirmed", hasCustomQuestions(config))}
         <h2 class="pb-section-title">${escapeHtml(settings.title || "You're scheduled")}</h2>
         <p class="pb-section-subtitle">${escapeHtml(
           settings.subtitle || "A confirmation email has been sent to you."

@@ -696,7 +696,7 @@ function SidebarButton({ item, active, collapsed, onClick }) {
       onClick={onClick}
       className={cn(
         "group flex w-full items-center text-left transition-all duration-300",
-        collapsed ? "mx-auto h-[54px] w-[54px] justify-center rounded-[18px]" : "h-12 gap-3 rounded-2xl px-3",
+        collapsed ? "mx-auto h-[38px] w-[38px] justify-center rounded-[12px]" : "h-12 gap-3 rounded-2xl px-3",
         active ? "bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]" : "text-slate-300 hover:bg-white/[0.06] hover:text-white"
       )}
     >
@@ -1659,7 +1659,7 @@ function App() {
     <div className="min-h-screen bg-[#EFF3F9] p-3 text-slate-900 antialiased dark:bg-[#071122] dark:text-slate-50">
       <div className="flex h-[calc(100vh-24px)] overflow-hidden rounded-[34px] border border-[#D7E1F0] bg-white shadow-[0_40px_120px_rgba(15,31,61,0.12)] dark:border-white/10 dark:bg-[#0B1324]">
         <aside className={cn(
-          "relative h-full shrink-0 overflow-visible rounded-tr-[32px] rounded-br-[32px] bg-gradient-to-b from-[#0f1f3d] to-[#0a1530] text-white shadow-[18px_0_60px_rgba(8,21,48,0.34)] transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "relative h-full shrink-0 overflow-visible rounded-tr-[32px] rounded-br-[32px] bg-gradient-to-b from-[#0f1f3d] to-[#0a1530] text-white shadow-[18px_0_60px_rgba(8,21,48,0.34)] transition-[width] duration-[180ms] ease-out",
           collapsed ? "w-[72px]" : "w-[260px]"
         )}>
           <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-white/10" />
@@ -1668,7 +1668,7 @@ function App() {
           <div className="pointer-events-none absolute left-0 top-16 h-72 w-full bg-[radial-gradient(circle_at_0%_30%,rgba(76,124,255,0.18),transparent_48%)]" />
 
           <button type="button" onClick={() => setCollapsed((value) => !value)} className="absolute -right-[13px] top-[60px] z-30 flex h-[30px] w-[30px] items-center justify-center rounded-full border border-slate-200/85 bg-white text-[#0f1f3d] shadow-[0_8px_20px_rgba(15,31,61,0.15)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#9DB8FF] hover:bg-[#F7FAFF] hover:text-[#2563EB] hover:shadow-[0_12px_24px_rgba(37,99,235,0.16)]" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
-            <ChevronLeft className={cn("h-[10px] w-[10px] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]", collapsed && "rotate-180")} />
+            <ChevronLeft className={cn("h-[10px] w-[10px] transition-transform duration-150 ease-out", collapsed && "rotate-180")} />
           </button>
 
           <div className={collapsed ? "flex h-full flex-col px-0 py-5" : "flex h-full flex-col px-4 py-5"}>
@@ -1677,19 +1677,19 @@ function App() {
                 <div className="absolute left-0 h-8 w-8 rounded-full border-[5px] border-[#2563EB]" />
                 <div className="absolute right-0 h-8 w-8 rounded-full border-[5px] border-white/95" />
               </div>
-              <div className={cn("overflow-hidden whitespace-nowrap transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]", collapsed ? "max-w-0 opacity-0" : "max-w-[180px] opacity-100")}>
+              <div className={cn("overflow-hidden whitespace-nowrap transition-all duration-[180ms] ease-out", collapsed ? "max-w-0 opacity-0" : "max-w-[180px] opacity-100")}>
                 <span className="font-['Sora'] text-[15px] font-semibold tracking-[-0.03em] text-white">Meet</span>
                 <span className="font-['Sora'] text-[15px] font-semibold tracking-[-0.03em] text-[#76A2FF]">Scheduling</span>
               </div>
             </div>
 
             <div className="mt-9 space-y-3">
-              <button type="button" className={cn("flex items-center justify-center overflow-hidden rounded-[22px] border border-[#4C7CFF]/40 bg-gradient-to-r from-[#2563EB] to-[#4F8BFF] text-white shadow-[0_20px_40px_rgba(37,99,235,0.32)] transition-all duration-300 hover:brightness-105", collapsed ? "mx-auto h-[58px] w-[58px] rounded-full" : "h-14 w-full gap-2 px-4")}>
+              <button type="button" className={cn("flex items-center justify-center overflow-hidden rounded-[22px] border border-[#4C7CFF]/40 bg-gradient-to-r from-[#2563EB] to-[#4F8BFF] text-white shadow-[0_20px_40px_rgba(37,99,235,0.32)] transition-all duration-300 hover:brightness-105", collapsed ? "mx-auto h-[38px] w-[38px] rounded-full" : "h-14 w-full gap-2 px-4")}>
                 <Plus className="h-5 w-5 shrink-0" />
                 {!collapsed && <span className="text-[15px] font-semibold tracking-[-0.02em]">Create</span>}
               </button>
 
-              <button type="button" onClick={() => navigateBuilder("home")} className={cn("flex items-center justify-center rounded-[20px] border border-[#79A6FF]/40 bg-white/[0.03] text-[#E6EEFF] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all duration-300 hover:bg-white/[0.06]", collapsed ? "mx-auto h-[58px] w-[58px]" : "h-14 w-full gap-2 px-4")}>
+              <button type="button" onClick={() => navigateBuilder("home")} className={cn("flex items-center justify-center rounded-[20px] border border-[#79A6FF]/40 bg-white/[0.03] text-[#E6EEFF] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all duration-300 hover:bg-white/[0.06]", collapsed ? "mx-auto h-[38px] w-[38px]" : "h-14 w-full gap-2 px-4")}>
                 <LayoutTemplate className="h-5 w-5 shrink-0" />
                 {!collapsed && <span className="text-[15px] font-semibold tracking-[-0.02em]">Landing Page</span>}
               </button>
@@ -1713,8 +1713,8 @@ function App() {
                         "group flex w-full items-center text-left transition-all duration-300",
                         collapsed
                           ? item.accent
-                            ? "mx-auto h-[58px] w-[58px] justify-center rounded-[18px] border border-[#7FA8FF]/30 bg-white/[0.06] text-white"
-                            : "mx-auto h-[54px] w-[54px] justify-center rounded-[18px] text-slate-300 hover:bg-white/[0.06] hover:text-white"
+                            ? "mx-auto h-[38px] w-[38px] justify-center rounded-[12px] border border-[#7FA8FF]/30 bg-white/[0.06] text-white"
+                            : "mx-auto h-[38px] w-[38px] justify-center rounded-[12px] text-slate-300 hover:bg-white/[0.06] hover:text-white"
                           : item.accent
                             ? "h-12 gap-3 rounded-2xl border border-[#7FA8FF]/30 bg-white/[0.06] px-3 text-white"
                             : active
@@ -1732,7 +1732,7 @@ function App() {
           </div>
         </aside>
 
-        <div className="min-w-0 flex flex-1 flex-col overflow-hidden bg-[#F5F7FB] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-[#08101d]">
+        <div className="min-w-0 flex flex-1 flex-col overflow-hidden bg-[#F5F7FB] transition-all duration-[180ms] ease-out dark:bg-[#08101d]">
           {route.type === "builder" ? (
             <main className="flex-1 overflow-y-auto px-5 py-5 sm:px-6 lg:px-8">
               <div className="mx-auto max-w-[1680px]">

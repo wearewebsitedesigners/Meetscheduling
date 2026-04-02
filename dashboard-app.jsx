@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   AtSign,
   BarChart3,
+  Bell,
   BellRing,
   Camera,
   ChevronDown,
@@ -14,17 +15,25 @@ import {
   CircleHelp,
   CreditCard,
   ExternalLink,
+  Globe,
+  ImageIcon,
+  KeyRound,
   LayoutTemplate,
   Link2,
   Lock,
   LogOut,
   Mail,
   MoonStar,
+  Palette,
   Plus,
   Search,
   Shield,
   Sparkles,
   LoaderCircle,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+  Upload,
   User,
   UserPlus,
   Users,
@@ -701,8 +710,12 @@ function SidebarButton({ item, active, collapsed, onClick }) {
 
 const SETTINGS_TABS = [
   { key: "profile", label: "Profile", icon: User },
+  { key: "branding", label: "Branding", icon: Palette },
   { key: "my-link", label: "My Link", icon: Link2 },
+  { key: "communication", label: "Communication", icon: Bell },
+  { key: "login", label: "Login preferences", icon: KeyRound },
   { key: "security", label: "Security", icon: Lock },
+  { key: "cookie", label: "Cookie settings", icon: Globe },
   { key: "billing", label: "Billing", icon: CreditCard },
 ];
 
@@ -712,6 +725,15 @@ function SettingsOverlay({ open, tab, user, avatarUrl, dark, initials, onClose, 
   const [saving, setSaving] = React.useState(false);
   const [successMsg, setSuccessMsg] = React.useState("");
   const [errorMsg, setErrorMsg] = React.useState("");
+  // Branding
+  const [brandingEnabled, setBrandingEnabled] = React.useState(true);
+  const [brandingSaved, setBrandingSaved] = React.useState(false);
+  // Communication
+  const [emailNotifications, setEmailNotifications] = React.useState(true);
+  const [commSaved, setCommSaved] = React.useState(false);
+  // Cookies
+  const [cookiePrefs, setCookiePrefs] = React.useState({ functional: true, performance: true, targeting: true });
+  const [cookieSaved, setCookieSaved] = React.useState(false);
 
   React.useEffect(() => {
     if (open) {
@@ -945,6 +967,247 @@ function SettingsOverlay({ open, tab, user, avatarUrl, dark, initials, onClose, 
               Upgrade plan
             </button>
           </div>
+        </div>
+      );
+    }
+
+    if (tab === "branding") {
+      return (
+        <div className="max-w-xl">
+          <div className="mb-8">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Account details</p>
+            <h2 className="mt-1 font-['Sora'] text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Branding</h2>
+          </div>
+
+          {/* Logo section */}
+          <div className="rounded-[20px] border border-[#D7E1F0] bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
+            <div className="flex items-start gap-2">
+              <p className="text-[15px] font-semibold text-slate-800 dark:text-slate-200">Logo</p>
+            </div>
+            <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Your company branding will appear at the top-left corner of the scheduling page.</p>
+
+            {/* Logo preview */}
+            <div className="mt-4 flex h-44 w-full items-center justify-center overflow-hidden rounded-[14px] border-2 border-dashed border-[#D7E1F0] bg-[#F8FAFE] dark:border-white/10 dark:bg-white/[0.03]">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Brand logo" className="max-h-32 max-w-[200px] object-contain" />
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-slate-400">
+                  <ImageIcon className="h-10 w-10" />
+                  <span className="text-[13px]">No logo uploaded</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onChangePhoto}
+                disabled={avatarUploading}
+                className="inline-flex items-center gap-2 rounded-full border border-[#D7E1F0] bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                {avatarUploading ? "Uploading..." : "Update"}
+              </button>
+              <button type="button" className="inline-flex items-center gap-2 rounded-full border border-[#D7E1F0] bg-white px-4 py-2 text-[13px] font-semibold text-slate-500 shadow-sm transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+                <Trash2 className="h-3.5 w-3.5" />
+                Remove
+              </button>
+              <span className="text-[12px] text-slate-400">JPG, GIF or PNG. Max 5MB.</span>
+            </div>
+
+            {(avatarMessage || avatarError) ? (
+              <p className={cn("mt-2 text-[12px]", avatarError ? "text-rose-500" : "text-emerald-600")}>{avatarError || avatarMessage}</p>
+            ) : null}
+          </div>
+
+          {/* Branding toggle */}
+          <div className="mt-4 rounded-[20px] border border-[#D7E1F0] bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[14px] font-semibold text-slate-800 dark:text-slate-200">Use MeetScheduling branding</p>
+                <p className="mt-0.5 text-[13px] text-slate-400 dark:text-slate-500">
+                  {brandingEnabled
+                    ? "MeetScheduling branding will be displayed on your scheduling page, notifications, and confirmations."
+                    : "Your own branding will be used on scheduling pages."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setBrandingEnabled((v) => !v); setBrandingSaved(false); }}
+                className={cn("relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200", brandingEnabled ? "bg-[#2563EB]" : "bg-slate-200 dark:bg-white/20")}
+              >
+                <span className={cn("pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200", brandingEnabled ? "translate-x-5" : "translate-x-0.5")} />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setBrandingSaved(true)}
+              className="rounded-full bg-[#2563EB] px-6 py-2.5 text-[14px] font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.35)] transition hover:bg-[#1d4ed8]"
+            >
+              Save Changes
+            </button>
+            {brandingSaved ? <span className="text-[13px] font-medium text-emerald-600 dark:text-emerald-400">Saved!</span> : null}
+          </div>
+        </div>
+      );
+    }
+
+    if (tab === "communication") {
+      return (
+        <div className="max-w-xl">
+          <div className="mb-8">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Account details</p>
+            <h2 className="mt-1 font-['Sora'] text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Communication settings</h2>
+          </div>
+
+          <div className="rounded-[20px] border border-[#D7E1F0] bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[14px] font-semibold text-slate-800 dark:text-slate-200">Email notifications when added to event types</p>
+                <p className="mt-1 text-[13px] leading-5 text-slate-500 dark:text-slate-400">Receive an email when someone adds you as a host to an event type.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setEmailNotifications((v) => !v); setCommSaved(true); setTimeout(() => setCommSaved(false), 2000); }}
+                className={cn("relative mt-0.5 inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200", emailNotifications ? "bg-[#2563EB]" : "bg-slate-200 dark:bg-white/20")}
+              >
+                <span className={cn("pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200", emailNotifications ? "translate-x-5" : "translate-x-0.5")} />
+              </button>
+            </div>
+          </div>
+
+          {commSaved ? (
+            <p className="mt-3 text-[13px] font-medium text-emerald-600 dark:text-emerald-400">Your changes are saved automatically.</p>
+          ) : (
+            <p className="mt-3 text-[13px] text-slate-400 dark:text-slate-500">Your changes to this page are saved automatically.</p>
+          )}
+        </div>
+      );
+    }
+
+    if (tab === "login") {
+      return (
+        <div className="max-w-xl">
+          <div className="mb-8">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Account details</p>
+            <h2 className="mt-1 font-['Sora'] text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Login preferences</h2>
+          </div>
+
+          <div className="space-y-4">
+            {/* Current auth method */}
+            <div className="rounded-[20px] border border-[#D7E1F0] bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E2EAF4] bg-white shadow-sm dark:border-white/10 dark:bg-white/5">
+                    <span className="text-lg font-bold text-[#4285F4]">G</span>
+                  </div>
+                  <p className="text-[14px] font-medium text-slate-700 dark:text-slate-200">You log in with a Google account.</p>
+                </div>
+                <button type="button" className="rounded-full border border-[#D7E1F0] bg-white px-4 py-1.5 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                  Unlink
+                </button>
+              </div>
+            </div>
+
+            {/* Google account */}
+            <div className="rounded-[20px] border border-[#D7E1F0] bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[14px] font-semibold text-slate-800 dark:text-slate-200">Google account</p>
+                  <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{user?.email || "No email on file"}</p>
+                </div>
+                <button type="button" className="rounded-full border border-[#D7E1F0] bg-white px-4 py-1.5 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                  Change email
+                </button>
+              </div>
+            </div>
+
+            <hr className="border-[#E2EAF4] dark:border-white/10" />
+
+            {/* Alternative login */}
+            <button type="button" className="inline-flex items-center gap-3 rounded-full border-2 border-[#D7E1F0] bg-white px-5 py-2.5 text-[14px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+              <svg viewBox="0 0 21 21" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+                <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+                <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+                <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+              </svg>
+              Switch to Microsoft login
+            </button>
+
+            <p className="text-[13px] text-slate-500 dark:text-slate-400">
+              Please <button type="button" className="font-semibold text-blue-600 underline underline-offset-2 dark:text-blue-400">contact support</button> if you need assistance.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (tab === "cookie") {
+      return (
+        <div className="max-w-xl">
+          <div className="mb-8">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Privacy</p>
+            <h2 className="mt-1 font-['Sora'] text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Cookie settings</h2>
+            <p className="mt-2 text-[14px] leading-6 text-slate-500 dark:text-slate-400">
+              When you visit any website, it may store or retrieve information on your browser, mostly in the form of cookies. This information might be about you, your preferences or your device and is mostly used to make the site work as you expect it to.
+            </p>
+          </div>
+
+          <div className="mb-6">
+            <p className="mb-4 text-[15px] font-semibold text-slate-800 dark:text-slate-200">Manage Consent Preferences</p>
+            <div className="divide-y divide-[#E2EAF4] overflow-hidden rounded-[20px] border border-[#D7E1F0] bg-white dark:divide-white/10 dark:border-white/10 dark:bg-white/5">
+              {/* Strictly Necessary */}
+              <div className="flex items-center justify-between px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 dark:text-slate-500">+</span>
+                  <p className="text-[14px] font-medium text-slate-800 dark:text-slate-200">Strictly Necessary Cookies</p>
+                </div>
+                <span className="text-[13px] font-semibold text-[#2563EB] dark:text-[#8DB2FF]">Always Active</span>
+              </div>
+
+              {[
+                { key: "functional", label: "Functional Cookies" },
+                { key: "performance", label: "Performance Cookies" },
+                { key: "targeting", label: "Targeting Cookies" },
+              ].map(({ key, label }) => (
+                <div key={key} className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 dark:text-slate-500">+</span>
+                    <p className="text-[14px] font-medium text-slate-800 dark:text-slate-200">{label}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCookiePrefs((prev) => ({ ...prev, [key]: !prev[key] }))}
+                    className={cn("relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200", cookiePrefs[key] ? "bg-[#2563EB]" : "bg-slate-200 dark:bg-white/20")}
+                  >
+                    <span className={cn("pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200", cookiePrefs[key] ? "translate-x-5" : "translate-x-0.5")} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => { setCookiePrefs({ functional: false, performance: false, targeting: false }); setCookieSaved(true); setTimeout(() => setCookieSaved(false), 2000); }}
+              className="rounded-full bg-[#2563EB] px-6 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#1d4ed8]"
+            >
+              Reject All
+            </button>
+            <button
+              type="button"
+              onClick={() => { setCookieSaved(true); setTimeout(() => setCookieSaved(false), 2000); }}
+              className="rounded-full bg-[#2563EB] px-6 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#1d4ed8]"
+            >
+              Confirm My Choices
+            </button>
+          </div>
+          {cookieSaved ? <p className="mt-3 text-[13px] font-medium text-emerald-600 dark:text-emerald-400">Preferences saved.</p> : null}
         </div>
       );
     }

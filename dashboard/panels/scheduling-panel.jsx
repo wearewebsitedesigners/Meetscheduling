@@ -1147,7 +1147,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
               </button>
             </div>
           </div>
-        ) : (
+        ) : !googleConnected ? (
           <div className="mt-6 flex flex-col gap-4 rounded-[28px] border border-amber-200 bg-amber-50/85 px-5 py-5 shadow-[0_18px_42px_rgba(15,23,42,0.05)] backdrop-blur-2xl md:flex-row md:items-center md:justify-between dark:border-amber-400/20 dark:bg-amber-500/10">
             <div>
               <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Google Calendar is not connected.</p>
@@ -1178,7 +1178,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
               Connect Google Calendar
             </button>
           </div>
-        )}
+        ) : null}
 
         <div className="mt-8 flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap gap-2 rounded-2xl border border-white/40 bg-white/40 p-1.5 backdrop-blur-xl dark:border-white/10 dark:bg-white/5">

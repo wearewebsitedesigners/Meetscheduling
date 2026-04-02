@@ -1086,7 +1086,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[34px] border border-[#DFE7F3] bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(168,85,247,0.13),_transparent_24%),linear-gradient(180deg,#eef4ff_0%,#edf2f7_35%,#f7fbff_100%)] p-4 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:p-6 xl:p-8 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.12),_transparent_24%),linear-gradient(180deg,#081120_0%,#0b1424_35%,#0d182b_100%)]">
+    <div className="relative overflow-hidden rounded-[34px] border border-[#DFE7F3] bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(168,85,247,0.13),_transparent_24%),linear-gradient(180deg,#eef4ff_0%,#edf2f7_35%,#f7fbff_100%)] p-3 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:p-4 xl:p-5 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.12),_transparent_24%),linear-gradient(180deg,#081120_0%,#0b1424_35%,#0d182b_100%)]">
       <GlassOrb className="left-[-80px] top-[120px] h-72 w-72" />
       <GlassOrb className="right-[8%] top-[10%] h-80 w-80 bg-blue-400/10" />
       <GlassOrb className="bottom-[-40px] left-[20%] h-64 w-64 bg-cyan-300/10" />
@@ -1401,7 +1401,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                         style={{ background: `radial-gradient(ellipse at left center, ${neonColor} 0%, transparent 60%)` }}
                       />
 
-                      <div className="relative pl-6 pr-5 py-5 md:pl-7 md:pr-6">
+                      <div className="relative pl-7 pr-6 py-6 md:pl-8 md:pr-7">
                         {/* Top row: title + status + actions */}
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">

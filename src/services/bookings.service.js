@@ -43,6 +43,7 @@ function mapBookingRow(row, timezone = "UTC") {
     inviteeEmail: row.invitee_email,
     contactId: row.contact_id || null,
     notes: row.notes,
+    inviteeAnswers: Array.isArray(row.invitee_answers) ? row.invitee_answers : (row.invitee_answers ? JSON.parse(row.invitee_answers) : []),
     visitorTimezone: row.visitor_timezone,
     startAtUtc: row.start_at_utc,
     endAtUtc: row.end_at_utc,
@@ -464,6 +465,7 @@ async function createPublicBooking({
   inviteeCompany,
   source = "booking_link",
   notes = "",
+  answers = [],
 }) {
   const hasStartAtUtc = typeof startAtUtc === "string" && String(startAtUtc).trim().length > 0;
   const safeStartAtUtc = hasStartAtUtc
@@ -476,6 +478,13 @@ async function createPublicBooking({
   const cleanCompany = assertOptionalString(inviteeCompany, "company", { max: 160 });
   const cleanNotes = assertOptionalString(notes, "notes", { max: 5000 });
   const cleanSource = assertOptionalString(source, "source", { max: 40 }) || "booking_link";
+  const cleanAnswers = Array.isArray(answers)
+    ? answers.slice(0, 5).map((a) => ({
+        id: String(a.id || "").slice(0, 80),
+        label: String(a.label || "").slice(0, 200),
+        answer: String(a.answer || "").slice(0, 2000),
+      }))
+    : [];
 
   const slotPayload = await generatePublicSlots({
     username,
@@ -598,10 +607,11 @@ async function createPublicBooking({
                 email_sent_host,
                 email_sent_invitee,
                 status,
-                invitee_phone
+                invitee_phone,
+                invitee_answers
               )
               VALUES (
-                $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13,$14,$15,$16,$17,FALSE,FALSE,'confirmed',$18
+                $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13,$14,$15,$16,$17,FALSE,FALSE,'confirmed',$18,$19
               )
               RETURNING *
             `,
@@ -611,6 +621,7 @@ async function createPublicBooking({
               baseMeetingState.calendarProvider,
               baseMeetingState.calendarEventId,
               cleanPhone || null,
+              JSON.stringify(cleanAnswers),
             ],
             client
           )
@@ -632,14 +643,15 @@ async function createPublicBooking({
                 location_type,
                 meeting_link,
                 status,
-                invitee_phone
+                invitee_phone,
+                invitee_answers
               )
               VALUES (
-                $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13,$14,'confirmed',$15
+                $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13,$14,'confirmed',$15,$16
               )
               RETURNING *
             `,
-            [...baseValues, cleanPhone || null],
+            [...baseValues, cleanPhone || null, JSON.stringify(cleanAnswers)],
             client
           );
 
@@ -666,10 +678,11 @@ async function createPublicBooking({
               location_type,
               meeting_link,
               status,
-              invitee_phone
+              invitee_phone,
+              invitee_answers
             )
             VALUES (
-              $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13,$14,'confirmed',$15
+              $1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13,$14,'confirmed',$15,$16
             )
             RETURNING *
           `,
@@ -689,6 +702,7 @@ async function createPublicBooking({
             event.locationType,
             baseMeetingState.meetingLink,
             cleanPhone || null,
+            JSON.stringify(cleanAnswers),
           ],
           client
         );

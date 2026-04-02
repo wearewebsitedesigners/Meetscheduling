@@ -366,7 +366,13 @@
     >${escapeHtml(String(cell.day))}</button>`;
   }
 
-  function hasCustomQuestions(config) {
+  function hasCustomQuestions(config, payload) {
+    // Check event-type DB questions first
+    const eventQuestions = payload && payload.event && Array.isArray(payload.event.customQuestions)
+      ? payload.event.customQuestions
+      : [];
+    if (eventQuestions.length > 0) return true;
+    // Fall back to page-builder section config
     const section = resolveSection(config, "detailsForm");
     const questions = section?.settings?.customQuestions;
     return Array.isArray(questions) && questions.length > 0;
@@ -430,7 +436,7 @@
       )
       .join("");
 
-    const withQuestions = hasCustomQuestions(config);
+    const withQuestions = hasCustomQuestions(config, payload);
 
     return sectionWrap(
       section,
@@ -512,7 +518,13 @@
   function renderDetailsForm(section, mode, state, services, payload, config, selectedSectionId) {
     const settings = section.settings || {};
     const step = safeText(state.step, "schedule");
-    const questions = Array.isArray(settings.customQuestions) ? settings.customQuestions.slice(0, 5) : [];
+    // Prefer questions defined on the event type (DB), fall back to page-builder config
+    const eventQuestions = Array.isArray(payload && payload.event && payload.event.customQuestions)
+      ? payload.event.customQuestions
+      : [];
+    const questions = eventQuestions.length > 0
+      ? eventQuestions.slice(0, 5)
+      : (Array.isArray(settings.customQuestions) ? settings.customQuestions.slice(0, 5) : []);
     const withQuestions = questions.length > 0;
 
     // DETAILS step — name, email, phone, notes

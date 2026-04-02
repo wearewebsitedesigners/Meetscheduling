@@ -182,6 +182,20 @@ function MeetingDetails({ booking, timezone, canceling, onCancel }) {
           </div>
         ) : null}
 
+        {Array.isArray(booking.inviteeAnswers) && booking.inviteeAnswers.length > 0 ? (
+          <div className="rounded-[24px] border border-violet-200/60 bg-violet-50/60 p-5 shadow-[0_8px_24px_rgba(109,40,217,0.06)] backdrop-blur-xl dark:border-violet-500/20 dark:bg-violet-500/[0.06]">
+            <div className="mb-3 text-[12px] font-bold uppercase tracking-[0.14em] text-violet-600 dark:text-violet-400">Questionnaire Answers</div>
+            <div className="space-y-3">
+              {booking.inviteeAnswers.map((a, i) => (
+                <div key={a.id || i}>
+                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">{a.label || `Question ${i + 1}`}</div>
+                  <div className="mt-0.5 text-sm text-slate-800 dark:text-slate-200">{a.answer || <span className="italic text-slate-400">No answer</span>}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex flex-col gap-4 rounded-[24px] border border-white/30 bg-white/65 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl md:flex-row md:items-center md:justify-between dark:border-white/10 dark:bg-white/[0.05]">
           <div>
             <div className="inline-flex items-center gap-2 font-semibold text-blue-700 dark:text-[#8DB2FF]">

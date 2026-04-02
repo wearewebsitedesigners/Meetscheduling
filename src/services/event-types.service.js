@@ -32,6 +32,7 @@ function buildEventTypeSelect(prefix = "") {
     ${table}brand_logo_url,
     ${table}brand_tagline,
     ${table}sidebar_message,
+    COALESCE(${table}custom_questions, '[]'::jsonb) AS custom_questions,
     ${table}created_at,
     ${table}updated_at
   `;
@@ -73,6 +74,16 @@ function normalizeEventTypeInput(input, { partial = false } = {}) {
   maybe("brandLogoUrl", (value) => assertOptionalString(value, "brandLogoUrl", { max: 1000 }));
   maybe("brandTagline", (value) => assertOptionalString(value, "brandTagline", { max: 200 }));
   maybe("sidebarMessage", (value) => assertOptionalString(value, "sidebarMessage", { max: 1000 }));
+  maybe("customQuestions", (value) => {
+    if (!value) return [];
+    if (!Array.isArray(value)) throw new Error("customQuestions must be an array");
+    if (value.length > 5) throw new Error("customQuestions may not exceed 5 items");
+    return value.slice(0, 5).map((q, i) => ({
+      id: String(q.id || `q${i}`),
+      label: String(q.label || "").slice(0, 200),
+      required: Boolean(q.required),
+    }));
+  });
 
   if (!partial) {
     const customLocationRequired =
@@ -244,6 +255,7 @@ async function updateEventType(workspaceId, eventTypeId, payload, client = null)
     brandLogoUrl: input.brandLogoUrl !== undefined ? input.brandLogoUrl : (existing.brand_logo_url || null),
     brandTagline: input.brandTagline !== undefined ? input.brandTagline : (existing.brand_tagline || null),
     sidebarMessage: input.sidebarMessage !== undefined ? input.sidebarMessage : (existing.sidebar_message || null),
+    customQuestions: input.customQuestions !== undefined ? input.customQuestions : (existing.custom_questions || []),
   };
 
   if (next.locationType === "custom" && !String(next.customLocation || "").trim()) {
@@ -269,8 +281,9 @@ async function updateEventType(workspaceId, eventTypeId, payload, client = null)
           brand_logo_url = $12,
           brand_tagline = $13,
           sidebar_message = $14,
+          custom_questions = $15,
           updated_at = NOW()
-        WHERE id = $15 AND workspace_id = $16
+        WHERE id = $16 AND workspace_id = $17
         RETURNING
 ${buildEventTypeSelect()}
       `,
@@ -289,6 +302,7 @@ ${buildEventTypeSelect()}
         next.brandLogoUrl || null,
         next.brandTagline || null,
         next.sidebarMessage || null,
+        JSON.stringify(next.customQuestions || []),
         eventTypeId,
         workspaceId,
       ],

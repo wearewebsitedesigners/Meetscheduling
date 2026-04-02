@@ -154,6 +154,7 @@ router.get(
         durationMinutes: event.duration_minutes,
         bufferBeforeMin: event.buffer_before_min,
         bufferAfterMin: event.buffer_after_min,
+        customQuestions: Array.isArray(event.custom_questions) ? event.custom_questions : [],
       },
       visitorTimezone,
       dates,
@@ -246,6 +247,7 @@ router.post(
       inviteeCompany: body.company || "",
       source: body.source || "booking_link",
       notes: body.notes || "",
+      answers: Array.isArray(body.answers) ? body.answers : [],
     });
     // Bust the event page + slot caches so the next visitor sees fresh availability.
     if (result?.booking?.event_type_id) bustEventCache(result.booking.event_type_id);

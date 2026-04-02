@@ -5,14 +5,17 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  ChevronUp,
   Copy,
   ExternalLink,
+  HelpCircle,
   Link2,
   LoaderCircle,
   MoreHorizontal,
   Plus,
   Search,
   Sparkles,
+  Trash2,
   Users,
   Vote,
   Wand2,
@@ -336,6 +339,9 @@ function normalizeEventType(row) {
     brandLogoUrl: row.brand_logo_url || row.brandLogoUrl || "",
     brandTagline: row.brand_tagline || row.brandTagline || "",
     sidebarMessage: row.sidebar_message || row.sidebarMessage || "",
+    customQuestions: Array.isArray(row.custom_questions ?? row.customQuestions)
+      ? (row.custom_questions ?? row.customQuestions)
+      : [],
     createdAt: row.created_at || row.createdAt || "",
   };
 }
@@ -691,6 +697,9 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
   const [editingSlugId, setEditingSlugId] = useState("");
   const [slugDraft, setSlugDraft] = useState("");
   const [savingSlugId, setSavingSlugId] = useState("");
+  const [questionsOpenId, setQuestionsOpenId] = useState("");
+  const [questionsDraft, setQuestionsDraft] = useState([]);
+  const [savingQuestionsId, setSavingQuestionsId] = useState("");
   const createMenuRef = useRef(null);
 
   const loadPanel = async ({ preserveMessages = false } = {}) => {
@@ -1004,6 +1013,25 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
     }
   };
 
+  const handleSaveQuestions = async (eventType) => {
+    setSavingQuestionsId(eventType.id);
+    setError("");
+    try {
+      const payload = await apiFetch(`/api/event-types/${eventType.id}`, {
+        method: "PATCH",
+        body: { customQuestions: questionsDraft },
+      });
+      const updated = normalizeEventType(payload?.eventType || {});
+      setEventTypes((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      setNotice("Questions saved.");
+      setQuestionsOpenId("");
+    } catch (qErr) {
+      setError(qErr.message || "Could not save questions.");
+    } finally {
+      setSavingQuestionsId("");
+    }
+  };
+
   const handleCopyLink = async (eventType) => {
     const copied = await copyToClipboard(buildBookingLink(username, eventType.slug));
     setNotice(copied ? `Copied booking link for ${eventType.title}.` : "Unable to copy the booking link.");
@@ -1102,7 +1130,14 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
         {notice ? (
           <div className="mt-6 flex items-start gap-3 rounded-[24px] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{notice}</span>
+            <span className="flex-1">{notice}</span>
+            <button
+              onClick={() => setNotice("")}
+              className="ml-1 rounded-full p-0.5 hover:bg-emerald-100 dark:hover:bg-emerald-400/20"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         ) : null}
 
@@ -1335,15 +1370,31 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                   const isSavingSlug = savingSlugId === eventType.id;
                   const baseUrl = bookingLink ? bookingLink.replace(`/${eventType.slug}`, "") : `https://www.meetscheduling.com/${username || "username"}`;
 
+                  const isQuestionsOpen = questionsOpenId === eventType.id;
+                  const isSavingQuestions = savingQuestionsId === eventType.id;
+                  const neonColor = eventType.color || "#2563eb";
+
                   return (
                     <div
                       key={eventType.id}
-                      className="group relative overflow-hidden rounded-[24px] border border-slate-200/70 bg-white shadow-[0_4px_24px_rgba(15,23,42,0.06)] transition duration-200 hover:shadow-[0_8px_32px_rgba(15,23,42,0.10)] dark:border-white/10 dark:bg-[#0d1729]"
+                      className="group relative overflow-hidden rounded-[28px] border border-white/60 bg-white/80 shadow-[0_8px_40px_rgba(15,23,42,0.10)] backdrop-blur-2xl transition duration-300 hover:shadow-[0_16px_56px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[#0c1628]/90"
+                      style={{ boxShadow: `0 8px 40px rgba(15,23,42,0.10), inset 0 0 0 1px rgba(255,255,255,0.4)` }}
                     >
-                      {/* Color accent bar */}
-                      <div className="absolute inset-y-0 left-0 w-1 rounded-l-[24px]" style={{ backgroundColor: eventType.color }} />
+                      {/* Neon glow left bar */}
+                      <div
+                        className="absolute inset-y-0 left-0 w-1.5 rounded-l-[28px]"
+                        style={{
+                          background: `linear-gradient(180deg, ${neonColor}ff 0%, ${neonColor}aa 50%, ${neonColor}33 100%)`,
+                          boxShadow: `4px 0 20px ${neonColor}66, 2px 0 8px ${neonColor}44`,
+                        }}
+                      />
+                      {/* Subtle color tint overlay */}
+                      <div
+                        className="pointer-events-none absolute inset-0 rounded-[28px] opacity-[0.03]"
+                        style={{ background: `radial-gradient(ellipse at left center, ${neonColor} 0%, transparent 60%)` }}
+                      />
 
-                      <div className="pl-5 pr-5 py-5 md:pl-6 md:pr-6">
+                      <div className="relative pl-6 pr-5 py-5 md:pl-7 md:pr-6">
                         {/* Top row: title + status + actions */}
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
@@ -1359,6 +1410,11 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                               )}>
                                 {eventType.isActive ? "Active" : "Paused"}
                               </span>
+                              {eventType.customQuestions?.length > 0 ? (
+                                <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+                                  {eventType.customQuestions.length} Q{eventType.customQuestions.length > 1 ? "s" : ""}
+                                </span>
+                              ) : null}
                               {eventType.locationType === "google_meet" && !googleConnected ? (
                                 <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                                   Needs Google
@@ -1379,7 +1435,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                             <button
                               type="button"
                               onClick={() => openEditModal(eventType)}
-                              className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                              className="rounded-xl border border-slate-200 bg-white/80 px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                             >
                               Edit
                             </button>
@@ -1395,7 +1451,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                               type="button"
                               onClick={() => bookingLink && window.open(bookingLink, "_blank", "noopener,noreferrer")}
                               disabled={!bookingLink}
-                              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/80 px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                             >
                               <ExternalLink className="h-3.5 w-3.5" />
                               Open
@@ -1418,7 +1474,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                         </div>
 
                         {/* Editable booking link row */}
-                        <div className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.04]">
+                        <div className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.04]">
                           <Link2 className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
                           <span className="shrink-0 text-sm text-slate-400 dark:text-slate-500">{baseUrl}/</span>
                           {isEditingSlug ? (
@@ -1464,6 +1520,120 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                               </button>
                             </>
                           )}
+                        </div>
+
+                        {/* Questions toggle button */}
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isQuestionsOpen) {
+                                setQuestionsOpenId("");
+                              } else {
+                                setQuestionsOpenId(eventType.id);
+                                setQuestionsDraft(
+                                  (eventType.customQuestions || []).map((q) => ({ ...q }))
+                                );
+                              }
+                            }}
+                            className="flex w-full items-center justify-between gap-2 rounded-xl border border-violet-200/70 bg-violet-50/70 px-3 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100/80 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300 dark:hover:bg-violet-500/15"
+                          >
+                            <span className="flex items-center gap-2">
+                              <HelpCircle className="h-3.5 w-3.5" />
+                              Questionnaire
+                              {eventType.customQuestions?.length > 0 ? (
+                                <span className="rounded-full bg-violet-200 px-1.5 py-0.5 text-xs font-bold text-violet-800 dark:bg-violet-500/30 dark:text-violet-200">
+                                  {eventType.customQuestions.length}/5
+                                </span>
+                              ) : (
+                                <span className="text-xs font-normal text-violet-500 dark:text-violet-400">Add up to 5 questions</span>
+                              )}
+                            </span>
+                            {isQuestionsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </button>
+
+                          {/* Questions panel */}
+                          {isQuestionsOpen ? (
+                            <div className="mt-2 rounded-xl border border-violet-200/60 bg-violet-50/50 p-4 dark:border-violet-500/20 dark:bg-violet-500/[0.06]">
+                              <div className="space-y-2">
+                                {questionsDraft.map((q, idx) => (
+                                  <div key={q.id || idx} className="flex items-center gap-2">
+                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-200 text-xs font-bold text-violet-700 dark:bg-violet-500/30 dark:text-violet-200">
+                                      {idx + 1}
+                                    </span>
+                                    <input
+                                      type="text"
+                                      value={q.label}
+                                      placeholder={`Question ${idx + 1}`}
+                                      maxLength={200}
+                                      onChange={(e) => {
+                                        const next = questionsDraft.map((item, i) =>
+                                          i === idx ? { ...item, label: e.target.value } : item
+                                        );
+                                        setQuestionsDraft(next);
+                                      }}
+                                      className="min-w-0 flex-1 rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-violet-400"
+                                    />
+                                    <label className="flex shrink-0 items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                                      <input
+                                        type="checkbox"
+                                        checked={q.required}
+                                        onChange={(e) => {
+                                          const next = questionsDraft.map((item, i) =>
+                                            i === idx ? { ...item, required: e.target.checked } : item
+                                          );
+                                          setQuestionsDraft(next);
+                                        }}
+                                        className="accent-violet-600"
+                                      />
+                                      Required
+                                    </label>
+                                    <button
+                                      type="button"
+                                      onClick={() => setQuestionsDraft(questionsDraft.filter((_, i) => i !== idx))}
+                                      className="shrink-0 rounded-lg p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {questionsDraft.length < 5 ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setQuestionsDraft([
+                                      ...questionsDraft,
+                                      { id: `q${Date.now()}`, label: "", required: false },
+                                    ])
+                                  }
+                                  className="mt-2 flex items-center gap-1.5 text-xs font-medium text-violet-600 transition hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-200"
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                  Add question ({5 - questionsDraft.length} left)
+                                </button>
+                              ) : null}
+
+                              <div className="mt-3 flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveQuestions(eventType)}
+                                  disabled={isSavingQuestions}
+                                  className="rounded-lg bg-violet-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
+                                >
+                                  {isSavingQuestions ? "Saving…" : "Save questions"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setQuestionsOpenId("")}
+                                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     </div>

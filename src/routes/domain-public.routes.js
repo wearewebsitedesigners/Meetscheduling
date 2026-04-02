@@ -201,6 +201,7 @@ router.post(
       inviteeCompany: body.company || "",
       source: body.source || "booking_link",
       notes: body.notes || "",
+      answers: Array.isArray(body.answers) ? body.answers : [],
     });
     res.status(201).json({
       ...result,

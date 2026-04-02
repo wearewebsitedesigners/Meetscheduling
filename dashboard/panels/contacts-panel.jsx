@@ -861,7 +861,7 @@ export default function ContactsPanel() {
   const displayCols = ALL_COLUMNS.filter((c) => c.alwaysVisible || visibleColumns[c.key]);
 
   return (
-    <div className="-mx-5 -mt-7 min-h-[calc(100vh-60px)] rounded-[34px] border border-[#DFE7F3] bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(168,85,247,0.13),_transparent_24%),linear-gradient(180deg,#eef4ff_0%,#edf2f7_35%,#f7fbff_100%)] px-5 pt-7 pb-6 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:-mx-6 sm:px-6 sm:pt-7 lg:-mx-8 lg:px-8 lg:pt-8 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.12),_transparent_24%),linear-gradient(180deg,#081120_0%,#0b1424_35%,#0d182b_100%)]">
+    <div className="-mx-5 -mt-7 min-h-[calc(100vh-60px)] rounded-[34px] border border-[#DFE7F3] bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(168,85,247,0.13),_transparent_24%),linear-gradient(180deg,#eef4ff_0%,#edf2f7_35%,#f7fbff_100%)] px-5 pt-8 pb-6 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:-mx-6 sm:px-6 sm:pt-7 lg:-mx-8 lg:px-8 lg:pt-8 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.12),_transparent_24%),linear-gradient(180deg,#081120_0%,#0b1424_35%,#0d182b_100%)]">
       <div className="w-full">
 
         {/* ── Header ──────────────────────────────────────────────────────── */}

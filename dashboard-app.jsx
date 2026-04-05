@@ -1533,8 +1533,7 @@ function BookingEditorOverlay({ open, eventType, username, dark, onClose, onSave
               key={previewKey}
               src={previewUrl}
               title="Booking page preview"
-              className="flex-1 border-0"
-              sandbox="allow-scripts allow-same-origin allow-forms"
+              style={{ flex: 1, border: "none", width: "100%", display: "block", minHeight: 0 }}
             />
           ) : (
             <div className="flex flex-1 items-center justify-center text-[14px] text-slate-400">

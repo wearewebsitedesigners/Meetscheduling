@@ -22,8 +22,10 @@ const selectedDatePill = document.getElementById("selected-date-pill");
 // Steps & Panels
 const stepCalendar = document.getElementById("step-calendar");
 const stepDetails = document.getElementById("step-details");
+const stepQuestions = document.getElementById("step-questions");
 const stepPillSelect = document.getElementById("step-pill-select");
 const stepPillDetails = document.getElementById("step-pill-details");
+const stepPillQuestions = document.getElementById("step-pill-questions");
 const stepPillConfirm = document.getElementById("step-pill-confirm");
 
 // Calendar Elements
@@ -39,6 +41,11 @@ const slotsList = document.getElementById("slots-list");
 
 // Form Elements
 const formBackBtn = document.getElementById("form-back-btn");
+const detailsBackBtn = document.getElementById("details-back-btn");
+const questionsForm = document.getElementById("questions-form");
+const questionsList = document.getElementById("questions-list");
+const questionsErrorAlert = document.getElementById("questions-error-alert");
+const questionsBackBtn = document.getElementById("questions-back-btn");
 const bookingForm = document.getElementById("booking-form");
 const nameInput = document.getElementById("name-input");
 const emailInput = document.getElementById("email-input");
@@ -257,13 +264,29 @@ function formatYMD(year, month, day) {
 }
 
 function syncStepPills(activeStep) {
-  const steps = [
-    ["select", stepPillSelect],
-    ["details", stepPillDetails],
-    ["confirmed", stepPillConfirm],
-  ];
+  const hasQuestions = Array.isArray(currentEvent?.customQuestions) && currentEvent.customQuestions.length > 0;
 
-  const order = { select: 0, details: 1, confirmed: 2 };
+  // Show/hide the questions pill dynamically
+  if (stepPillQuestions instanceof HTMLElement) {
+    stepPillQuestions.style.display = hasQuestions ? "" : "none";
+  }
+
+  const steps = hasQuestions
+    ? [
+        ["select", stepPillSelect],
+        ["details", stepPillDetails],
+        ["questions", stepPillQuestions],
+        ["confirmed", stepPillConfirm],
+      ]
+    : [
+        ["select", stepPillSelect],
+        ["details", stepPillDetails],
+        ["confirmed", stepPillConfirm],
+      ];
+
+  const order = hasQuestions
+    ? { select: 0, details: 1, questions: 2, confirmed: 3 }
+    : { select: 0, details: 1, confirmed: 2 };
 
   steps.forEach(([key, element]) => {
     if (!(element instanceof HTMLElement)) return;
@@ -770,6 +793,7 @@ function goToStep2() {
 
   stepCalendar.classList.add("hidden");
   stepDetails.classList.remove("hidden");
+  if (stepQuestions) stepQuestions.classList.add("hidden");
   syncStepPills("details");
 
   // Show selected datetime on the left sidebar
@@ -790,31 +814,90 @@ function goToStep2() {
 
 function goBackToStep1() {
   stepDetails.classList.add("hidden");
+  if (stepQuestions) stepQuestions.classList.add("hidden");
   stepCalendar.classList.remove("hidden");
   sidebarDatetime.style.display = "none";
   syncStepPills("select");
 }
 
-if (formBackBtn instanceof HTMLButtonElement) {
-  formBackBtn.addEventListener("click", () => {
-    goBackToStep1();
+function buildQuestionsPanel() {
+  if (!questionsList) return;
+  const questions = currentEvent?.customQuestions || [];
+  questionsList.innerHTML = "";
+  questions.forEach((q, idx) => {
+    const item = document.createElement("div");
+    item.className = "question-item";
+    const labelEl = document.createElement("label");
+    labelEl.htmlFor = `q-answer-${idx}`;
+    labelEl.innerHTML = escapeHtml(q.label || `Question ${idx + 1}`) +
+      (q.required ? '<span class="q-required">*</span>' : '');
+    const textarea = document.createElement("textarea");
+    textarea.id = `q-answer-${idx}`;
+    textarea.rows = 3;
+    textarea.dataset.questionId = q.id || String(idx);
+    textarea.dataset.required = q.required ? "1" : "0";
+    textarea.placeholder = "Your answer…";
+    item.appendChild(labelEl);
+    item.appendChild(textarea);
+    questionsList.appendChild(item);
   });
 }
 
-// Step pill navigation: SELECT ↔ DETAILS only
+function goToStep3() {
+  // Validate details form fields before moving to questions
+  const nameVal = nameInput.value.trim();
+  const emailVal = emailInput.value.trim();
+  const localNumber = phoneInput?.value?.trim() || "";
+
+  if (!nameVal) { showError("Please enter your full name.", formErrorAlert); nameInput.focus(); return; }
+  if (!emailVal || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailVal)) { showError("Please enter a valid email address.", formErrorAlert); emailInput.focus(); return; }
+  if (!localNumber || !/^\d{7,10}$/.test(localNumber)) { showError("Please enter a valid phone number (7–10 digits).", formErrorAlert); phoneInput?.focus(); return; }
+
+  showError("", formErrorAlert);
+  buildQuestionsPanel();
+  stepDetails.classList.add("hidden");
+  if (stepQuestions) stepQuestions.classList.remove("hidden");
+  syncStepPills("questions");
+
+  // Focus first question
+  setTimeout(() => {
+    const first = questionsList?.querySelector("textarea");
+    if (first) first.focus();
+  }, 50);
+}
+
+function goBackToStep2() {
+  if (stepQuestions) stepQuestions.classList.add("hidden");
+  stepDetails.classList.remove("hidden");
+  syncStepPills("details");
+}
+
+if (formBackBtn instanceof HTMLButtonElement) {
+  formBackBtn.addEventListener("click", () => { goBackToStep1(); });
+}
+if (detailsBackBtn instanceof HTMLButtonElement) {
+  detailsBackBtn.addEventListener("click", () => { goBackToStep1(); });
+}
+if (questionsBackBtn instanceof HTMLButtonElement) {
+  questionsBackBtn.addEventListener("click", () => { goBackToStep2(); });
+}
+
+// Step pill navigation
 if (stepPillSelect) {
   stepPillSelect.addEventListener("click", () => {
-    if (stepPillSelect.classList.contains("is-done")) {
-      goBackToStep1();
-    }
+    if (stepPillSelect.classList.contains("is-done")) goBackToStep1();
   });
 }
-
 if (stepPillDetails) {
   stepPillDetails.addEventListener("click", () => {
-    // Forward: only if a slot is already chosen and we're on select step
-    if (selectedSlot && !stepPillDetails.classList.contains("is-active")) {
-      goToStep2();
+    if (stepPillDetails.classList.contains("is-done")) goBackToStep2();
+    else if (selectedSlot && !stepPillDetails.classList.contains("is-active")) goToStep2();
+  });
+}
+if (stepPillQuestions) {
+  stepPillQuestions.addEventListener("click", () => {
+    if (stepPillQuestions.classList.contains("is-done") || stepPillDetails.classList.contains("is-done")) {
+      goToStep3();
     }
   });
 }
@@ -997,6 +1080,52 @@ if (phoneInput) {
 
 bookingForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  // If there are custom questions, go to questions step instead of submitting
+  const hasQuestions = Array.isArray(currentEvent?.customQuestions) && currentEvent.customQuestions.length > 0;
+  if (hasQuestions) {
+    goToStep3();
+    return;
+  }
+
+  // No questions — submit directly
+  await submitBooking([]);
+});
+
+async function collectAndSubmitAnswers(e) {
+  e.preventDefault();
+  const answers = [];
+  let hasError = false;
+  if (questionsList) {
+    questionsList.querySelectorAll(".question-item textarea").forEach((ta) => {
+      const val = ta.value.trim();
+      if (ta.dataset.required === "1" && !val) {
+        ta.style.borderColor = "var(--error)";
+        hasError = true;
+      } else {
+        ta.style.borderColor = "";
+        answers.push({ questionId: ta.dataset.questionId, answer: val });
+      }
+    });
+  }
+  if (hasError) {
+    showError("Please answer all required questions.", questionsErrorAlert);
+    return;
+  }
+  showError("", questionsErrorAlert);
+  await submitBooking(answers);
+}
+
+if (questionsForm instanceof HTMLFormElement) {
+  questionsForm.addEventListener("submit", collectAndSubmitAnswers);
+}
+
+async function submitBooking(answers = []) {
+  const confirmBtn = document.getElementById("confirm-booking-btn");
+  const questionsSubmitBtn = document.getElementById("questions-submit-btn");
+  const activeSubmitBtn = (stepQuestions && !stepQuestions.classList.contains("hidden"))
+    ? questionsSubmitBtn : confirmBtn;
+
   try {
     showError("", formErrorAlert);
 
@@ -1012,32 +1141,24 @@ bookingForm.addEventListener("submit", async (e) => {
 
     if (!emailVal) throw new Error("Please enter your email address.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailVal)) {
-      emailInput.focus();
       throw new Error("Please enter a valid email address (e.g. name@gmail.com).");
     }
 
-    if (!localNumber) {
-      phoneInput?.focus();
-      throw new Error("Please enter your phone number.");
-    }
+    if (!localNumber) throw new Error("Please enter your phone number.");
+    if (!/^\d{7,10}$/.test(localNumber)) throw new Error("Enter 7–10 digits — e.g. 9876543210");
 
-    if (!/^\d{7,10}$/.test(localNumber)) {
-      phoneInput.focus();
-      throw new Error("Enter 7–10 digits — e.g. 9876543210");
-    }
-
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = "Confirming...";
+    if (activeSubmitBtn) { activeSubmitBtn.disabled = true; activeSubmitBtn.textContent = "Confirming…"; }
 
     const requestBody = {
       visitorDate: selectedDate,
       startAtUtc: selectedSlot.startAtUtc,
       slotToken: selectedSlot.token,
-      name: nameInput.value.trim(),
-      email: emailInput.value.trim(),
+      name: nameVal,
+      email: emailVal,
       phone: phoneVal,
       notes: notesInput.value.trim(),
       timezone: visitorTimezone,
+      answers,
     };
 
     const payload = useLocalPreview
@@ -1096,11 +1217,15 @@ bookingForm.addEventListener("submit", async (e) => {
     window.location.href = url;
 
   } catch (err) {
-    showError(err.message, formErrorAlert);
-    confirmBtn.disabled = false;
-    confirmBtn.textContent = "Confirm booking";
+    const errTarget = (stepQuestions && !stepQuestions.classList.contains("hidden"))
+      ? questionsErrorAlert : formErrorAlert;
+    showError(err.message, errTarget);
+    if (activeSubmitBtn) {
+      activeSubmitBtn.disabled = false;
+      activeSubmitBtn.textContent = "Confirm booking";
+    }
   }
-});
+}
 
 // Init - render sidebar immediately from URL so page feels instant
 (function preRenderSidebar() {

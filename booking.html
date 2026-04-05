@@ -1032,6 +1032,66 @@
       box-shadow: none;
     }
 
+    /* ── Form actions row (Back + Next/Submit) ── */
+    .form-actions-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .form-actions-row .submit-btn {
+      flex: 1;
+      width: auto;
+    }
+    .back-step-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 38px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--tx-2);
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+      flex-shrink: 0;
+    }
+    .back-step-btn:hover { background: var(--border-soft); border-color: var(--tx-3); }
+    .back-step-btn svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    /* ── Questions list ──────────────────────── */
+    .questions-list { display: flex; flex-direction: column; gap: 14px; }
+    .question-item label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--tx-2);
+      margin-bottom: 4px;
+    }
+    .question-item label .q-required {
+      color: var(--error);
+      margin-left: 2px;
+    }
+    .question-item textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 8px 10px;
+      font-size: 10px;
+      color: var(--tx);
+      background: var(--surface);
+      resize: vertical;
+      min-height: 60px;
+      outline: none;
+      transition: border-color .15s;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+    .question-item textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-ring); }
+
     /* ── Utility icon ────────────────────────── */
     .utility-icon {
       width: 10px;
@@ -1264,6 +1324,7 @@
           <div class="step-progress" aria-label="Booking progress">
             <div id="step-pill-select" class="step-pill is-active">Select</div>
             <div id="step-pill-details" class="step-pill">Details</div>
+            <div id="step-pill-questions" class="step-pill" style="display:none;">Questions</div>
             <div id="step-pill-confirm" class="step-pill">Confirm</div>
           </div>
 
@@ -1385,7 +1446,36 @@
                   <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
                 </p>
 
-                <button type="submit" id="confirm-booking-btn" class="submit-btn">Confirm booking</button>
+                <div class="form-actions-row">
+                  <button type="button" id="details-back-btn" class="back-step-btn">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
+                    Back
+                  </button>
+                  <button type="submit" id="confirm-booking-btn" class="submit-btn">Next</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- ── Questions step ── -->
+          <div id="step-questions" class="step-panel hidden">
+            <div class="details-card">
+              <div class="form-header">
+                <div>
+                  <h2 class="form-title">A few quick questions</h2>
+                  <p class="form-subtitle">Help the host prepare for your meeting.</p>
+                </div>
+              </div>
+              <div id="questions-error-alert" class="error-msg"></div>
+              <form id="questions-form">
+                <div id="questions-list" class="questions-list"></div>
+                <div class="form-actions-row" style="margin-top:20px;">
+                  <button type="button" id="questions-back-btn" class="back-step-btn">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
+                    Back
+                  </button>
+                  <button type="submit" id="questions-submit-btn" class="submit-btn">Confirm booking</button>
+                </div>
               </form>
             </div>
           </div>

@@ -1434,7 +1434,7 @@ function BookingEditorOverlay({ open, eventType, username, dark, onClose, onSave
 
             {/* Accent color */}
             <section>
-              <p className="text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Accent Color</p>
+              <p className="text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Sidebar &amp; Accent Color</p>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -1450,7 +1450,7 @@ function BookingEditorOverlay({ open, eventType, username, dark, onClose, onSave
                   className="w-24 rounded-[10px] border border-[#D7E1F0] bg-white px-3 py-2 text-[12px] font-mono text-slate-900 outline-none focus:border-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
                 />
               </div>
-              <p className="mt-1.5 text-[11px] text-slate-400">Calendar highlights, buttons &amp; accents.</p>
+              <p className="mt-1.5 text-[11px] text-slate-400">Colors the sidebar hero banner, calendar highlights &amp; buttons.</p>
             </section>
 
             {/* Background */}

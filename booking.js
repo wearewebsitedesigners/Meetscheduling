@@ -726,6 +726,11 @@ async function loadEvent() {
     const brandColor = String(currentEvent.color || "").trim();
     if (/^#[0-9A-Fa-f]{3,8}$/.test(brandColor)) {
       document.documentElement.style.setProperty("--brand", brandColor);
+      // Tint the hero with the brand color
+      const heroEl = document.getElementById("sidebar-hero");
+      if (heroEl) {
+        heroEl.style.background = `linear-gradient(140deg, color-mix(in srgb, ${brandColor} 80%, #000) 0%, color-mix(in srgb, ${brandColor} 60%, #000) 60%, ${brandColor} 100%)`;
+      }
     }
 
     // Apply custom background

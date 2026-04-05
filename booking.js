@@ -264,29 +264,13 @@ function formatYMD(year, month, day) {
 }
 
 function syncStepPills(activeStep) {
-  const hasQuestions = Array.isArray(currentEvent?.customQuestions) && currentEvent.customQuestions.length > 0;
-
-  // Show/hide the questions pill dynamically
-  if (stepPillQuestions instanceof HTMLElement) {
-    stepPillQuestions.style.display = hasQuestions ? "" : "none";
-  }
-
-  const steps = hasQuestions
-    ? [
-        ["select", stepPillSelect],
-        ["details", stepPillDetails],
-        ["questions", stepPillQuestions],
-        ["confirmed", stepPillConfirm],
-      ]
-    : [
-        ["select", stepPillSelect],
-        ["details", stepPillDetails],
-        ["confirmed", stepPillConfirm],
-      ];
-
-  const order = hasQuestions
-    ? { select: 0, details: 1, questions: 2, confirmed: 3 }
-    : { select: 0, details: 1, confirmed: 2 };
+  const steps = [
+    ["select",    stepPillSelect],
+    ["details",   stepPillDetails],
+    ["questions", stepPillQuestions],
+    ["confirmed", stepPillConfirm],
+  ];
+  const order = { select: 0, details: 1, questions: 2, confirmed: 3 };
 
   steps.forEach(([key, element]) => {
     if (!(element instanceof HTMLElement)) return;
@@ -824,6 +808,17 @@ function buildQuestionsPanel() {
   if (!questionsList) return;
   const questions = currentEvent?.customQuestions || [];
   questionsList.innerHTML = "";
+  const questionsSubmitBtn = document.getElementById("questions-submit-btn");
+
+  if (!questions.length) {
+    // No questions — show a simple "all set" message and relabel the submit btn
+    questionsList.innerHTML = '<p style="font-size:10px;color:var(--tx-3);text-align:center;padding:18px 0;">No additional questions — you\'re all set!</p>';
+    if (questionsSubmitBtn) questionsSubmitBtn.textContent = "Confirm booking";
+    return;
+  }
+
+  if (questionsSubmitBtn) questionsSubmitBtn.textContent = "Confirm booking";
+
   questions.forEach((q, idx) => {
     const item = document.createElement("div");
     item.className = "question-item";
@@ -1080,16 +1075,8 @@ if (phoneInput) {
 
 bookingForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-
-  // If there are custom questions, go to questions step instead of submitting
-  const hasQuestions = Array.isArray(currentEvent?.customQuestions) && currentEvent.customQuestions.length > 0;
-  if (hasQuestions) {
-    goToStep3();
-    return;
-  }
-
-  // No questions — submit directly
-  await submitBooking([]);
+  // Always go to Questions step (step 3) — it shows questions if any, or a confirm button if none
+  goToStep3();
 });
 
 async function collectAndSubmitAnswers(e) {

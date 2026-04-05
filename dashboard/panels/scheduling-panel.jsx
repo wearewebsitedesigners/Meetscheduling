@@ -669,7 +669,7 @@ function EmptyState({ title, description, action, actionLabel }) {
   );
 }
 
-export default function SchedulingPanel({ initials = "WU", displayName = "Workspace User", avatarUrl = "", usernameProp = "" }) {
+export default function SchedulingPanel({ initials = "WU", displayName = "Workspace User", avatarUrl = "", usernameProp = "", onOpenEditor }) {
   const cachedGoogleStatus = readCachedGoogleCalendarStatus();
   const [activeTab, setActiveTab] = useState("Event types");
   const [query, setQuery] = useState("");
@@ -1457,7 +1457,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                           <div className="flex shrink-0 flex-wrap items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => window.open(`/booking-editor?id=${eventType.id}`, `booking-editor-${eventType.id}`, "width=1280,height=800,noopener")}
+                              onClick={() => onOpenEditor?.(eventType)}
                               className="rounded-xl border border-slate-200 bg-white/80 px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                             >
                               Edit

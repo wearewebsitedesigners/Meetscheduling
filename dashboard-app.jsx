@@ -1294,6 +1294,261 @@ function SettingsOverlay({ open, tab, user, avatarUrl, dark, initials, onClose, 
   ) : null;
 }
 
+// ── Booking page background presets ──────────────────────────────────────────
+const EDITOR_BG_PRESETS = [
+  { name: "Default", value: "" },
+  { name: "White", value: "#ffffff" },
+  { name: "Slate", value: "#f1f5f9" },
+  { name: "Ocean", value: "linear-gradient(135deg,#1CB5E0 0%,#000851 100%)" },
+  { name: "Sunset", value: "linear-gradient(135deg,#f093fb 0%,#f5576c 100%)" },
+  { name: "Forest", value: "linear-gradient(135deg,#43e97b 0%,#38f9d7 100%)" },
+  { name: "Night", value: "linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)" },
+  { name: "Sand", value: "linear-gradient(135deg,#ffecd2 0%,#fcb69f 100%)" },
+  { name: "Mint", value: "linear-gradient(135deg,#d4fc79 0%,#96e6a1 100%)" },
+  { name: "Lavender", value: "linear-gradient(135deg,#a18cd1 0%,#fbc2eb 100%)" },
+];
+
+function BookingEditorOverlay({ open, eventType, username, dark, onClose, onSaved }) {
+  const [brandLogoUrl, setBrandLogoUrl] = React.useState("");
+  const [brandTagline, setBrandTagline] = React.useState("");
+  const [sidebarMessage, setSidebarMessage] = React.useState("");
+  const [color, setColor] = React.useState("#2563eb");
+  const [brandBgColor, setBrandBgColor] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [notice, setNotice] = React.useState("");
+  const [saveError, setSaveError] = React.useState("");
+  const [previewKey, setPreviewKey] = React.useState(0);
+
+  // Sync form when eventType changes
+  React.useEffect(() => {
+    if (!open || !eventType) return;
+    setBrandLogoUrl(eventType.brandLogoUrl || "");
+    setBrandTagline(eventType.brandTagline || "");
+    setSidebarMessage(eventType.sidebarMessage || "");
+    setColor(eventType.color || "#2563eb");
+    setBrandBgColor(eventType.brandBgColor || "");
+    setNotice("");
+    setSaveError("");
+    setPreviewKey((k) => k + 1);
+  }, [open, eventType?.id]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const handleEsc = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [open, onClose]);
+
+  function buildPreviewUrl() {
+    if (!username || !eventType?.slug) return "";
+    const q = new URLSearchParams();
+    q.set("_preview", "1");
+    q.set("_logo", brandLogoUrl);
+    q.set("_tagline", brandTagline);
+    q.set("_color", color);
+    q.set("_bg", brandBgColor);
+    return `/${username}/${eventType.slug}?${q.toString()}`;
+  }
+
+  async function handleSave() {
+    if (!eventType?.id) return;
+    setSaving(true); setSaveError(""); setNotice("");
+    try {
+      const payload = await apiFetch(`/api/event-types/${eventType.id}`, {
+        method: "PATCH",
+        body: { brandLogoUrl, brandTagline, sidebarMessage, color, brandBgColor },
+      });
+      setNotice("Saved!");
+      onSaved?.(payload?.eventType);
+      setTimeout(() => { setPreviewKey((k) => k + 1); setNotice(""); }, 800);
+    } catch (err) {
+      setSaveError(err.message || "Save failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) return null;
+
+  const previewUrl = buildPreviewUrl();
+
+  return typeof document !== "undefined" ? createPortal(
+    <div className="fixed inset-0 z-[300] transition-all duration-300">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Panel — same max-w-5xl slide-in as SettingsOverlay */}
+      <div className="absolute inset-y-0 right-0 flex w-full max-w-5xl overflow-hidden rounded-l-[32px] bg-[#F5F7FB] shadow-[-40px_0_120px_rgba(15,23,42,0.20)] dark:bg-[#0b1324]">
+
+        {/* ── Left sidebar: controls ── */}
+        <div className="flex w-64 shrink-0 flex-col border-r border-[#DFE7F2] bg-white dark:border-white/10 dark:bg-[#0d1829] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center gap-3 border-b border-[#DFE7F2] px-5 py-5 dark:border-white/10 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-1.5 text-[13px] font-medium text-blue-600 transition hover:text-blue-700 dark:text-blue-400"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </button>
+          </div>
+
+          <div className="px-4 py-2 shrink-0 border-b border-[#DFE7F2] dark:border-white/10">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Booking Page Editor</p>
+            <p className="mt-0.5 truncate text-[13px] font-semibold text-slate-800 dark:text-slate-200">{eventType?.title || "Event"}</p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
+
+            {/* Logo */}
+            <section>
+              <p className="text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Company Logo URL</p>
+              <input
+                type="url"
+                value={brandLogoUrl}
+                onChange={(e) => setBrandLogoUrl(e.target.value)}
+                placeholder="https://yourcompany.com/logo.png"
+                className="w-full rounded-[10px] border border-[#D7E1F0] bg-white px-3 py-2 text-[13px] text-slate-900 outline-none transition focus:border-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+              />
+              {brandLogoUrl && (
+                <div className="mt-2 inline-flex rounded-lg border border-[#E2EAF4] bg-[#F7FAFE] p-1.5 dark:border-white/10 dark:bg-white/5">
+                  <img src={brandLogoUrl} alt="Logo" className="h-8 max-w-[120px] object-contain rounded" onError={(e) => { e.target.style.display = "none"; }} />
+                </div>
+              )}
+              <p className="mt-1.5 text-[11px] text-slate-400">Shown at the top of the booking sidebar.</p>
+            </section>
+
+            {/* Tagline */}
+            <section>
+              <p className="text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Tagline (below logo)</p>
+              <input
+                type="text"
+                value={brandTagline}
+                onChange={(e) => setBrandTagline(e.target.value)}
+                placeholder="e.g. Experts in digital strategy"
+                maxLength={200}
+                className="w-full rounded-[10px] border border-[#D7E1F0] bg-white px-3 py-2 text-[13px] text-slate-900 outline-none transition focus:border-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+              />
+            </section>
+
+            {/* Accent color */}
+            <section>
+              <p className="text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Accent Color</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="h-9 w-9 cursor-pointer rounded-lg border border-[#D7E1F0] p-0.5 dark:border-white/10"
+                />
+                <input
+                  type="text"
+                  value={color}
+                  onChange={(e) => { if (/^#[0-9A-Fa-f]{0,6}$/.test(e.target.value)) setColor(e.target.value); }}
+                  maxLength={7}
+                  className="w-24 rounded-[10px] border border-[#D7E1F0] bg-white px-3 py-2 text-[12px] font-mono text-slate-900 outline-none focus:border-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                />
+              </div>
+              <p className="mt-1.5 text-[11px] text-slate-400">Calendar highlights, buttons &amp; accents.</p>
+            </section>
+
+            {/* Background */}
+            <section>
+              <p className="text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Page Background</p>
+              <div className="grid grid-cols-5 gap-1.5">
+                {EDITOR_BG_PRESETS.map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    title={preset.name}
+                    onClick={() => setBrandBgColor(preset.value)}
+                    className="relative aspect-square rounded-lg border-2 transition"
+                    style={{
+                      background: preset.value || "linear-gradient(-40deg,#e8eeff,#edf3ff,#f0ebff,#e4f0ff,#eafcf3)",
+                      borderColor: brandBgColor === preset.value ? "#2563eb" : "#E2EAF4",
+                    }}
+                  >
+                    {brandBgColor === preset.value && (
+                      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow">✓</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11px] text-slate-400">
+                {EDITOR_BG_PRESETS.find((p) => p.value === brandBgColor)?.name || "Custom"}
+              </p>
+            </section>
+
+            {/* Sidebar message */}
+            <section>
+              <p className="text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Sidebar Message</p>
+              <textarea
+                value={sidebarMessage}
+                onChange={(e) => setSidebarMessage(e.target.value)}
+                placeholder="Add a welcome note for your guests…"
+                maxLength={1000}
+                rows={4}
+                className="w-full resize-y rounded-[10px] border border-[#D7E1F0] bg-white px-3 py-2 text-[13px] text-slate-900 outline-none transition focus:border-blue-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+              />
+              <p className="mt-1 text-[11px] text-slate-400">Shown below the event description in the sidebar.</p>
+            </section>
+
+          </div>
+
+          {/* Save footer */}
+          <div className="shrink-0 border-t border-[#DFE7F2] bg-white px-4 py-4 dark:border-white/10 dark:bg-[#0d1829]">
+            {notice && <p className="mb-2 text-[12px] font-semibold text-emerald-600 dark:text-emerald-400">{notice}</p>}
+            {saveError && <p className="mb-2 text-[12px] font-semibold text-red-600 dark:text-red-400">{saveError}</p>}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPreviewKey((k) => k + 1)}
+                className="flex-1 rounded-full border border-[#D7E1F0] bg-white py-2 text-[13px] font-medium text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+              >
+                Refresh
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-full bg-[#2563EB] py-2 text-[13px] font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.35)] transition hover:bg-[#1d4ed8] disabled:opacity-50"
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Right: preview ── */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex items-center gap-3 border-b border-[#DFE7F2] bg-[#F5F7FB] px-5 py-3 dark:border-white/10 dark:bg-[#0b1324]">
+            <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">Live Preview</span>
+            {previewUrl && (
+              <span className="truncate text-[12px] text-slate-400 dark:text-slate-500">{previewUrl.split("?")[0]}</span>
+            )}
+          </div>
+          {previewUrl ? (
+            <iframe
+              key={previewKey}
+              src={previewUrl}
+              title="Booking page preview"
+              className="flex-1 border-0"
+              sandbox="allow-scripts allow-same-origin allow-forms"
+            />
+          ) : (
+            <div className="flex flex-1 items-center justify-center text-[14px] text-slate-400">
+              Preview unavailable — username or slug missing.
+            </div>
+          )}
+        </div>
+
+      </div>
+    </div>,
+    document.body
+  ) : null;
+}
+
 function App() {
   const previewMode = isLocalPreviewHost();
   const [collapsed, setCollapsed] = useState(() => {
@@ -1319,6 +1574,8 @@ function App() {
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState("profile");
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorEventType, setEditorEventType] = useState(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
@@ -1644,7 +1901,7 @@ function App() {
 
   const renderPanel = () => {
     if (currentKey === "dashboard") return <OverviewPanel />;
-    if (currentKey === "scheduling") return <SchedulingPanel initials={initials} displayName={displayName} avatarUrl={avatarUrl} usernameProp={user?.username || ""} />;
+    if (currentKey === "scheduling") return <SchedulingPanel initials={initials} displayName={displayName} avatarUrl={avatarUrl} usernameProp={user?.username || ""} onOpenEditor={(et) => { setEditorEventType(et); setEditorOpen(true); }} />;
     if (currentKey === "meetings") return <MeetingsPanel />;
     if (currentKey === "availability") return <AvailabilityPanel />;
     if (currentKey === "contacts") return <ContactsPanel />;
@@ -1901,6 +2158,16 @@ function App() {
         avatarError={avatarError}
       />
       <InviteUserModal open={inviteOpen} dark={dark} email={inviteEmail} role={inviteRole} message={inviteMessage} error={inviteError} submitting={inviteSubmitting} onEmailChange={setInviteEmail} onRoleChange={setInviteRole} onClose={() => { setInviteOpen(false); showInviteFeedback("", ""); }} onSubmit={handleInviteSubmit} />
+      <BookingEditorOverlay
+        open={editorOpen}
+        eventType={editorEventType}
+        username={user?.username || ""}
+        dark={dark}
+        onClose={() => setEditorOpen(false)}
+        onSaved={(updated) => {
+          if (updated) setEditorEventType((prev) => ({ ...prev, ...updated }));
+        }}
+      />
     </div>
   );
 }

@@ -1062,6 +1062,21 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
     }
   };
 
+  const handleDelete = async (eventType) => {
+    if (!window.confirm(`Delete "${eventType.title}"? This cannot be undone.`)) return;
+    setBusyEventId(eventType.id);
+    setError("");
+    try {
+      await apiFetch(`/api/event-types/${eventType.id}`, { method: "DELETE" });
+      setEventTypes((current) => current.filter((item) => item.id !== eventType.id));
+      setNotice(`${eventType.title} deleted.`);
+    } catch (deleteError) {
+      setError(deleteError.message || "Unable to delete the event type.");
+    } finally {
+      setBusyEventId("");
+    }
+  };
+
   const handleConnectGoogle = async () => {
     try {
       const returnPath = `${window.location.pathname}${window.location.search}`;
@@ -1476,6 +1491,15 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                             >
                               {isBusy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : null}
                               {eventType.isActive ? "Pause" : "Activate"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(eventType)}
+                              disabled={isBusy}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
                             </button>
                           </div>
                         </div>

@@ -466,6 +466,10 @@ function buildApp() {
     return res.sendFile(path.join(staticRoot, "landing-page-public.html"));
   });
 
+  app.get("/booking-editor", (req, res) => {
+    res.sendFile(path.join(staticRoot, "booking-editor.html"));
+  });
+
   app.get("/:username/:slug", (req, res) => {
     res.sendFile(path.join(staticRoot, "booking.html"));
   });

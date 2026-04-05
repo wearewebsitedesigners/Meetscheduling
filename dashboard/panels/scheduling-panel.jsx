@@ -339,6 +339,7 @@ function normalizeEventType(row) {
     brandLogoUrl: row.brand_logo_url || row.brandLogoUrl || "",
     brandTagline: row.brand_tagline || row.brandTagline || "",
     sidebarMessage: row.sidebar_message || row.sidebarMessage || "",
+    brandBgColor: row.brand_bg_color || row.brandBgColor || "",
     customQuestions: Array.isArray(row.custom_questions ?? row.customQuestions)
       ? (row.custom_questions ?? row.customQuestions)
       : [],
@@ -1456,7 +1457,7 @@ export default function SchedulingPanel({ initials = "WU", displayName = "Worksp
                           <div className="flex shrink-0 flex-wrap items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => openEditModal(eventType)}
+                              onClick={() => window.open(`/booking-editor?id=${eventType.id}`, `booking-editor-${eventType.id}`, "width=1280,height=800,noopener")}
                               className="rounded-xl border border-slate-200 bg-white/80 px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                             >
                               Edit

@@ -5,7 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "build": "npm run build:dashboard-ui",
-    "build:dashboard-ui": "rm -rf ./assets/dashboard-react && npx tailwindcss -c tailwind.dashboard.config.cjs -i ./dashboard-tailwind.css -o ./assets/dashboard-react.css --minify && npx esbuild dashboard-app.jsx --bundle --format=esm --splitting --platform=browser --target=es2018 --outdir=./assets/dashboard-react --minify",
+    "build:dashboard-ui": "rm -rf ./assets/dashboard-react ./assets/booking-editor && npx tailwindcss -c tailwind.dashboard.config.cjs -i ./dashboard-tailwind.css -o ./assets/dashboard-react.css --minify && npx esbuild dashboard-app.jsx --bundle --format=esm --splitting --platform=browser --target=es2018 --outdir=./assets/dashboard-react --minify && npx esbuild booking-editor-app.jsx --bundle --format=esm --platform=browser --target=es2018 --outdir=./assets/booking-editor --minify",
     "deploy:prod": "DEPLOY_ENV=production bash scripts/deploy.sh",
     "pm2:prod": "pm2 start ecosystem.config.js --env production",
     "start": "node src/server.js",

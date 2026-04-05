@@ -32,6 +32,7 @@ function buildEventTypeSelect(prefix = "") {
     ${table}brand_logo_url,
     ${table}brand_tagline,
     ${table}sidebar_message,
+    ${table}brand_bg_color,
     COALESCE(${table}custom_questions, '[]'::jsonb) AS custom_questions,
     ${table}created_at,
     ${table}updated_at
@@ -74,6 +75,7 @@ function normalizeEventTypeInput(input, { partial = false } = {}) {
   maybe("brandLogoUrl", (value) => assertOptionalString(value, "brandLogoUrl", { max: 1000 }));
   maybe("brandTagline", (value) => assertOptionalString(value, "brandTagline", { max: 200 }));
   maybe("sidebarMessage", (value) => assertOptionalString(value, "sidebarMessage", { max: 1000 }));
+  maybe("brandBgColor", (value) => assertOptionalString(value, "brandBgColor", { max: 500 }));
   maybe("customQuestions", (value) => {
     if (!value) return [];
     if (!Array.isArray(value)) throw new Error("customQuestions must be an array");
@@ -197,9 +199,10 @@ async function createEventType(workspaceId, payload, client = null) {
           is_active,
           brand_logo_url,
           brand_tagline,
-          sidebar_message
+          sidebar_message,
+          brand_bg_color
         )
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,TRUE,$14,$15,$16)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,TRUE,$14,$15,$16,$17)
         RETURNING
 ${buildEventTypeSelect()}
       `,
@@ -220,6 +223,7 @@ ${buildEventTypeSelect()}
         input.brandLogoUrl || null,
         input.brandTagline || null,
         input.sidebarMessage || null,
+        input.brandBgColor || null,
       ],
       client
     );
@@ -255,6 +259,7 @@ async function updateEventType(workspaceId, eventTypeId, payload, client = null)
     brandLogoUrl: input.brandLogoUrl !== undefined ? input.brandLogoUrl : (existing.brand_logo_url || null),
     brandTagline: input.brandTagline !== undefined ? input.brandTagline : (existing.brand_tagline || null),
     sidebarMessage: input.sidebarMessage !== undefined ? input.sidebarMessage : (existing.sidebar_message || null),
+    brandBgColor: input.brandBgColor !== undefined ? input.brandBgColor : (existing.brand_bg_color || null),
     customQuestions: input.customQuestions !== undefined ? input.customQuestions : (existing.custom_questions || []),
   };
 
@@ -282,8 +287,9 @@ async function updateEventType(workspaceId, eventTypeId, payload, client = null)
           brand_tagline = $13,
           sidebar_message = $14,
           custom_questions = $15,
+          brand_bg_color = $16,
           updated_at = NOW()
-        WHERE id = $16 AND workspace_id = $17
+        WHERE id = $17 AND workspace_id = $18
         RETURNING
 ${buildEventTypeSelect()}
       `,
@@ -303,6 +309,7 @@ ${buildEventTypeSelect()}
         next.brandTagline || null,
         next.sidebarMessage || null,
         JSON.stringify(next.customQuestions || []),
+        next.brandBgColor || null,
         eventTypeId,
         workspaceId,
       ],

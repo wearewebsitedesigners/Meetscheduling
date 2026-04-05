@@ -701,6 +701,32 @@ async function loadEvent() {
     }
 
     currentEvent = data.event;
+
+    // Preview-mode overrides — set by the booking editor iframe
+    const _pq = new URLSearchParams(window.location.search);
+    if (_pq.get("_preview") === "1") {
+      const _logo = _pq.get("_logo");
+      const _tagline = _pq.get("_tagline");
+      const _color = _pq.get("_color");
+      const _bg = _pq.get("_bg");
+      if (_logo !== null) currentEvent.brandLogoUrl = _logo;
+      if (_tagline !== null) currentEvent.brandTagline = _tagline;
+      if (_color !== null) currentEvent.color = _color;
+      if (_bg !== null) currentEvent.brandBgColor = _bg;
+    }
+
+    // Apply brand accent color to CSS custom property
+    const brandColor = String(currentEvent.color || "").trim();
+    if (/^#[0-9A-Fa-f]{3,8}$/.test(brandColor)) {
+      document.documentElement.style.setProperty("--brand", brandColor);
+    }
+
+    // Apply custom background
+    const brandBg = String(currentEvent.brandBgColor || "").trim();
+    if (brandBg) {
+      document.body.style.background = brandBg;
+    }
+
     renderSidebarEventDetails(currentEvent);
 
     availableDates = new Set(data.dates); // The API gives us YYYY-MM-DD

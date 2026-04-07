@@ -1,7 +1,7 @@
 const { query, withTransaction } = require("../db/pool");
 const { HttpError, badRequest } = require("../utils/http-error");
 
-const PLAN_ORDER = Object.freeze(["BASIC", "POPULAR", "PRO"]);
+const PLAN_ORDER = Object.freeze(["BASIC", "POPULAR", "PRO", "ENTERPRISE"]);
 
 const BASIC_FEATURES = Object.freeze([
   "booking_page",
@@ -19,6 +19,11 @@ const POPULAR_FEATURES = Object.freeze([
   "remove_branding",
   "email_automations",
   "meeting_links",
+  "round_robin_scheduling",
+  "collective_events",
+  "routing_forms",
+  "teams_workflows",
+  "team_scheduling",
 ]);
 
 const PRO_FEATURES = Object.freeze([
@@ -27,6 +32,23 @@ const PRO_FEATURES = Object.freeze([
   "packages_subscriptions",
   "custom_css",
   "api_access",
+  "org_workflows",
+  "org_subdomain",
+  "saml_sso",
+  "calendar_delegation",
+  "member_attributes",
+  "attribute_routing",
+]);
+
+const ENTERPRISE_FEATURES = Object.freeze([
+  ...PRO_FEATURES,
+  "dedicated_database",
+  "ai_phone_agents",
+  "active_directory_sync",
+  "enterprise_support",
+  "uptime_sla",
+  "slack_connect",
+  "compliance_soc2_hipaa_iso",
 ]);
 
 const PLAN_ENTITLEMENTS = Object.freeze({
@@ -50,6 +72,13 @@ const PLAN_ENTITLEMENTS = Object.freeze({
     booking_pages_limit: null,
     calendars_limit: 36,
     features: PRO_FEATURES,
+  }),
+  ENTERPRISE: Object.freeze({
+    planKey: "ENTERPRISE",
+    staff_limit: null,
+    booking_pages_limit: null,
+    calendars_limit: null,
+    features: ENTERPRISE_FEATURES,
   }),
 });
 

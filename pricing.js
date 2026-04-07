@@ -4,26 +4,32 @@ const UPGRADE_PLAN_QUERY_KEY = "upgradePlan";
 const UPGRADE_INTENT_QUERY_KEY = "upgradeIntent";
 
 const PLAN_NAMES = Object.freeze({
-  BASIC: "Basic",
-  POPULAR: "Popular",
+  BASIC: "Startup",
+  POPULAR: "Business Pro",
   PRO: "Pro",
+  ENTERPRISE: "Enterprise",
 });
 
 const PLAN_DETAILS = Object.freeze({
   BASIC: {
-    label: "Basic",
-    price: "$15/month",
-    meta: "1 staff member • 1 booking page",
+    label: "Startup",
+    price: "$12/month",
+    meta: "Up to 3 team members • 10 event types",
   },
   POPULAR: {
-    label: "Popular",
-    price: "$28/month",
-    meta: "6 staff members • 3 booking pages",
+    label: "Business Pro",
+    price: "$29/month",
+    meta: "Unlimited team members • All integrations",
   },
   PRO: {
     label: "Pro",
     price: "$79/month",
     meta: "36 staff members • Unlimited booking pages",
+  },
+  ENTERPRISE: {
+    label: "Enterprise",
+    price: "Custom pricing",
+    meta: "Dedicated infrastructure • Full compliance",
   },
 });
 
@@ -431,6 +437,12 @@ async function renderPayPalButtons(planKey) {
 
 async function startPayPalCheckout(planKey, sourceButton = null) {
   const normalizedPlanKey = normalizePlanKey(planKey) || "BASIC";
+
+  // Enterprise uses contact sales, not PayPal
+  if (normalizedPlanKey === "ENTERPRISE") {
+    window.location.href = "mailto:sales@meetscheduling.com";
+    return;
+  }
   hideNotice();
   if (!(await hasActiveSession())) {
     setPostLoginRedirect(normalizedPlanKey);

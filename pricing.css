@@ -266,7 +266,7 @@ main {
 .plans {
   margin-top: 1.7rem;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -406,7 +406,17 @@ main {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 680px;
+  min-width: 820px;
+}
+
+.table-category td {
+  padding: 0.5rem 1rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--pricing-muted);
+  background: var(--pricing-soft);
 }
 
 thead th {
@@ -824,6 +834,12 @@ body.modal-open {
   }
   50% {
     opacity: 0.9;
+  }
+}
+
+@media (max-width: 1280px) {
+  .plans {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
